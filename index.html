@@ -1,0 +1,2403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
+  <title>AMAZÔNIA FIRE-WATCH AI • CBMAM / CIOPS</title>
+
+  <!-- Global Diagnostic Interceptor -->
+  <script>
+    (function() {
+      const _origWarn = console.warn;
+      console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && (
+          args[0].includes('cdn.tailwindcss.com') ||
+          args[0].includes('Tracking Prevention') ||
+          args[0].includes('AudioContext')
+        )) return;
+        _origWarn.apply(console, args);
+      };
+
+      window.onerror = function(msg, url, line, col, error) {
+        if (typeof msg === 'string' && (
+          msg.includes('tailwindcss.com') ||
+          msg.includes('tailwind') ||
+          msg.includes('AudioContext') ||
+          msg.includes('null')
+        )) return true;
+        console.error("FIRE-WATCH DIAGNOSTIC:", msg, "at line", line);
+        return false;
+      };
+    })();
+  </script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet Draw CSS & JS (Official Area Selection & Editing) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    if (typeof tailwind !== 'undefined' && tailwind) {
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              mono: ['"Cascadia Code"', '"Consolas"', '"JetBrains Mono"', '"Segoe UI Mono"', 'monospace'],
+              tactical: ['"Chakra Petch"', '"Segoe UI Semibold"', '"Arial Black"', 'sans-serif'],
+              sans: ['"Inter"', '"Segoe UI"', 'system-ui', '-apple-system', 'sans-serif'],
+            },
+            colors: {
+              cbmam: {
+                red: '#ff1e27',
+                darkred: '#8b0000',
+                orange: '#ff6b00',
+                gold: '#ffb703',
+                green: '#00f59b',
+                purple: '#b5179e',
+                cyan: '#00f0ff',
+                navy: '#050b14',
+                panel: '#0d1527',
+                border: '#1e293b'
+              }
+            }
+          }
+        }
+      };
+    }
+  </script>
+
+  <style>
+    /* Full Viewport App Reset */
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #050b14;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      user-select: none;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090e1a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ff1e27;
+    }
+
+    /* Fullscreen Leaflet Map */
+    #map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      background-color: #070b13;
+    }
+
+    #map .leaflet-map-pane {
+      transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    #map.map-3d-perspective .leaflet-map-pane {
+      transform: perspective(1200px) rotateX(28deg) scale(1.08);
+      transform-origin: 50% 80%;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: #0d1527 !important;
+      color: #e2e8f0 !important;
+      border: 1px solid #ff1e27 !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+      font-family: 'Cascadia Code', monospace !important;
+      font-size: 12px !important;
+    }
+    .leaflet-popup-tip {
+      background: #0d1527 !important;
+      border: 1px solid #ff1e27 !important;
+    }
+
+    /* Leaflet Draw Toolbar Customization */
+    .leaflet-draw-toolbar a {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+      color: #00f0ff !important;
+    }
+    .leaflet-draw-toolbar a:hover {
+      background-color: #1e293b !important;
+    }
+    .leaflet-draw-actions a {
+      background-color: #0f172a !important;
+      color: #e2e8f0 !important;
+      border-color: #334155 !important;
+    }
+
+    /* Window System Styling */
+    .tactical-window {
+      position: absolute;
+      background: rgba(13, 21, 39, 0.95);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(30, 41, 59, 0.85);
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.75), 0 0 15px rgba(0, 240, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      min-width: 320px;
+      min-height: 200px;
+    }
+    .tactical-window.window-active {
+      border-color: rgba(0, 240, 255, 0.65);
+      box-shadow: 0 12px 45px rgba(0, 0, 0, 0.85), 0 0 25px rgba(0, 240, 255, 0.15);
+    }
+    .tactical-window.window-active-red {
+      border-color: rgba(255, 30, 39, 0.75);
+      box-shadow: 0 12px 45px rgba(0, 0, 0, 0.85), 0 0 25px rgba(255, 30, 39, 0.25);
+    }
+    .tactical-window.window-minimized {
+      display: none !important;
+    }
+    .tactical-window.window-maximized {
+      top: 54px !important;
+      left: 12px !important;
+      width: calc(100vw - 24px) !important;
+      height: calc(100vh - 124px) !important;
+      border-radius: 6px;
+    }
+
+    .window-titlebar {
+      background: linear-gradient(90deg, #090e1a, #0f172a);
+      border-bottom: 1px solid #1e293b;
+      padding: 8px 12px;
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .window-title {
+      font-family: 'Segoe UI Semibold', 'Arial Black', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .win-btn {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      color: #94a3b8;
+      font-size: 11px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .win-btn:hover {
+      background: rgba(51, 65, 85, 0.9);
+      color: #f8fafc;
+    }
+    .win-btn-close:hover {
+      background: #dc2626 !important;
+      border-color: #ef4444 !important;
+      color: #ffffff !important;
+    }
+
+    .window-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 12px;
+    }
+
+    /* Resize Grip */
+    .window-resizer {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 14px;
+      height: 14px;
+      cursor: se-resize;
+      background: linear-gradient(135deg, transparent 50%, rgba(148, 163, 184, 0.3) 50%, rgba(148, 163, 184, 0.3) 70%, transparent 70%, transparent 85%, rgba(148, 163, 184, 0.3) 85%);
+      z-index: 10;
+    }
+
+    /* Range input styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #1e293b;
+      height: 5px;
+      border-radius: 3px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #00f0ff;
+      cursor: pointer;
+      box-shadow: 0 0 8px #00f0ff;
+      border: 2px solid #050b14;
+    }
+
+    /* Dock styling */
+    #bottomDock {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 40;
+      background: rgba(9, 14, 26, 0.92);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(30, 41, 59, 0.9);
+      border-radius: 12px;
+      padding: 6px 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dock-item {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      color: #94a3b8;
+      font-size: 10px;
+      font-family: 'Segoe UI Semibold', sans-serif;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .dock-item:hover {
+      background: rgba(30, 41, 59, 0.95);
+      border-color: #00f0ff;
+      color: #ffffff;
+      transform: translateY(-2px);
+    }
+    .dock-indicator {
+      position: absolute;
+      bottom: 2px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #00f0ff;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .dock-item.dock-open .dock-indicator {
+      opacity: 1;
+      background: #00f59b;
+    }
+    .dock-item.dock-minimized .dock-indicator {
+      opacity: 1;
+      background: #ffb703;
+    }
+  </style>
+</head>
+<body class="bg-[#050b14] text-slate-100 select-none">
+
+  <!-- ========================================================
+       1. FULLSCREEN MAP CANVAS (MAIN DISPLAY)
+       ======================================================== -->
+  <div id="map" class="absolute inset-0 w-full h-full z-0 overflow-hidden bg-slate-950"></div>
+
+  <!-- FLOATING MAP CONTROLS OVERLAY -->
+  <div class="absolute top-16 left-4 z-20 flex flex-col gap-2 pointer-events-auto">
+    <!-- Unified Layer Switcher: Base Layers + Overlays -->
+    <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1.5 flex items-center gap-1.5 shadow-xl flex-wrap font-mono text-xs select-none">
+      <span class="text-slate-400 text-[10px] px-1 font-bold flex items-center gap-1">
+        <span class="text-emerald-400">❖</span> CAMADA:
+      </span>
+      {/* Camadas Base Exclusivas */}
+      <button onclick="setBaseLayer('satellite')" id="btnLayerSatellite" class="px-2.5 py-1 text-[11px] font-bold rounded bg-emerald-600 text-white shadow transition-all" title="Satélite Híbrido (Esri World Imagery + Labels)">
+        Satélite Híbrido
+      </button>
+      <button onclick="setBaseLayer('streets')" id="btnLayerStreets" class="px-2.5 py-1 text-[11px] rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-all" title="Ruas Claras (World Street Map)">
+        Ruas Claras
+      </button>
+      <button onclick="setBaseLayer('dark')" id="btnLayerDark" class="px-2.5 py-1 text-[11px] rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-all" title="Tático Noturno (Canvas Dark)">
+        Tático Noturno
+      </button>
+      <button onclick="setBaseLayer('topo')" id="btnLayerTopo" class="px-2.5 py-1 text-[11px] rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-all" title="Relevo & Topografia (World Topo)">
+        Relevo & Topografia
+      </button>
+
+      {/* Separador */}
+      <div class="h-4 w-[1px] bg-slate-700 mx-0.5"></div>
+      <span class="text-[9px] text-slate-400 font-bold px-0.5 uppercase tracking-wider">OVERLAYS:</span>
+
+      {/* Overlays Sobrepostos Reativos */}
+      <button onclick="toggleOverlayLayer('firms')" id="btnOverlayFirms" class="px-2.5 py-1 text-[11px] rounded bg-slate-800/90 text-slate-300 border border-slate-700 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1" title="Overlay WMS: Focos térmicos VIIRS 375m da NASA FIRMS">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> NASA FIRMS
+      </button>
+      <button onclick="toggleOverlayLayer('earth3d')" id="btnOverlayEarth3d" class="px-2.5 py-1 text-[11px] rounded bg-slate-800/90 text-slate-300 border border-slate-700 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1" title="Overlay: Textura de relevo / sombreado 3D do Google Earth">
+        <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> Google Earth 3D
+      </button>
+      <button onclick="toggleOverlayLayer('bdqueimadas')" id="btnOverlayBdqueimadas" class="px-2.5 py-1 text-[11px] rounded bg-slate-800/90 text-slate-300 border border-slate-700 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1" title="Overlay WMS: Focos 24h INPE BDQueimadas">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> INPE BDQueimadas
+      </button>
+    </div>
+
+    <!-- Google Earth 3D Tactical Controls Sub-bar -->
+    <div id="earth3dSubbar" class="hidden bg-sky-950/90 backdrop-blur-md border border-sky-600/70 rounded-lg p-1.5 flex items-center gap-2 shadow-xl animate-fade-in font-mono text-xs">
+      <span class="text-sky-300 font-bold flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span> GOOGLE EARTH 3D:
+      </span>
+      <button onclick="toggle3DTilt()" id="btn3DTilt" class="px-2 py-0.5 rounded bg-sky-900/80 hover:bg-sky-800 text-sky-200 border border-sky-500/60 flex items-center gap-1 transition-all" title="Alternar Inclinação 3D Orbital">
+        <span id="tiltIcon">📐</span> <span id="tiltText">Inclinar 3D (28°)</span>
+      </button>
+      <button onclick="openCurrentInGoogleEarthWeb()" class="px-2 py-0.5 rounded bg-sky-900/80 hover:bg-sky-800 text-sky-200 border border-sky-500/60 flex items-center gap-1 transition-all" title="Abrir esta área no Google Earth 3D Web">
+        <span>↗ Abrir no Google Earth</span>
+      </button>
+      <button onclick="WindowManager.open('win-googleearth')" class="px-2 py-0.5 rounded bg-sky-900/80 hover:bg-sky-800 text-sky-200 border border-sky-500/60 flex items-center gap-1 transition-all" title="Abrir painel orbital">
+        <span>🌐 Painel 3D</span>
+      </button>
+    </div>
+
+    <!-- Quick Area Draw Palette on Map -->
+    <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1.5 flex items-center gap-1 shadow-xl">
+      <span class="text-[10px] font-mono text-slate-400 px-1 font-bold">SELEÇÃO:</span>
+      <button onclick="activateDrawRectangle()" id="btnDrawBbox" class="px-2.5 py-1 text-xs font-mono font-bold rounded bg-slate-800 hover:bg-red-950/80 text-red-300 border border-red-800/80 flex items-center gap-1" title="Desenhar Bounding Box Retangular">
+        <span>📐 Bounding Box</span>
+      </button>
+      <button onclick="activateDrawPolygon()" id="btnDrawPoly" class="px-2.5 py-1 text-xs font-mono font-bold rounded bg-slate-800 hover:bg-amber-950/80 text-amber-300 border border-amber-800/80 flex items-center gap-1" title="Desenhar Polígono Livre">
+        <span>⬡ Polígono</span>
+      </button>
+      <button onclick="clearAreaSelection()" id="btnClearDraw" class="px-2 py-1 text-xs font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1" title="Limpar delimitação">
+        <span>✕ Limpar</span>
+      </button>
+    </div>
+
+    <!-- Live Area Metrics Banner (Visible when area is selected) -->
+    <div id="mapAreaBanner" class="hidden bg-slate-900/95 backdrop-blur-md border border-red-500/80 rounded-lg p-2.5 shadow-2xl max-w-xs animate-fade-in">
+      <div class="flex items-center justify-between text-xs font-mono font-bold text-red-400 mb-1 border-b border-red-900/50 pb-1">
+        <span>📍 ÁREA DELIMITADA ATIVA</span>
+        <span id="bannerAreaSqKm" class="text-white text-sm">0.00 km²</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1 text-[11px] font-mono text-slate-300 mb-2">
+        <div>Hectares: <span id="bannerAreaHa" class="text-amber-400 font-bold">0.00 ha</span></div>
+        <div>Metros²: <span id="bannerAreaM2" class="text-cyan-400 font-bold">0 m²</span></div>
+        <div class="col-span-2 text-[10px] text-slate-400 truncate">Centro: <span id="bannerCenter" class="text-slate-200">--</span></div>
+      </div>
+      <div class="flex gap-1.5">
+        <button onclick="sendWhatsAppFireAlertFromSelection()" class="flex-1 px-2 py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-mono font-bold text-xs rounded shadow flex items-center justify-center gap-1">
+          <span>📲 ALERTA WHATSAPP</span>
+        </button>
+        <button onclick="focusOnSelection()" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono rounded">
+          <span>🎯 Focar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       TOP HEADER / TACTICAL HUD STATUS BAR
+       ======================================================== -->
+  <header class="absolute top-0 left-0 right-0 z-30 h-12 bg-[#090e1a]/90 backdrop-blur-md border-b border-slate-800/90 px-4 flex items-center justify-between pointer-events-auto">
+    <!-- Brand / CBMAM CIOPS -->
+    <div class="flex items-center space-x-3">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/60 shadow-[0_0_12px_rgba(255,30,39,0.3)]">
+        <span class="text-red-500 text-base">🔥</span>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="font-tactical font-bold text-sm tracking-wider text-white">AMAZÔNIA FIRE-WATCH AI</span>
+          <span class="px-1.5 py-0.2 text-[9px] font-mono font-semibold bg-red-950 text-red-400 border border-red-800 rounded">v5.2 REACT-ENGINE</span>
+        </div>
+        <div class="text-[10px] font-mono text-slate-400 flex items-center space-x-1.5">
+          <span class="text-amber-400 font-semibold">CBMAM</span>
+          <span>•</span>
+          <span class="text-cyan-400 font-semibold">CIOPS</span>
+          <span>•</span>
+          <span class="text-slate-300">Análise Tempo-Área (ΔA/Δt)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scenario Quick Selectors in Header -->
+    <div class="hidden md:flex items-center space-x-1.5 bg-slate-900/90 border border-slate-800 rounded-lg p-1">
+      <span class="text-[10px] font-mono text-slate-400 px-1 font-bold">CENÁRIO:</span>
+      <button id="btnScenStable" onclick="loadScenario('stable')" class="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 transition-all flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 1: Estável (0.00 m²/min)
+      </button>
+      <button id="btnScenRapid" onclick="loadScenario('rapid')" class="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span> 2: Rápido (+1.80 m²/min)
+      </button>
+      <button id="btnScenWind" onclick="loadScenario('vegetation')" class="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span> 3: Vento (+3.20 m²/min)
+      </button>
+    </div>
+
+    <!-- Telemetry Badges & Audio Switch -->
+    <div class="flex items-center space-x-3 text-xs font-mono">
+      <div class="hidden lg:flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-2.5 py-1 rounded">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-400">SATÉLITES:</span>
+        <span class="text-emerald-400 font-bold">ESRI / VIIRS 375m</span>
+      </div>
+
+      <div class="hidden sm:flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-2.5 py-1 rounded">
+        <span class="text-slate-400">MANAUS:</span>
+        <span id="headerClock" class="text-amber-300 font-bold">--:--:-- UTC-4</span>
+      </div>
+
+      <!-- Audio Button -->
+      <button id="btnAudioToggle" onclick="toggleAudio()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-mono flex items-center gap-1" title="Ligar/Desligar Áudio">
+        <span id="audioIcon">🔊</span> <span id="audioText" class="hidden sm:inline">SOM ATIVO</span>
+      </button>
+
+      <!-- Reset Windows Button -->
+      <button onclick="WindowManager.resetLayout()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-mono" title="Restaurar Layout">
+        <span>🔄 Layout</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================
+       FLOATING WINDOW 1: TELEMETRIA & ELASTICIDADE (ΔA/Δt)
+       ======================================================== -->
+  <div id="win-telemetry" class="tactical-window" style="top: 60px; left: 16px; width: 360px; height: 520px; z-index: 100;">
+    <div class="window-titlebar" onmousedown="WindowManager.dragStart(event, 'win-telemetry')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-400">
+        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>TELEMETRIA & ELASTICIDADE (ΔA/Δt)</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button class="win-btn" onclick="WindowManager.minimize('win-telemetry')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-telemetry')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-telemetry')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body space-y-3">
+      <!-- Diagnostic Card -->
+      <div id="diagnosticCard" class="bg-slate-900/90 rounded-lg p-3 border border-emerald-500/50 transition-all">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-mono font-bold text-slate-400">CLASSIFICAÇÃO CBMAM / CIOPS:</span>
+          <span id="diagBadgeConfidence" class="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 rounded">CONF: 99.4%</span>
+        </div>
+        <div id="diagClassification" class="font-tactical font-bold text-base text-emerald-400 mt-1">FOCO ESTÁVEL / CONFINADO</div>
+        <div id="diagSubtitle" class="text-xs font-mono text-slate-300 mt-0.5">Variação mínima em 5 min • Queima confinada</div>
+
+        <div class="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-slate-800 text-xs font-mono">
+          <div>
+            <div class="text-[10px] text-slate-400">ÁREA ATUAL:</div>
+            <div id="diagAreaCurrent" class="text-base font-bold text-emerald-400">2.00 m²</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">TAXA (ΔA/Δt):</div>
+            <div id="diagRateCurrent" class="text-base font-bold text-emerald-400">0.00 m²/min</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">TEMPO OBSERVAÇÃO:</div>
+            <div id="diagObsTime" class="text-xs font-bold text-slate-200">05m 00s</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">MULTIPLICADOR:</div>
+            <div id="diagMultiplier" class="text-xs font-bold text-emerald-400">1.0x (Estável)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Projections 10x - 15x Table -->
+      <div class="bg-slate-900/70 rounded-lg p-2.5 border border-slate-800">
+        <div class="text-[11px] font-mono font-bold text-amber-400 mb-1 flex items-center justify-between">
+          <span>PROJEÇÃO PREDITIVA DE EXPANSÃO:</span>
+          <span class="text-[9px] text-slate-400 font-normal">MODELO CINÉTICO</span>
+        </div>
+        <table class="w-full text-left font-mono text-[11px]">
+          <thead>
+            <tr class="text-slate-400 border-b border-slate-800">
+              <th class="pb-1">Área Alvo</th>
+              <th class="pb-1">Multiplicador</th>
+              <th class="pb-1 text-right">Tempo Estimado (ETA)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 text-slate-200">
+            <tr>
+              <td class="py-1">5.0 m²</td>
+              <td class="py-1 text-yellow-400">2.5x</td>
+              <td id="eta5m" class="py-1 text-right font-bold text-emerald-400">N/A (Estável)</td>
+            </tr>
+            <tr>
+              <td class="py-1">10.0 m²</td>
+              <td class="py-1 text-orange-400">5.0x</td>
+              <td id="eta10m" class="py-1 text-right font-bold text-emerald-400">N/A (Estável)</td>
+            </tr>
+            <tr>
+              <td class="py-1">20.0 m²</td>
+              <td class="py-1 text-red-400">10.0x</td>
+              <td id="eta20m" class="py-1 text-right font-bold text-emerald-400">N/A (Estável)</td>
+            </tr>
+            <tr>
+              <td class="py-1">30.0 m²</td>
+              <td class="py-1 text-purple-400">15.0x</td>
+              <td id="eta30m" class="py-1 text-right font-bold text-emerald-400">N/A (Estável)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Infrastructure Threats ETA -->
+      <div class="bg-slate-900/70 rounded-lg p-2.5 border border-slate-800 space-y-2">
+        <div class="text-[11px] font-mono font-bold text-red-400 flex items-center justify-between">
+          <span>ALVOS CRÍTICOS EM RAIO DIRETO:</span>
+          <span class="text-[9px] text-slate-400">RADAR URBANO</span>
+        </div>
+        <div class="flex items-center justify-between text-xs font-mono bg-slate-950/60 p-1.5 rounded border border-slate-800">
+          <span class="text-slate-300">⚡ Fiação Elétrica (8m):</span>
+          <span id="etaWireText" class="text-emerald-400 font-bold">SEM RISCO (SEGURO)</span>
+        </div>
+        <div class="flex items-center justify-between text-xs font-mono bg-slate-950/60 p-1.5 rounded border border-slate-800">
+          <span class="text-slate-300">🏠 Casas Vizinhas (14m):</span>
+          <span id="etaHousesText" class="text-emerald-400 font-bold">SEM RISCO (SEGURO)</span>
+        </div>
+      </div>
+
+      <!-- Environmental Sliders -->
+      <div class="bg-slate-900/70 rounded-lg p-2.5 border border-slate-800 space-y-2 text-xs font-mono">
+        <div>
+          <div class="flex justify-between text-slate-400 mb-1">
+            <span>VELOCIDADE DO VENTO:</span>
+            <span id="windValLabel" class="text-cyan-400 font-bold">5 km/h</span>
+          </div>
+          <input type="range" id="sliderWind" min="0" max="45" value="5" class="w-full" oninput="onWindSliderChange(this.value)">
+        </div>
+        <div>
+          <div class="flex justify-between text-slate-400 mb-1">
+            <span>TIPO DE COMBUSTÍVEL:</span>
+          </div>
+          <select id="selectFuel" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono" onchange="onFuelSelectChange(this.value)">
+            <option value="confinado">Carvão Confinado / Churrasqueira (Baixa Taxa)</option>
+            <option value="madeira">Madeira e Móveis de Quintal (Taxa Média)</option>
+            <option value="vegetacao">Capim Seco e Resíduos Vegetais (Alta Taxa)</option>
+            <option value="quimico">Líquidos Inflamáveis / Plásticos (Taxa Crítica)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-telemetry')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 2: CÂMERA DE RUA & FÍSICA DO FOGO
+       ======================================================== -->
+  <div id="win-streetview" class="tactical-window" style="top: 60px; right: 16px; width: 440px; height: 500px; z-index: 101;">
+    <div class="window-titlebar" onmousedown="WindowManager.dragStart(event, 'win-streetview')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-amber-300">
+        <span class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span>TRANSMISSÃO DE RUA (FÍSICA DO FOGO)</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button class="win-btn" onclick="WindowManager.minimize('win-streetview')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-streetview')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-streetview')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body p-2 flex flex-col space-y-2">
+      <!-- Street Feed Mode Bar -->
+      <div class="flex items-center justify-between bg-slate-950 px-2 py-1 rounded border border-slate-800 text-[11px] font-mono">
+        <div class="flex items-center gap-1.5">
+          <button onclick="setStreetVisionMode('rgb')" id="btnVisionRgb" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">Óptico RGB</button>
+          <button onclick="setStreetVisionMode('flir')" id="btnVisionFlir" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700">FLIR Térmico</button>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-slate-400">FPS:</span>
+          <span class="text-emerald-400 font-bold" id="streetFps">60</span>
+        </div>
+      </div>
+
+      <!-- Canvas Feed Container -->
+      <div class="relative w-full flex-1 bg-black rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center min-h-[260px]">
+        <canvas id="streetCanvas" class="w-full h-full block"></canvas>
+
+        <!-- AI Bounding Box & Physics Overlay -->
+        <div id="aiBoundingBox" class="absolute pointer-events-none transition-all duration-300 border-2 rounded p-1 flex flex-col justify-between font-mono" style="width: 140px; height: 110px; top: 48%; left: 34%; border-color: rgba(0, 245, 155, 0.85); background: rgba(0, 245, 155, 0.05);">
+          <div class="flex items-center justify-between text-[10px]">
+            <span id="bbHeader" class="bg-emerald-950 text-emerald-300 px-1 py-0.2 rounded font-bold">IA: ESTÁVEL</span>
+            <span id="bbTemp" class="text-emerald-300">185°C</span>
+          </div>
+          <div class="text-[10px] space-y-0.5">
+            <div id="bbArea" class="text-white font-bold">Área: 2.0 m²</div>
+            <div id="bbRisk" class="text-emerald-400 text-[9px]">Taxa: 0.00 m²/min</div>
+          </div>
+        </div>
+
+        <!-- Camera HUD Watermark -->
+        <div class="absolute top-2 left-2 pointer-events-none text-[10px] font-mono text-slate-300 bg-black/60 px-1.5 py-0.5 rounded border border-slate-700">
+          CAM-MN-042 • RUA DAS LARANJEIRAS, FLORES
+        </div>
+      </div>
+
+      <!-- Fast Action Controls -->
+      <div class="grid grid-cols-2 gap-2 font-mono text-xs">
+        <button onclick="triggerRapidJump()" class="px-2.5 py-1.5 bg-red-950/80 hover:bg-red-900 border border-red-700 text-red-200 rounded font-bold flex items-center justify-center gap-1 transition-all">
+          <span>⚡ Provocar Salto Térmico</span>
+        </button>
+        <button onclick="triggerQuickContainment()" class="px-2.5 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-200 rounded font-bold flex items-center justify-center gap-1 transition-all">
+          <span>🛡️ Simular Contenção</span>
+        </button>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-streetview')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 3: GRÁFICO DINÂMICO TEMPO-ÁREA
+       ======================================================== -->
+  <div id="win-chart" class="tactical-window" style="top: 360px; left: 390px; width: 480px; height: 320px; z-index: 95;">
+    <div class="window-titlebar" onmousedown="WindowManager.dragStart(event, 'win-chart')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-cyan-300">
+        <span class="h-2 w-2 rounded-full bg-cyan-400"></span>
+        <span>GRÁFICO TEMPO-ÁREA (ΔA/Δt) • CHART.JS</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button class="win-btn" onclick="WindowManager.minimize('win-chart')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-chart')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-chart')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body p-2 flex flex-col">
+      <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-1 px-1">
+        <div>Evolução da Área vs Limiar Estável</div>
+        <div class="text-cyan-400 font-bold" id="chartSlopeLabel">Inclinação: 0.00 m²/min</div>
+      </div>
+      <div class="flex-1 w-full min-h-[220px]">
+        <canvas id="timeAreaChart"></canvas>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-chart')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 4: DELIMITAÇÃO DE ÁREA & GEODÉSICA
+       ======================================================== -->
+  <div id="win-areaselect" class="tactical-window window-minimized" style="top: 140px; left: 390px; width: 420px; height: 380px; z-index: 102;">
+    <div class="window-titlebar" onmousedown="WindowManager.dragStart(event, 'win-areaselect')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-red-400">
+        <span class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span>DELIMITAÇÃO DE ÁREA DE RISCO</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button class="win-btn" onclick="WindowManager.minimize('win-areaselect')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-areaselect')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-areaselect')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body space-y-3 font-mono text-xs">
+      <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800">
+        <div class="text-[11px] font-bold text-slate-300 mb-1.5">MODOS DE SELEÇÃO NO TELÃO:</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="activateDrawRectangle()" class="p-2 bg-red-950/70 hover:bg-red-900 border border-red-700/80 rounded text-red-200 font-bold flex flex-col items-center text-center">
+            <span class="text-base mb-0.5">📐</span>
+            <span>Bounding Box</span>
+            <span class="text-[9px] text-red-300/80 font-normal">Arrastar retângulo</span>
+          </button>
+          <button onclick="activateDrawPolygon()" class="p-2 bg-amber-950/70 hover:bg-amber-900 border border-amber-700/80 rounded text-amber-200 font-bold flex flex-col items-center text-center">
+            <span class="text-base mb-0.5">⬡</span>
+            <span>Polígono Livre</span>
+            <span class="text-[9px] text-amber-300/80 font-normal">Marcar vértices</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Geodesic Results Card -->
+      <div class="bg-slate-900/90 p-3 rounded border border-slate-700 space-y-2">
+        <div class="text-xs font-bold text-cyan-400 border-b border-slate-800 pb-1">CÁLCULO GEODÉSICO DE IMPACTO:</div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <span class="text-slate-400 text-[10px]">ÁREA EM KM²:</span>
+            <div id="areaCalcSqKm" class="text-base font-bold text-white">0.00 km²</div>
+          </div>
+          <div>
+            <span class="text-slate-400 text-[10px]">HECTARES:</span>
+            <div id="areaCalcHa" class="text-base font-bold text-amber-400">0.00 ha</div>
+          </div>
+          <div>
+            <span class="text-slate-400 text-[10px]">ÁREA EM M²:</span>
+            <div id="areaCalcM2" class="text-xs font-bold text-cyan-300">0 m²</div>
+          </div>
+          <div>
+            <span class="text-slate-400 text-[10px]">SEVERIDADE:</span>
+            <div id="areaCalcRisk" class="text-xs font-bold text-red-400">CRÍTICA</div>
+          </div>
+        </div>
+        <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800 truncate">
+          Vértice Central: <span id="areaCalcCenter" class="text-slate-200">-3.08920, -60.02170</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="space-y-1.5">
+        <button onclick="sendWhatsAppFireAlertFromSelection()" class="w-full py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow flex items-center justify-center gap-1.5 text-xs">
+          <span>📲 DISPARAR ALERTA WHATSAPP (+55 92 99146-3640)</span>
+        </button>
+        <button onclick="clearAreaSelection()" class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs">
+          <span>Limpar Delimitação Atual</span>
+        </button>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-areaselect')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 5: ALERTA WHATSAPP (+55 92 99146-3640)
+       ======================================================== -->
+  <div id="win-whatsapp" class="tactical-window window-minimized" style="top: 100px; left: calc(50% - 220px); width: 440px; height: 530px; z-index: 105;">
+    <div class="window-titlebar bg-gradient-to-r from-emerald-950 to-slate-900" onmousedown="WindowManager.dragStart(event, 'win-whatsapp')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-300">
+        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>CENTRAL DE DESPACHO WHATSAPP • CBMAM / CIOPS</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button class="win-btn" onclick="WindowManager.minimize('win-whatsapp')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-whatsapp')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-whatsapp')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body space-y-3 font-mono text-xs">
+      <!-- Target Config & Auto Trigger Switch -->
+      <div class="bg-slate-900/90 p-2.5 rounded border border-emerald-500/40 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-300 font-bold">DESTINO OFICIAL:</span>
+          <span class="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold rounded">+55 92 99146-3640</span>
+        </div>
+        <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+          <div>
+            <div class="font-bold text-slate-200">DESPACHO AUTOMÁTICO:</div>
+            <div class="text-[10px] text-slate-400">Disparar ao delimitar área ou salto ΔA/Δt ≥ +1.80 m²/min</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="chkAutoDispatch" class="sr-only peer" onchange="toggleAutoDispatch(this.checked)">
+            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Message Preview Box -->
+      <div class="bg-slate-950 p-2.5 rounded border border-slate-800 space-y-1">
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <span>PRÉ-VISUALIZAÇÃO DA MENSAGEM:</span>
+          <button onclick="copyAlertMessage()" class="text-cyan-400 hover:text-cyan-300 underline text-[10px]">Copiar Texto</button>
+        </div>
+        <textarea id="txtAlertPreview" rows="8" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-slate-200 text-[11px] font-mono leading-relaxed resize-none focus:outline-none focus:border-emerald-500"></textarea>
+      </div>
+
+      <!-- Dispatch Button -->
+      <button onclick="executeWhatsAppDispatch()" class="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow-[0_0_15px_rgba(0,245,155,0.3)] flex items-center justify-center gap-2 text-sm transition-all">
+        <span>📲 ENVIAR AGORA PARA +55 92 99146-3640</span>
+      </button>
+
+      <!-- Dispatch History Log -->
+      <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+        <div class="text-[10px] text-slate-400 font-bold mb-1">HISTÓRICO RECENTE DE TRANSMISSÕES:</div>
+        <div id="dispatchHistoryList" class="max-h-24 overflow-y-auto space-y-1 text-[10px] text-slate-300">
+          <div class="p-1 bg-slate-950 rounded flex justify-between">
+            <span>Hoje 14:50 - Nível 4 Crítico</span>
+            <span class="text-emerald-400 font-bold">Despachado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-whatsapp')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 6: GOOGLE EARTH 3D & ORBITAL
+       ======================================================== -->
+  <div id="win-googleearth" class="tactical-window window-minimized" style="top: 80px; left: 80px; width: 640px; height: 500px; z-index: 104;">
+    <div class="window-titlebar bg-gradient-to-r from-sky-950 to-slate-900" onmousedown="WindowManager.dragStart(event, 'win-googleearth')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-sky-400">
+        <span class="h-2 w-2 rounded-full bg-sky-500 animate-pulse"></span>
+        <span>GOOGLE EARTH 3D • RECONHECIMENTO ORBITAL</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button id="btnOpenEarthWebWindow" onclick="openCurrentInGoogleEarthWeb()" title="Abrir no Google Earth Web 3D" class="win-btn">
+          <span>↗</span>
+        </button>
+        <button class="win-btn" onclick="WindowManager.minimize('win-googleearth')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-googleearth')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-googleearth')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body p-3 flex flex-col space-y-3 font-mono text-xs">
+      <div class="bg-sky-950/40 p-2 rounded border border-sky-800/60 flex items-center justify-between text-[11px]">
+        <div>
+          <span class="text-slate-400">COORDENADA:</span>
+          <span class="text-sky-300 font-bold" id="earth3dCoordLabel">-4.96610812, -65.18093201</span>
+          <span class="text-slate-400 ml-2" id="earth3dLocName">CALHA DO SOLIMÕES (TEFÉ/COARI)</span>
+        </div>
+        <span class="text-amber-400 font-bold" id="earth3dAltLabel">ALTITUDE: 313.295m</span>
+      </div>
+
+      <!-- Tactical 3D Simulation Canvas -->
+      <div class="flex-1 bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden flex flex-col items-center justify-center min-h-[280px]">
+        <canvas id="earth3dCanvas" class="w-full h-full block"></canvas>
+        <div class="absolute bottom-2 left-2 text-[10px] text-sky-400 bg-black/70 px-2 py-1 rounded border border-sky-800/50">
+          PROJEÇÃO TOPOGRÁFICA 3D • ELEVAÇÃO: 111.7m • VISÃO NADIR: 355.3°
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 text-center text-[11px]">
+        <div class="bg-slate-900 p-2 rounded border border-slate-800">
+          <div class="text-slate-400 text-[10px]">SENSOR ÓPTICO</div>
+          <div class="text-cyan-300 font-bold">Copernicus Sentinel-2</div>
+        </div>
+        <div class="bg-slate-900 p-2 rounded border border-slate-800">
+          <div class="text-slate-400 text-[10px]">RESOLUÇÃO ESPACIAL</div>
+          <div class="text-amber-300 font-bold">10m / pixel</div>
+        </div>
+        <div class="bg-slate-900 p-2 rounded border border-slate-800">
+          <div class="text-slate-400 text-[10px]">FATOR DE NUVENS</div>
+          <div class="text-emerald-300 font-bold">8.4% (Visível)</div>
+        </div>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-googleearth')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 7: NASA FIRMS & VIIRS 375M (COM IFRAME SANDBOX)
+       ======================================================== -->
+  <div id="win-firms" class="tactical-window window-minimized" style="top: 100px; right: 80px; width: 620px; height: 480px; z-index: 103;">
+    <div class="window-titlebar bg-gradient-to-r from-amber-950 to-slate-900" onmousedown="WindowManager.dragStart(event, 'win-firms')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-amber-400">
+        <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span>NASA FIRMS • SENSOR VIIRS 375M & MODIS</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button onclick="window.open('https://zoom.earth/maps/satellite/#view=-5.790675,-66.643552,11z/overlays=heat,fires', '_blank')" title="Abrir em nova aba" class="win-btn">
+          <span>↗</span>
+        </button>
+        <button class="win-btn" onclick="WindowManager.minimize('win-firms')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-firms')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-firms')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body p-3 space-y-3 font-mono text-xs">
+      <div class="bg-amber-950/30 p-2.5 rounded border border-amber-800/60 flex items-center justify-between">
+        <div>
+          <span class="text-slate-400">COORDENADA VIIRS:</span>
+          <span class="text-amber-300 font-bold">-5.790675, -66.643552</span>
+          <div class="text-[10px] text-slate-400 mt-0.5">Potência Radiativa (FRP): 42.6 MW • Temp Brilho TI4: 348.5 K</div>
+        </div>
+        <button onclick="centerMapOnCoords(-5.790675, -66.643552)" class="px-2.5 py-1 bg-amber-700 hover:bg-amber-600 text-white rounded text-[11px] font-bold">
+          Focar no Telão
+        </button>
+      </div>
+
+      <!-- Real-Time Telemetry Table -->
+      <div class="bg-slate-900/80 rounded border border-slate-800 overflow-hidden">
+        <table class="w-full text-left text-[11px]">
+          <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="p-2">Satélite</th>
+              <th class="p-2">Hora Passagem</th>
+              <th class="p-2">Confiança</th>
+              <th class="p-2">FRP</th>
+              <th class="p-2 text-right">Ação</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800 text-slate-200">
+            <tr>
+              <td class="p-2 font-bold text-red-400">NOAA-20 (VIIRS)</td>
+              <td class="p-2">17:30 UTC</td>
+              <td class="p-2 text-emerald-400 font-bold">Nominal (95%)</td>
+              <td class="p-2">42.6 MW</td>
+              <td class="p-2 text-right">
+                <button onclick="centerMapOnCoords(-5.790675, -66.643552)" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[10px]">Focar</button>
+              </td>
+            </tr>
+            <tr>
+              <td class="p-2 font-bold text-amber-400">Suomi-NPP</td>
+              <td class="p-2">13:15 UTC</td>
+              <td class="p-2 text-emerald-400 font-bold">Alta (98%)</td>
+              <td class="p-2">38.2 MW</td>
+              <td class="p-2 text-right">
+                <button onclick="centerMapOnCoords(-5.790675, -66.643552)" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[10px]">Focar</button>
+              </td>
+            </tr>
+            <tr>
+              <td class="p-2 font-bold text-purple-400">Terra (MODIS)</td>
+              <td class="p-2">10:45 UTC</td>
+              <td class="p-2 text-yellow-400 font-bold">Média (72%)</td>
+              <td class="p-2">29.1 MW</td>
+              <td class="p-2 text-right">
+                <button onclick="centerMapOnCoords(-5.790675, -66.643552)" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[10px]">Focar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sandboxed Embedded Reconnaissance Viewer -->
+      <div class="h-44 w-full bg-slate-950 rounded border border-slate-800 overflow-hidden relative">
+        <iframe
+          src="https://zoom.earth/maps/satellite/#view=-5.790675,-66.643552,11z/overlays=heat,fires"
+          title="NASA FIRMS Zoom Earth"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          class="w-full h-full border-0"
+          loading="lazy"
+        ></iframe>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-firms')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 8: INPE / BDQUEIMADAS
+       ======================================================== -->
+  <div id="win-bdqueimadas" class="tactical-window window-minimized" style="top: 120px; left: 160px; width: 520px; height: 440px; z-index: 102;">
+    <div class="window-titlebar bg-gradient-to-r from-red-950 to-slate-900" onmousedown="WindowManager.dragStart(event, 'win-bdqueimadas')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-red-400">
+        <span class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span>INPE • PROGRAMA BDQUEIMADAS (AMAZÔNIA)</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button onclick="window.open('https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/', '_blank')" title="Abrir em nova aba" class="win-btn">
+          <span>↗</span>
+        </button>
+        <button class="win-btn" onclick="WindowManager.minimize('win-bdqueimadas')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-bdqueimadas')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-bdqueimadas')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body p-3 space-y-3 font-mono text-xs">
+      <div class="grid grid-cols-2 gap-2 text-center">
+        <div class="bg-slate-900 p-2 rounded border border-slate-800">
+          <div class="text-[10px] text-slate-400">FOCOS DETECTADOS (24H AM)</div>
+          <div class="text-lg font-bold text-red-400">184 Focos</div>
+        </div>
+        <div class="bg-slate-900 p-2 rounded border border-slate-800">
+          <div class="text-[10px] text-slate-400">ÍNDICE DE RISCO METEOROLÓGICO</div>
+          <div class="text-lg font-bold text-amber-400">CRÍTICO (0.88)</div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/80 rounded border border-slate-800 p-2.5">
+        <div class="text-[11px] font-bold text-slate-300 mb-2">MUNICÍPIOS COM MAIOR CONCENTRAÇÃO:</div>
+        <div class="space-y-1.5 text-[11px]">
+          <div class="flex items-center justify-between">
+            <span>1. Lábrea / Sul do Amazonas</span>
+            <span class="text-red-400 font-bold">48 focos</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded"><div class="bg-red-500 h-1.5 rounded" style="width: 85%"></div></div>
+
+          <div class="flex items-center justify-between">
+            <span>2. Apuí / Rodovia Transamazônica</span>
+            <span class="text-orange-400 font-bold">36 focos</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded"><div class="bg-orange-500 h-1.5 rounded" style="width: 65%"></div></div>
+
+          <div class="flex items-center justify-between">
+            <span>3. Região Metropolitana de Manaus</span>
+            <span class="text-amber-400 font-bold">14 focos</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded"><div class="bg-amber-400 h-1.5 rounded" style="width: 32%"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-bdqueimadas')"></div>
+  </div>
+
+  <!-- ========================================================
+       FLOATING WINDOW 9: DOSSIÊ FORENSE PERICIAL (LEI 9.605/98)
+       ======================================================== -->
+  <div id="win-forensics" class="tactical-window window-minimized" style="top: 140px; left: 240px; width: 540px; height: 480px; z-index: 101;">
+    <div class="window-titlebar bg-gradient-to-r from-purple-950 to-slate-900" onmousedown="WindowManager.dragStart(event, 'win-forensics')">
+      <div class="flex items-center space-x-2 text-xs font-semibold text-purple-400">
+        <span class="h-2 w-2 rounded-full bg-purple-500 animate-pulse"></span>
+        <span>DOSSIÊ FORENSE DIGITAL • ART. 41 LEI 9.605/98</span>
+      </div>
+      <div class="flex items-center space-x-1.5 text-slate-400">
+        <button class="win-btn" onclick="WindowManager.minimize('win-forensics')" title="Minimizar">_</button>
+        <button class="win-btn" onclick="WindowManager.maximize('win-forensics')" title="Maximizar">□</button>
+        <button class="win-btn win-btn-close" onclick="WindowManager.close('win-forensics')" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="window-body p-3 space-y-3 font-mono text-xs">
+      <div class="bg-purple-950/30 p-2.5 rounded border border-purple-800/60 text-slate-300">
+        <div class="font-bold text-purple-300 mb-1">CADEIA DE CUSTÓDIA PROBATÓRIA DIGITAL</div>
+        <div>Registros de telemetria assinados digitalmente com garantia de não-repúdio perante o Ministério Público e Delegacia Especializada em Crimes Ambientais (DEMA).</div>
+      </div>
+
+      <div class="bg-slate-900/90 p-2.5 rounded border border-slate-800 space-y-1.5">
+        <div class="flex justify-between"><span class="text-slate-400">PROTOCOLO:</span> <span class="text-white font-bold">CBMAM-FW-2026-928174</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">HASH CRIPTOGRÁFICO SHA-256:</span></div>
+        <div class="text-[10px] text-cyan-400 break-all bg-slate-950 p-1.5 rounded border border-slate-800">
+          e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        </div>
+      </div>
+
+      <button onclick="window.print()" class="w-full py-2 bg-purple-900/80 hover:bg-purple-800 text-purple-100 font-bold rounded border border-purple-600 flex items-center justify-center gap-1.5">
+        <span>📄 GERAR LAUDO PERICIAL EM PDF / IMPRESSÃO</span>
+      </button>
+    </div>
+    <div class="window-resizer" onmousedown="WindowManager.resizeStart(event, 'win-forensics')"></div>
+  </div>
+
+  <!-- ========================================================
+       BOTTOM FLOATING DOCK / TASKBAR
+       ======================================================== -->
+  <div id="bottomDock">
+    <div class="dock-item dock-open" id="dock-telemetry" onclick="WindowManager.toggle('win-telemetry')" title="Telemetria e Taxa ΔA/Δt">
+      <span class="text-base">📡</span>
+      <span class="text-[9px]">Telemetria</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item dock-open" id="dock-streetview" onclick="WindowManager.toggle('win-streetview')" title="Câmera de Rua e Física do Fogo">
+      <span class="text-base">🎥</span>
+      <span class="text-[9px]">Câmera Rua</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item dock-open" id="dock-chart" onclick="WindowManager.toggle('win-chart')" title="Gráfico Dinâmico Tempo-Área">
+      <span class="text-base">📈</span>
+      <span class="text-[9px]">Gráfico</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item" id="dock-areaselect" onclick="WindowManager.toggle('win-areaselect')" title="Delimitação de Área e Geodésica">
+      <span class="text-base">📐</span>
+      <span class="text-[9px]">Delimitar Área</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item" id="dock-whatsapp" onclick="WindowManager.toggle('win-whatsapp')" title="Central de Alerta WhatsApp (+55 92 99146-3640)">
+      <span class="text-base text-emerald-400">📲</span>
+      <span class="text-[9px] text-emerald-300 font-bold">WhatsApp</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item" id="dock-googleearth" onclick="WindowManager.toggle('win-googleearth')" title="Google Earth 3D">
+      <span class="text-base">🌐</span>
+      <span class="text-[9px]">Google Earth</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item" id="dock-firms" onclick="WindowManager.toggle('win-firms')" title="NASA FIRMS & VIIRS">
+      <span class="text-base">🛰️</span>
+      <span class="text-[9px]">NASA FIRMS</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item" id="dock-bdqueimadas" onclick="WindowManager.toggle('win-bdqueimadas')" title="INPE BDQueimadas">
+      <span class="text-base">🔥</span>
+      <span class="text-[9px]">INPE Focos</span>
+      <div class="dock-indicator"></div>
+    </div>
+    <div class="dock-item" id="dock-forensics" onclick="WindowManager.toggle('win-forensics')" title="Dossiê Forense Pericial">
+      <span class="text-base">⚖️</span>
+      <span class="text-[9px]">Laudo Pericial</span>
+      <div class="dock-indicator"></div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastNotification" class="fixed bottom-20 right-6 z-50 transition-all duration-300 opacity-0 translate-y-10 pointer-events-none">
+    <div class="bg-slate-900/95 backdrop-blur-md border border-cyan-500/80 text-white px-4 py-2.5 rounded-lg shadow-2xl flex items-center space-x-2.5 text-xs font-mono">
+      <span id="toastIcon" class="text-cyan-400 text-base">ℹ️</span>
+      <span id="toastMessage">Sistema Tático Ativo</span>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       CORE JAVASCRIPT ENGINE
+       ======================================================== -->
+  <script>
+    /* ========================================================
+       STATE MANAGEMENT
+       ======================================================== */
+    const state = {
+      map: null,
+      fireLocation: [-3.089200, -60.021700], // Flores / Manaus
+      zoomEarthLocation: [-5.790675, -66.643552], // Juruá-Solimões / Tefé
+      googleEarthLocation: [-4.96610812, -65.18093201], // Coari-Tefé
+      scenario: 'stable',
+      initialArea: 2.0,
+      currentArea: 2.0,
+      expansionRate: 0.0,
+      windSpeedKmh: 5,
+      fuelType: 'confinado',
+      simTimeSeconds: 300,
+      audioActive: true,
+      autoDispatchWhatsApp: false,
+      whatsappNumber: '5592991463640',
+      visionMode: 'rgb',
+      drawMode: null,
+      drawnItems: null,
+      drawControl: null,
+      drawnBounds: null,
+      drawnAreaSqKm: 0,
+      concentricRings: {},
+      fireMarker: null,
+      chartInstance: null
+    };
+
+    /* ========================================================
+       DESKTOP WINDOW MANAGER
+       ======================================================== */
+    const WindowManager = {
+      topZ: 110,
+      draggedWindow: null,
+      dragOffset: { x: 0, y: 0 },
+      resizedWindow: null,
+      resizeStartDim: { w: 0, h: 0, x: 0, y: 0 },
+
+      bringToFront(winId) {
+        const el = document.getElementById(winId);
+        if (!el) return;
+        this.topZ += 2;
+        el.style.zIndex = this.topZ;
+        document.querySelectorAll('.tactical-window').forEach(w => w.classList.remove('window-active', 'window-active-red'));
+        el.classList.add(state.scenario === 'stable' ? 'window-active' : 'window-active-red');
+      },
+
+      toggle(winId) {
+        const el = document.getElementById(winId);
+        if (!el) return;
+        if (el.classList.contains('window-minimized')) {
+          this.open(winId);
+        } else {
+          this.minimize(winId);
+        }
+      },
+
+      open(winId) {
+        const el = document.getElementById(winId);
+        if (!el) return;
+        el.classList.remove('window-minimized');
+        this.bringToFront(winId);
+        this.updateDockState(winId, 'open');
+        if (winId === 'win-chart' && state.chartInstance) {
+          setTimeout(() => state.chartInstance.resize(), 100);
+        }
+      },
+
+      close(winId) {
+        const el = document.getElementById(winId);
+        if (!el) return;
+        el.classList.add('window-minimized');
+        this.updateDockState(winId, 'closed');
+      },
+
+      minimize(winId) {
+        const el = document.getElementById(winId);
+        if (!el) return;
+        el.classList.add('window-minimized');
+        this.updateDockState(winId, 'minimized');
+      },
+
+      maximize(winId) {
+        const el = document.getElementById(winId);
+        if (!el) return;
+        el.classList.toggle('window-maximized');
+        this.bringToFront(winId);
+        if (winId === 'win-chart' && state.chartInstance) {
+          setTimeout(() => state.chartInstance.resize(), 150);
+        }
+      },
+
+      updateDockState(winId, status) {
+        const dockId = winId.replace('win-', 'dock-');
+        const dockEl = document.getElementById(dockId);
+        if (!dockEl) return;
+        dockEl.classList.remove('dock-open', 'dock-minimized', 'dock-active');
+        if (status === 'open') {
+          dockEl.classList.add('dock-open', 'dock-active');
+        } else if (status === 'minimized') {
+          dockEl.classList.add('dock-minimized');
+        }
+      },
+
+      resetLayout() {
+        const defaultPositions = {
+          'win-telemetry': { top: '60px', left: '16px', width: '360px', height: '520px' },
+          'win-streetview': { top: '60px', left: `${window.innerWidth - 456}px`, width: '440px', height: '500px' },
+          'win-chart': { top: '360px', left: '390px', width: '480px', height: '320px' },
+          'win-areaselect': { top: '140px', left: '390px', width: '420px', height: '380px' },
+          'win-whatsapp': { top: '100px', left: `${Math.max(20, (window.innerWidth - 440) / 2)}px`, width: '440px', height: '530px' }
+        };
+        for (const [id, pos] of Object.entries(defaultPositions)) {
+          const el = document.getElementById(id);
+          if (el) {
+            el.classList.remove('window-maximized');
+            el.style.top = pos.top;
+            el.style.left = pos.left;
+            el.style.width = pos.width;
+            el.style.height = pos.height;
+          }
+        }
+        showToast('Layout das janelas restaurado');
+      },
+
+      dragStart(e, winId) {
+        if (e.target.closest('.window-controls') || e.target.closest('.win-btn')) return;
+        const el = document.getElementById(winId);
+        if (!el || el.classList.contains('window-maximized')) return;
+        this.bringToFront(winId);
+        this.draggedWindow = el;
+        const rect = el.getBoundingClientRect();
+        this.dragOffset.x = e.clientX - rect.left;
+        this.dragOffset.y = e.clientY - rect.top;
+        document.addEventListener('mousemove', this.dragMove);
+        document.addEventListener('mouseup', this.dragEnd);
+        e.preventDefault();
+      },
+
+      dragMove(e) {
+        if (!WindowManager.draggedWindow) return;
+        const el = WindowManager.draggedWindow;
+        let left = e.clientX - WindowManager.dragOffset.x;
+        let top = e.clientY - WindowManager.dragOffset.y;
+        left = Math.max(0, Math.min(window.innerWidth - el.offsetWidth, left));
+        top = Math.max(48, Math.min(window.innerHeight - 80, top));
+        el.style.left = `${left}px`;
+        el.style.top = `${top}px`;
+      },
+
+      dragEnd() {
+        WindowManager.draggedWindow = null;
+        document.removeEventListener('mousemove', WindowManager.dragMove);
+        document.removeEventListener('mouseup', WindowManager.dragEnd);
+      },
+
+      resizeStart(e, winId) {
+        const el = document.getElementById(winId);
+        if (!el) return;
+        this.bringToFront(winId);
+        this.resizedWindow = el;
+        this.resizeStartDim.w = el.offsetWidth;
+        this.resizeStartDim.h = el.offsetHeight;
+        this.resizeStartDim.x = e.clientX;
+        this.resizeStartDim.y = e.clientY;
+        document.addEventListener('mousemove', this.resizeMove);
+        document.addEventListener('mouseup', this.resizeEnd);
+        e.preventDefault();
+      },
+
+      resizeMove(e) {
+        if (!WindowManager.resizedWindow) return;
+        const el = WindowManager.resizedWindow;
+        const dw = e.clientX - WindowManager.resizeStartDim.x;
+        const dh = e.clientY - WindowManager.resizeStartDim.y;
+        const newW = Math.max(320, WindowManager.resizeStartDim.w + dw);
+        const newH = Math.max(200, WindowManager.resizeStartDim.h + dh);
+        el.style.width = `${newW}px`;
+        el.style.height = `${newH}px`;
+      },
+
+      resizeEnd() {
+        if (WindowManager.resizedWindow && WindowManager.resizedWindow.id === 'win-chart' && state.chartInstance) {
+          state.chartInstance.resize();
+        }
+        WindowManager.resizedWindow = null;
+        document.removeEventListener('mousemove', WindowManager.resizeMove);
+        document.removeEventListener('mouseup', WindowManager.resizeEnd);
+      }
+    };
+
+    /* Click listener on windows to bring to front */
+    document.addEventListener('mousedown', (e) => {
+      const win = e.target.closest('.tactical-window');
+      if (win) {
+        WindowManager.bringToFront(win.id);
+      }
+    });
+
+    /* ========================================================
+       2. LEAFLET MAP & TILE PROVIDERS (ZERO 403 FORBIDDEN)
+       ======================================================== */
+    let tileLayers = {};
+    let overlayLayers = {};
+    let activeOverlayState = { firms: false, earth3d: false, bdqueimadas: false };
+
+    function initMap() {
+      if (typeof L === 'undefined') {
+        setTimeout(initMap, 200);
+        return;
+      }
+
+      state.map = L.map('map', {
+        center: [-3.119, -60.021], // Coordenadas Manaus / Amazônia
+        zoom: 12,
+        scrollWheelZoom: true,
+        zoomControl: false,
+        attributionControl: false
+      });
+
+      L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+
+      // Camadas Base Oficiais
+      tileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Satélite Híbrido',
+        maxZoom: 18
+      });
+      tileLayers.satelliteRef = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        zIndex: 2
+      });
+
+      tileLayers.streets = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Ruas Claras',
+        maxZoom: 18
+      });
+
+      tileLayers.dark = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Tático Noturno',
+        maxZoom: 18
+      });
+
+      tileLayers.topo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Relevo & Topografia',
+        maxZoom: 18
+      });
+
+      // Overlays Reativos WMS e 3D
+      overlayLayers.firms = L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi', {
+        layers: 'VIIRS_SNPP_Thermal_Anomalies_375m_All',
+        format: 'image/png',
+        transparent: true,
+        version: '1.3.0',
+        zIndex: 10,
+        opacity: 0.88
+      });
+
+      overlayLayers.earth3d = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        zIndex: 6,
+        opacity: 0.65
+      });
+
+      overlayLayers.bdqueimadas = L.tileLayer.wms('https://terrabrasilis.dpi.inpe.br/geoserver/wms', {
+        layers: 'bdqueimadas:focos_24h',
+        format: 'image/png',
+        transparent: true,
+        version: '1.3.0',
+        zIndex: 11,
+        opacity: 0.88
+      });
+
+      // Base inicial
+      tileLayers.satellite.addTo(state.map);
+      tileLayers.satelliteRef.addTo(state.map);
+
+      setupLeafletDraw();
+      setupMapLayers();
+      setupMapInteractivity();
+      state.map.on('moveend', syncGoogleEarthWindowCoords);
+    }
+
+    let is3DTiltActive = false;
+
+    function toggle3DTilt() {
+      const mapEl = document.getElementById('map');
+      const tiltText = document.getElementById('tiltText');
+      is3DTiltActive = !is3DTiltActive;
+      if (is3DTiltActive) {
+        mapEl.classList.add('map-3d-perspective');
+        if (tiltText) tiltText.textContent = 'Visão Nadir (2D)';
+        showToast('Perspectiva 3D Orbital Ativada (28°)');
+      } else {
+        mapEl.classList.remove('map-3d-perspective');
+        if (tiltText) tiltText.textContent = 'Inclinar 3D (28°)';
+        showToast('Visão Retornada ao Modo Nadir 2D');
+      }
+    }
+
+    function openCurrentInGoogleEarthWeb() {
+      if (!state.map) return;
+      const c = state.map.getCenter();
+      const z = state.map.getZoom();
+      const dist = Math.round(591657550 / Math.pow(2, Math.max(1, z - 1)) / 4);
+      const url = `https://earth.google.com/web/@${c.lat.toFixed(6)},${c.lng.toFixed(6)},150a,${dist}d,35y,0h,45t,0r`;
+      window.open(url, '_blank');
+      showToast('Abrindo Google Earth 3D nas coordenadas ativas...');
+    }
+
+    function syncGoogleEarthWindowCoords() {
+      if (!state.map) return;
+      const c = state.map.getCenter();
+      const z = state.map.getZoom();
+      const dist = Math.round(591657550 / Math.pow(2, Math.max(1, z - 1)) / 4);
+      const elCoord = document.getElementById('earth3dCoordLabel');
+      const elAlt = document.getElementById('earth3dAltLabel');
+      const btnOpenWeb = document.getElementById('btnOpenEarthWebWindow');
+      if (elCoord) elCoord.textContent = `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`;
+      if (elAlt) elAlt.textContent = `ALTITUDE: ${dist.toLocaleString('pt-BR')}m`;
+      if (btnOpenWeb) {
+        btnOpenWeb.onclick = () => window.open(`https://earth.google.com/web/@${c.lat.toFixed(6)},${c.lng.toFixed(6)},150a,${dist}d,35y,0h,45t,0r`, '_blank');
+      }
+    }
+
+    function toggleOverlayLayer(name) {
+      if (!overlayLayers[name] || !state.map) return;
+      activeOverlayState[name] = !activeOverlayState[name];
+      const isNowActive = activeOverlayState[name];
+      const btn = document.getElementById('btnOverlay' + name.charAt(0).toUpperCase() + name.slice(1));
+
+      if (isNowActive) {
+        overlayLayers[name].addTo(state.map);
+        if (btn) {
+          if (name === 'firms') btn.className = 'px-2.5 py-1 text-[11px] rounded bg-amber-600 text-white font-bold border border-amber-400 shadow transition-all flex items-center gap-1';
+          else if (name === 'earth3d') btn.className = 'px-2.5 py-1 text-[11px] rounded bg-sky-600 text-white font-bold border border-sky-400 shadow transition-all flex items-center gap-1';
+          else if (name === 'bdqueimadas') btn.className = 'px-2.5 py-1 text-[11px] rounded bg-red-600 text-white font-bold border border-red-400 shadow transition-all flex items-center gap-1';
+        }
+        showToast('Overlay Ativado: ' + name.toUpperCase());
+      } else {
+        if (state.map.hasLayer(overlayLayers[name])) {
+          state.map.removeLayer(overlayLayers[name]);
+        }
+        if (btn) {
+          btn.className = 'px-2.5 py-1 text-[11px] rounded bg-slate-800/90 text-slate-300 border border-slate-700 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1';
+        }
+        showToast('Overlay Desativado: ' + name.toUpperCase());
+      }
+    }
+
+    function setBaseLayer(type) {
+      // Remove todas as bases anteriores sem desmontar o mapa
+      ['satellite', 'satelliteRef', 'streets', 'dark', 'topo', 'esri', 'google', 'voyager', 'gibs', 'earth3d'].forEach(k => {
+        if (tileLayers[k] && state.map.hasLayer(tileLayers[k])) {
+          state.map.removeLayer(tileLayers[k]);
+        }
+      });
+
+      // Reset botões de base
+      ['Satellite', 'Streets', 'Dark', 'Topo'].forEach(btnName => {
+        const el = document.getElementById('btnLayer' + btnName);
+        if (el) el.className = 'px-2.5 py-1 text-[11px] rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-all';
+      });
+
+      if (type === 'satellite' || type === 'esri') {
+        if (tileLayers.satellite) tileLayers.satellite.addTo(state.map);
+        if (tileLayers.satelliteRef) tileLayers.satelliteRef.addTo(state.map);
+        const btn = document.getElementById('btnLayerSatellite');
+        if (btn) btn.className = 'px-2.5 py-1 text-[11px] font-bold rounded bg-emerald-600 text-white shadow transition-all';
+        showToast('Base: Satélite Híbrido Ativado');
+      } else if (type === 'streets') {
+        if (tileLayers.streets) tileLayers.streets.addTo(state.map);
+        const btn = document.getElementById('btnLayerStreets');
+        if (btn) btn.className = 'px-2.5 py-1 text-[11px] font-bold rounded bg-emerald-600 text-white shadow transition-all';
+        showToast('Base: Ruas Claras Ativado');
+      } else if (type === 'dark') {
+        if (tileLayers.dark) tileLayers.dark.addTo(state.map);
+        const btn = document.getElementById('btnLayerDark');
+        if (btn) btn.className = 'px-2.5 py-1 text-[11px] font-bold rounded bg-emerald-600 text-white shadow transition-all';
+        showToast('Base: Tático Noturno Ativado');
+      } else if (type === 'topo') {
+        if (tileLayers.topo) tileLayers.topo.addTo(state.map);
+        const btn = document.getElementById('btnLayerTopo');
+        if (btn) btn.className = 'px-2.5 py-1 text-[11px] font-bold rounded bg-emerald-600 text-white shadow transition-all';
+        showToast('Base: Relevo & Topografia Ativado');
+      }
+    }
+
+    /* ========================================================
+       3. LEAFLET-DRAW EDITCONTROL & CÁLCULO DE ÁREA EM KM²
+       ======================================================== */
+    function setupLeafletDraw() {
+      state.drawnItems = new L.FeatureGroup();
+      state.map.addLayer(state.drawnItems);
+
+      if (typeof L.Control.Draw !== 'undefined') {
+        state.drawControl = new L.Control.Draw({
+          position: 'topright',
+          draw: {
+            rectangle: {
+              shapeOptions: {
+                color: '#ef4444',
+                fillOpacity: 0.2,
+                weight: 2,
+              },
+            },
+            polygon: {
+              shapeOptions: {
+                color: '#f97316',
+                fillOpacity: 0.25,
+                weight: 2,
+              },
+            },
+            circle: false,
+            circlemarker: false,
+            polyline: false,
+            marker: false,
+          },
+          edit: {
+            featureGroup: state.drawnItems,
+            remove: true,
+          }
+        });
+        state.map.addControl(state.drawControl);
+
+        state.map.on(L.Draw.Event.CREATED, (e) => {
+          const layer = e.layer;
+          state.drawnItems.clearLayers();
+          state.drawnItems.addLayer(layer);
+          handleAreaCreated(layer);
+        });
+      }
+    }
+
+    function handleAreaCreated(layer) {
+      if (layer instanceof L.Rectangle || layer instanceof L.Polygon) {
+        const bounds = layer.getBounds();
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+
+        // Cálculo exato de área em km² conforme fornecido
+        const latDiff = Math.abs(ne.lat - sw.lat) * 111;
+        const lngDiff = Math.abs(ne.lng - sw.lng) * 111 * Math.cos((sw.lat * Math.PI) / 180);
+        const areaSqKm = parseFloat((latDiff * lngDiff).toFixed(2));
+        const center = bounds.getCenter();
+
+        state.drawnBounds = bounds;
+        state.drawnAreaSqKm = areaSqKm;
+        state.fireLocation = [center.lat, center.lng];
+
+        // Atualiza Marcador do Foco
+        if (state.fireMarker) state.fireMarker.setLatLng(state.fireLocation);
+        Object.values(state.concentricRings).forEach(ring => ring.setLatLng(state.fireLocation));
+
+        // Atualiza Banner do Telão
+        const banner = document.getElementById('mapAreaBanner');
+        banner.classList.remove('hidden');
+        document.getElementById('bannerAreaSqKm').textContent = `~${areaSqKm} km²`;
+        document.getElementById('bannerAreaHa').textContent = `${(areaSqKm * 100).toFixed(1)} ha`;
+        document.getElementById('bannerAreaM2').textContent = `${Math.round(areaSqKm * 1000000).toLocaleString('pt-BR')} m²`;
+        document.getElementById('bannerCenter').textContent = `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
+
+        // Atualiza Janela de Medição
+        if (document.getElementById('areaCalcSqKm')) document.getElementById('areaCalcSqKm').textContent = `~${areaSqKm} km²`;
+        if (document.getElementById('areaCalcHa')) document.getElementById('areaCalcHa').textContent = `${(areaSqKm * 100).toFixed(1)} ha`;
+        if (document.getElementById('areaCalcM2')) document.getElementById('areaCalcM2').textContent = `${Math.round(areaSqKm * 1000000).toLocaleString('pt-BR')} m²`;
+        if (document.getElementById('areaCalcCenter')) document.getElementById('areaCalcCenter').textContent = `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
+
+        WindowManager.open('win-areaselect');
+        updateWhatsAppTemplate();
+        showToast(`Área delimitada: ~${areaSqKm} km² (${(areaSqKm * 100).toFixed(1)} ha)`, 'check');
+
+        // Se o despacho automático estiver ligado, envia imediatamente
+        if (state.autoDispatchWhatsApp) {
+          sendWhatsAppFireAlert({
+            lat: center.lat,
+            lng: center.lng,
+            areaSqKm: areaSqKm,
+            criticidade: state.scenario === 'stable' ? 'MODERADA' : 'CRÍTICA'
+          });
+        }
+      }
+    }
+
+    function activateDrawRectangle() {
+      if (state.drawControl) {
+        new L.Draw.Rectangle(state.map, state.drawControl.options.draw.rectangle).enable();
+        showToast('Clique e arraste no mapa para criar o Bounding Box');
+      }
+    }
+
+    function activateDrawPolygon() {
+      if (state.drawControl) {
+        new L.Draw.Polygon(state.map, state.drawControl.options.draw.polygon).enable();
+        showToast('Clique para marcar os vértices do polígono. Duplo clique para fechar');
+      }
+    }
+
+    function clearAreaSelection() {
+      if (state.drawnItems) state.drawnItems.clearLayers();
+      state.drawnBounds = null;
+      state.drawnAreaSqKm = 0;
+      document.getElementById('mapAreaBanner').classList.add('hidden');
+      showToast('Seleção de área limpa');
+    }
+
+    function focusOnSelection() {
+      if (state.drawnBounds) {
+        state.map.fitBounds(state.drawnBounds, { padding: [60, 60] });
+      }
+    }
+
+    function setupMapLayers() {
+      const initialRadius = Math.sqrt(state.initialArea / Math.PI);
+
+      state.concentricRings.real = L.circle(state.fireLocation, {
+        radius: initialRadius,
+        color: '#00f59b',
+        fillColor: '#00f59b',
+        fillOpacity: 0.35,
+        weight: 3
+      }).addTo(state.map);
+
+      state.concentricRings.ring5x = L.circle(state.fireLocation, {
+        radius: Math.sqrt(10 / Math.PI),
+        color: '#ffb703',
+        fillOpacity: 0.05,
+        weight: 2,
+        dashArray: '6, 6'
+      }).addTo(state.map);
+
+      state.concentricRings.ring10x = L.circle(state.fireLocation, {
+        radius: Math.sqrt(20 / Math.PI),
+        color: '#ff6b00',
+        fillOpacity: 0.03,
+        weight: 2,
+        dashArray: '8, 8'
+      }).addTo(state.map);
+
+      state.concentricRings.ring15x = L.circle(state.fireLocation, {
+        radius: Math.sqrt(30 / Math.PI),
+        color: '#b5179e',
+        fillOpacity: 0.02,
+        weight: 2.5,
+        dashArray: '10, 8'
+      }).addTo(state.map);
+
+      const fireIcon = L.divIcon({
+        className: 'custom-fire-marker',
+        html: `
+          <div class="relative flex items-center justify-center -top-3 -left-3 w-8 h-8">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-60"></span>
+            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-600 border-2 border-white shadow-lg"></span>
+          </div>
+        `,
+        iconSize: [24, 24]
+      });
+
+      state.fireMarker = L.marker(state.fireLocation, { icon: fireIcon }).addTo(state.map);
+    }
+
+    function setupMapInteractivity() {
+      state.map.on('click', (e) => {
+        state.fireLocation = [e.latlng.lat, e.latlng.lng];
+        state.fireMarker.setLatLng(state.fireLocation);
+        Object.values(state.concentricRings).forEach(ring => ring.setLatLng(state.fireLocation));
+        updateWhatsAppTemplate();
+      });
+    }
+
+    function centerMapOnCoords(lat, lng) {
+      state.map.flyTo([lat, lng], 13, { duration: 1.5 });
+      showToast(`Focado em: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+    }
+
+    /* ========================================================
+       4. WHATSAPP ALERT SERVICE (src/services/alertService.ts)
+       ======================================================== */
+    async function sendWhatsAppFireAlert(areaData) {
+      const targetNumber = state.whatsappNumber; // 5592991463640
+      const mapsLink = `https://www.google.com/maps?q=${areaData.lat.toFixed(5)},${areaData.lng.toFixed(5)}`;
+
+      const textMessage = 
+        `🚨 *ALERTA AMAZÔNIA FIRE WATCH AI*\n\n` +
+        `🔥 *Foco Crítico Detectado!*\n` +
+        `📍 *Coordenadas:* ${areaData.lat.toFixed(5)}, ${areaData.lng.toFixed(5)}\n` +
+        `📐 *Área de Impacto:* ~${areaData.areaSqKm} km² (${(areaData.areaSqKm * 100).toFixed(1)} ha)\n` +
+        `⚠️ *Severidade:* ${areaData.criticidade}\n` +
+        `⏰ *Horário:* ${new Date().toLocaleTimeString('pt-BR')}\n\n` +
+        `🗺️ *Localização Google Maps:* ${mapsLink}`;
+
+      try {
+        // Chamada para API / Webhook local do WhatsApp (Evolution API, Baileys ou Z-API)
+        fetch('/api/alerts/whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            number: targetNumber,
+            message: textMessage,
+          }),
+        }).catch(() => {});
+      } catch (error) {
+        console.warn('Falha na chamada fetch local:', error);
+      }
+
+      // Disparo em janela modal / aba web
+      const encodedText = encodeURIComponent(textMessage);
+      window.open(`https://api.whatsapp.com/send?phone=${targetNumber}&text=${encodedText}`, '_blank', 'width=800,height=700');
+
+      playAlarmSound();
+      showToast(`Alerta despachado para WhatsApp (+55 92 99146-3640)`, 'phone');
+
+      // Registra no histórico
+      const historyList = document.getElementById('dispatchHistoryList');
+      if (historyList) {
+        const item = document.createElement('div');
+        item.className = 'p-1 bg-slate-950 rounded flex justify-between';
+        const now = new Date().toLocaleTimeString('pt-BR').slice(0, 5);
+        item.innerHTML = `<span>Hoje ${now} - ~${areaData.areaSqKm} km²</span><span class="text-emerald-400 font-bold">Despachado</span>`;
+        historyList.prepend(item);
+      }
+    }
+
+    function formatCurrentWhatsAppText() {
+      const lat = state.fireLocation[0];
+      const lng = state.fireLocation[1];
+      const areaSqKm = state.drawnAreaSqKm > 0 ? state.drawnAreaSqKm : (state.currentArea / 1000000).toFixed(4);
+      const criticidade = state.scenario === 'stable' ? 'MODERADA' : 'CRÍTICA';
+      const mapsLink = `https://www.google.com/maps?q=${lat.toFixed(5)},${lng.toFixed(5)}`;
+
+      return `🚨 *ALERTA AMAZÔNIA FIRE WATCH AI*\n\n` +
+             `🔥 *Foco Crítico Detectado!*\n` +
+             `📍 *Coordenadas:* ${lat.toFixed(5)}, ${lng.toFixed(5)}\n` +
+             `📐 *Área de Impacto:* ~${areaSqKm} km²\n` +
+             `⚠️ *Severidade:* ${criticidade}\n` +
+             `⏰ *Horário:* ${new Date().toLocaleTimeString('pt-BR')}\n\n` +
+             `🗺️ *Localização Google Maps:* ${mapsLink}`;
+    }
+
+    function updateWhatsAppTemplate() {
+      const preview = document.getElementById('txtAlertPreview');
+      if (preview) {
+        preview.value = formatCurrentWhatsAppText();
+      }
+    }
+
+    function executeWhatsAppDispatch() {
+      const lat = state.fireLocation[0];
+      const lng = state.fireLocation[1];
+      const areaSqKm = state.drawnAreaSqKm > 0 ? state.drawnAreaSqKm : parseFloat((state.currentArea / 1000000).toFixed(4));
+      sendWhatsAppFireAlert({
+        lat,
+        lng,
+        areaSqKm,
+        criticidade: state.scenario === 'stable' ? 'MODERADA' : 'CRÍTICA'
+      });
+    }
+
+    function sendWhatsAppFireAlertFromSelection() {
+      WindowManager.open('win-whatsapp');
+      executeWhatsAppDispatch();
+    }
+
+    function toggleAutoDispatch(enabled) {
+      state.autoDispatchWhatsApp = enabled;
+      showToast(enabled ? 'Disparo Automático de Alertas ATIVADO' : 'Disparo Automático DESATIVADO');
+    }
+
+    function copyAlertMessage() {
+      const text = document.getElementById('txtAlertPreview').value;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Texto copiado para a área de transferência');
+      });
+    }
+
+    /* ========================================================
+       5. SIMULATION & SCENARIOS (ΔA/Δt ELASTICITY)
+       ======================================================== */
+    function loadScenario(type, playSound = true) {
+      state.scenario = type;
+      if (playSound) playBeep(800, 0.12);
+
+      const btnStable = document.getElementById('btnScenStable');
+      const btnRapid = document.getElementById('btnScenRapid');
+      const btnWind = document.getElementById('btnScenWind');
+
+      [btnStable, btnRapid, btnWind].forEach(b => {
+        if (b) b.className = 'px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1';
+      });
+
+      if (type === 'stable') {
+        state.initialArea = 2.0;
+        state.expansionRate = 0.00;
+        state.windSpeedKmh = 5;
+        state.fuelType = 'confinado';
+        state.simTimeSeconds = 300;
+        if (btnStable) btnStable.className = 'px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 transition-all flex items-center gap-1';
+        showToast('Cenário 1: Foco Confinado / Churrasqueira (ΔA/Δt ~ 0.00)');
+      } else if (type === 'rapid') {
+        state.initialArea = 2.0;
+        state.expansionRate = 1.80;
+        state.windSpeedKmh = 14;
+        state.fuelType = 'madeira';
+        state.simTimeSeconds = 120;
+        if (btnRapid) btnRapid.className = 'px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-red-950/80 text-red-300 border border-red-700/80 transition-all flex items-center gap-1 shadow-[0_0_12px_rgba(255,30,39,0.3)]';
+        showToast('Cenário 2: Salto Abrupto (ΔA/Δt = +1.80 m²/min) - ALERTA NÍVEL 4');
+        playAlarmSound();
+      } else if (type === 'vegetation') {
+        state.initialArea = 2.0;
+        state.expansionRate = 3.20;
+        state.windSpeedKmh = 28;
+        state.fuelType = 'vegetacao';
+        state.simTimeSeconds = 90;
+        if (btnWind) btnWind.className = 'px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-purple-950/80 text-purple-300 border border-purple-700/80 transition-all flex items-center gap-1 shadow-[0_0_12px_rgba(181,23,158,0.3)]';
+        showToast('Cenário 3: Vento Forte e Vegetação (ΔA/Δt = +3.20 m²/min)');
+        playAlarmSound();
+      }
+
+      const slider = document.getElementById('sliderWind');
+      if (slider) slider.value = state.windSpeedKmh;
+      const windLabel = document.getElementById('windValLabel');
+      if (windLabel) windLabel.textContent = `${state.windSpeedKmh} km/h`;
+      const selectFuel = document.getElementById('selectFuel');
+      if (selectFuel) selectFuel.value = state.fuelType;
+
+      updateCalculations();
+      updateChartData();
+      updateWhatsAppTemplate();
+    }
+
+    function updateCalculations() {
+      const isStable = (state.scenario === 'stable');
+      const timeMin = state.simTimeSeconds / 60;
+
+      if (isStable) {
+        state.currentArea = state.initialArea + Math.sin(timeMin * 2) * 0.03;
+      } else {
+        const windFactor = 1 + (state.windSpeedKmh / 20);
+        state.currentArea = state.initialArea + (state.expansionRate * timeMin * windFactor);
+      }
+
+      const currentRadius = Math.sqrt(state.currentArea / Math.PI);
+      const radius5x = Math.sqrt(10 / Math.PI);
+      const radius10x = Math.sqrt(20 / Math.PI);
+      const radius15x = Math.sqrt(30 / Math.PI);
+
+      if (state.concentricRings.real) {
+        state.concentricRings.real.setRadius(currentRadius);
+        state.concentricRings.real.setStyle({
+          color: isStable ? '#00f59b' : '#ff1e27',
+          fillColor: isStable ? '#00f59b' : '#ff1e27'
+        });
+      }
+      if (state.concentricRings.ring5x) state.concentricRings.ring5x.setRadius(radius5x);
+      if (state.concentricRings.ring10x) state.concentricRings.ring10x.setRadius(radius10x);
+      if (state.concentricRings.ring15x) state.concentricRings.ring15x.setRadius(radius15x);
+
+      const diagCard = document.getElementById('diagnosticCard');
+      const diagClass = document.getElementById('diagClassification');
+      const diagSub = document.getElementById('diagSubtitle');
+      const diagArea = document.getElementById('diagAreaCurrent');
+      const diagRate = document.getElementById('diagRateCurrent');
+      const diagMult = document.getElementById('diagMultiplier');
+
+      if (diagCard && diagClass && diagSub && diagArea && diagRate && diagMult) {
+        if (isStable) {
+          diagCard.className = 'bg-slate-900/90 rounded-lg p-3 border border-emerald-500/50 transition-all';
+          diagClass.textContent = 'FOCO ESTÁVEL / CONFINADO';
+          diagClass.className = 'font-tactical font-bold text-base text-emerald-400 mt-1';
+          diagSub.textContent = 'Variação mínima em 5 min • Queima confinada';
+          diagArea.textContent = `${state.currentArea.toFixed(2)} m²`;
+          diagArea.className = 'text-base font-bold text-emerald-400';
+          diagRate.textContent = '0.00 m²/min';
+          diagRate.className = 'text-base font-bold text-emerald-400';
+          diagMult.textContent = '1.0x (Estável)';
+          diagMult.className = 'text-xs font-bold text-emerald-400';
+        } else {
+          diagCard.className = 'bg-slate-900/90 rounded-lg p-3 border border-red-500/80 transition-all shadow-[0_0_15px_rgba(255,30,39,0.25)]';
+          diagClass.textContent = 'DESCONTROLE IMINENTE / EXPONENCIAL';
+          diagClass.className = 'font-tactical font-bold text-base text-red-400 mt-1 animate-pulse';
+          diagSub.textContent = 'Salto abrupto de área • Multiplicador preditivo 10x-15x em curso!';
+          diagArea.textContent = `${state.currentArea.toFixed(2)} m²`;
+          diagArea.className = 'text-base font-bold text-red-400';
+          diagRate.textContent = `+${state.expansionRate.toFixed(2)} m²/min`;
+          diagRate.className = 'text-base font-bold text-red-400';
+          diagMult.textContent = `${(state.currentArea / state.initialArea).toFixed(1)}x (Alta Expansão)`;
+          diagMult.className = 'text-xs font-bold text-red-400';
+        }
+      }
+
+      const formatEta = (targetA) => {
+        if (isStable) return 'N/A (Estável)';
+        const needed = targetA - state.initialArea;
+        if (needed <= 0) return '00m 05s';
+        const min = needed / state.expansionRate;
+        const m = Math.floor(min);
+        const s = Math.round((min - m) * 60);
+        return `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      };
+
+      if (document.getElementById('eta5m')) document.getElementById('eta5m').textContent = formatEta(5);
+      if (document.getElementById('eta10m')) document.getElementById('eta10m').textContent = formatEta(10);
+      if (document.getElementById('eta20m')) document.getElementById('eta20m').textContent = formatEta(20);
+      if (document.getElementById('eta30m')) document.getElementById('eta30m').textContent = formatEta(30);
+
+      const etaWireEl = document.getElementById('etaWireText');
+      const etaHousesEl = document.getElementById('etaHousesText');
+      if (etaWireEl && etaHousesEl) {
+        if (isStable) {
+          etaWireEl.textContent = 'SEM RISCO (SEGURO)';
+          etaWireEl.className = 'text-emerald-400 font-bold';
+          etaHousesEl.textContent = 'SEM RISCO (SEGURO)';
+          etaHousesEl.className = 'text-emerald-400 font-bold';
+        } else {
+          etaWireEl.textContent = 'ETA CONTATO: 03m 45s';
+          etaWireEl.className = 'text-red-400 font-bold animate-pulse';
+          etaHousesEl.textContent = 'ETA CONTATO: 06m 12s';
+          etaHousesEl.className = 'text-red-400 font-bold animate-pulse';
+        }
+      }
+
+      updateStreetPhysicsBox(isStable);
+    }
+
+    function onWindSliderChange(val) {
+      state.windSpeedKmh = parseInt(val);
+      document.getElementById('windValLabel').textContent = `${val} km/h`;
+      updateCalculations();
+      updateChartData();
+    }
+
+    function onFuelSelectChange(val) {
+      state.fuelType = val;
+      updateCalculations();
+      updateChartData();
+    }
+
+    /* ========================================================
+       6. STREET VIEW PHYSICS CANVAS & FLIR
+       ======================================================== */
+    let canvas, ctx;
+    let particles = [];
+    const NUM_PARTICLES = 120;
+
+    class FireParticle {
+      constructor(w, h) { this.reset(w, h); }
+      reset(w, h) {
+        const cx = w * 0.45;
+        const cy = h * 0.72;
+        this.x = cx + (Math.random() - 0.5) * (state.scenario === 'stable' ? 25 : 85);
+        this.y = cy + (Math.random() - 0.5) * 10;
+        this.vx = (Math.random() - 0.5) * 1.5 + (state.windSpeedKmh * 0.05);
+        this.vy = -(Math.random() * (state.scenario === 'stable' ? 2.5 : 6.5) + 1.2);
+        this.size = Math.random() * (state.scenario === 'stable' ? 8 : 18) + 4;
+        this.life = 0;
+        this.maxLife = Math.random() * 40 + 30;
+        this.isSmoke = Math.random() > 0.45;
+      }
+      update(w, h) {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life++;
+        this.size = Math.max(0.5, this.size * 0.96);
+        if (this.life >= this.maxLife || this.y < 0) this.reset(w, h);
+      }
+      draw(c, isFlir) {
+        const progress = this.life / this.maxLife;
+        c.save();
+        if (isFlir) {
+          if (this.isSmoke) {
+            c.fillStyle = `rgba(120, 20, 140, ${0.4 * (1 - progress)})`;
+          } else {
+            c.fillStyle = progress < 0.3 ? 'rgba(255, 255, 255, 0.9)' : `rgba(255, ${Math.floor(255 * (1 - progress))}, 0, ${0.8 * (1 - progress)})`;
+          }
+        } else {
+          if (this.isSmoke) {
+            c.fillStyle = `rgba(50, 55, 65, ${0.35 * (1 - progress)})`;
+          } else {
+            c.fillStyle = progress < 0.25 ? 'rgba(255, 240, 180, 0.95)' : `rgba(255, ${Math.floor(140 * (1 - progress))}, 0, ${0.85 * (1 - progress)})`;
+          }
+        }
+        c.beginPath();
+        c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+    }
+
+    function initStreetCanvas() {
+      canvas = document.getElementById('streetCanvas');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+      const w = canvas.width = canvas.parentElement.clientWidth || 400;
+      const h = canvas.height = canvas.parentElement.clientHeight || 260;
+
+      particles = [];
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        particles.push(new FireParticle(w, h));
+      }
+
+      requestAnimationFrame(renderStreetLoop);
+    }
+
+    function renderStreetLoop() {
+      if (!canvas || !ctx) return;
+      const w = canvas.width = canvas.parentElement.clientWidth || 400;
+      const h = canvas.height = canvas.parentElement.clientHeight || 260;
+      const isFlir = (state.visionMode === 'flir');
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (isFlir) {
+        ctx.fillStyle = '#0a0a1a';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(70, 80, 120, 0.3)';
+        ctx.lineWidth = 1;
+        for (let y = 0; y < h; y += 30) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+      } else {
+        const sky = ctx.createLinearGradient(0, 0, 0, h * 0.7);
+        sky.addColorStop(0, '#0a101d');
+        sky.addColorStop(1, '#151d2f');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, w, h * 0.7);
+
+        ctx.fillStyle = '#0d131f';
+        ctx.fillRect(w * 0.05, h * 0.35, 90, h * 0.35);
+        ctx.fillRect(w * 0.72, h * 0.30, 110, h * 0.40);
+
+        ctx.fillStyle = '#171c26';
+        ctx.fillRect(0, h * 0.7, w, h * 0.3);
+
+        const cx = w * 0.45;
+        const cy = h * 0.73;
+        const glow = ctx.createRadialGradient(cx, cy, 5, cx, cy, state.scenario === 'stable' ? 60 : 140);
+        glow.addColorStop(0, state.scenario === 'stable' ? 'rgba(255, 140, 0, 0.4)' : 'rgba(255, 50, 0, 0.6)');
+        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      particles.forEach(p => {
+        p.update(w, h);
+        p.draw(ctx, isFlir);
+      });
+
+      requestAnimationFrame(renderStreetLoop);
+    }
+
+    function setStreetVisionMode(mode) {
+      state.visionMode = mode;
+      document.getElementById('btnVisionRgb').className = mode === 'rgb' ? 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold' : 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700';
+      document.getElementById('btnVisionFlir').className = mode === 'flir' ? 'px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold' : 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700';
+    }
+
+    function updateStreetPhysicsBox(isStable) {
+      const box = document.getElementById('aiBoundingBox');
+      const header = document.getElementById('bbHeader');
+      const temp = document.getElementById('bbTemp');
+      const area = document.getElementById('bbArea');
+      const risk = document.getElementById('bbRisk');
+      if (!box || !header || !temp || !area || !risk) return;
+
+      if (isStable) {
+        box.style.borderColor = 'rgba(0, 245, 155, 0.85)';
+        box.style.background = 'rgba(0, 245, 155, 0.05)';
+        box.style.width = '130px';
+        box.style.height = '100px';
+        box.style.left = '36%';
+        header.textContent = 'IA: ESTÁVEL';
+        header.className = 'bg-emerald-950 text-emerald-300 px-1 py-0.2 rounded font-bold';
+        temp.textContent = '185°C';
+        temp.className = 'text-emerald-300';
+        area.textContent = `Área: ${state.currentArea.toFixed(1)} m²`;
+        risk.textContent = 'Taxa: 0.00 m²/min';
+        risk.className = 'text-emerald-400 text-[9px]';
+      } else {
+        box.style.borderColor = 'rgba(255, 30, 39, 0.9)';
+        box.style.background = 'rgba(255, 30, 39, 0.12)';
+        box.style.width = '210px';
+        box.style.height = '160px';
+        box.style.left = '28%';
+        header.textContent = 'IA: DESCONTROLE';
+        header.className = 'bg-red-950 text-red-300 px-1 py-0.2 rounded font-bold animate-pulse';
+        temp.textContent = '620°C';
+        temp.className = 'text-red-400 font-bold';
+        area.textContent = `Área: ${state.currentArea.toFixed(1)} m²`;
+        risk.textContent = `Taxa: +${state.expansionRate.toFixed(2)} m²/min`;
+        risk.className = 'text-red-400 font-bold text-[9px]';
+      }
+    }
+
+    function triggerRapidJump() {
+      loadScenario('rapid');
+      showToast('Salto abrupto de área provocado no feed tático', 'flame');
+    }
+
+    function triggerQuickContainment() {
+      loadScenario('stable');
+      showToast('Contenção de chamas simulada com sucesso', 'check');
+    }
+
+    /* ========================================================
+       7. DYNAMIC CHART.JS
+       ======================================================== */
+    function initChart() {
+      const ctx = document.getElementById('timeAreaChart');
+      if (!ctx) return;
+
+      const labels = ['0 min', '1 min', '2 min', '3 min', '4 min', '5 min', '6 min', '7 min'];
+      state.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Área Observada (m²)',
+              data: [2.0, 2.02, 2.01, 2.03, 2.01, 2.02, 2.01, 2.03],
+              borderColor: '#00f59b',
+              backgroundColor: 'rgba(0, 245, 155, 0.15)',
+              borderWidth: 2.5,
+              tension: 0.2,
+              fill: true
+            },
+            {
+              label: 'Limiar Seguro (m²)',
+              data: [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+              borderColor: '#64748b',
+              borderWidth: 1.5,
+              borderDash: [5, 5],
+              fill: false
+            },
+            {
+              label: 'Projeção 10x-15x (m²)',
+              data: [2.0, 3.8, 5.6, 9.2, 14.5, 22.0, 31.0, 42.0],
+              borderColor: '#ff1e27',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              fill: false,
+              hidden: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { family: 'Cascadia Code', size: 10 } }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#1e293b' },
+              ticks: { color: '#64748b', font: { family: 'Cascadia Code', size: 9 } }
+            },
+            y: {
+              grid: { color: '#1e293b' },
+              ticks: { color: '#64748b', font: { family: 'Cascadia Code', size: 9 } }
+            }
+          }
+        }
+      });
+    }
+
+    function updateChartData() {
+      if (!state.chartInstance) return;
+      const isStable = (state.scenario === 'stable');
+      const slopeLabel = document.getElementById('chartSlopeLabel');
+      if (slopeLabel) {
+        slopeLabel.textContent = isStable ? 'Inclinação: 0.00 m²/min' : `Inclinação: +${state.expansionRate.toFixed(2)} m²/min`;
+        slopeLabel.className = isStable ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold';
+      }
+
+      if (isStable) {
+        state.chartInstance.data.datasets[0].data = [2.0, 2.02, 2.01, 2.03, 2.01, 2.02, 2.01, 2.02];
+        state.chartInstance.data.datasets[0].borderColor = '#00f59b';
+        state.chartInstance.data.datasets[0].backgroundColor = 'rgba(0, 245, 155, 0.15)';
+        state.chartInstance.data.datasets[2].hidden = true;
+      } else {
+        const rate = state.expansionRate;
+        state.chartInstance.data.datasets[0].data = [2.0, 2.0 + rate*0.6, 2.0 + rate*1.5, 2.0 + rate*2.6, 2.0 + rate*4.0, 2.0 + rate*5.8, 2.0 + rate*8.0, 2.0 + rate*11.0];
+        state.chartInstance.data.datasets[0].borderColor = '#ff1e27';
+        state.chartInstance.data.datasets[0].backgroundColor = 'rgba(255, 30, 39, 0.2)';
+        state.chartInstance.data.datasets[2].hidden = false;
+      }
+      state.chartInstance.update();
+    }
+
+    /* ========================================================
+       8. 3D ORBITAL SIMULATION CANVAS
+       ======================================================== */
+    function initEarth3dCanvas() {
+      const c = document.getElementById('earth3dCanvas');
+      if (!c) return;
+      const ctx3d = c.getContext('2d');
+      let angle = 0;
+
+      function renderEarth3d() {
+        const w = c.width = c.parentElement.clientWidth || 580;
+        const h = c.height = c.parentElement.clientHeight || 280;
+        ctx3d.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h / 2;
+        const r = Math.min(w, h) * 0.38;
+
+        const grad = ctx3d.createRadialGradient(cx - r*0.3, cy - r*0.3, 10, cx, cy, r);
+        grad.addColorStop(0, '#0d324d');
+        grad.addColorStop(0.7, '#081c2e');
+        grad.addColorStop(1, '#020b14');
+        ctx3d.fillStyle = grad;
+        ctx3d.beginPath();
+        ctx3d.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx3d.fill();
+
+        ctx3d.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+        ctx3d.lineWidth = 1;
+        for (let i = -3; i <= 3; i++) {
+          ctx3d.beginPath();
+          const yr = cy + (i * r * 0.25);
+          const rx = Math.sqrt(Math.max(0, r*r - Math.pow(yr - cy, 2)));
+          ctx3d.ellipse(cx, yr, rx, rx * 0.3, 0, 0, Math.PI * 2);
+          ctx3d.stroke();
+        }
+
+        angle += 0.008;
+        const fireX = cx + Math.cos(angle) * r * 0.45;
+        const fireY = cy + Math.sin(angle) * r * 0.25;
+
+        ctx3d.fillStyle = '#ff1e27';
+        ctx3d.beginPath();
+        ctx3d.arc(fireX, fireY, 5, 0, Math.PI * 2);
+        ctx3d.fill();
+
+        ctx3d.strokeStyle = '#ff1e27';
+        ctx3d.beginPath();
+        ctx3d.arc(fireX, fireY, 12, 0, Math.PI * 2);
+        ctx3d.stroke();
+
+        ctx3d.fillStyle = '#ffb703';
+        ctx3d.font = '10px "Cascadia Code", monospace';
+        ctx3d.fillText('ANOMALIA TÉRMICA (-4.966, -65.180)', fireX + 16, fireY + 4);
+
+        requestAnimationFrame(renderEarth3d);
+      }
+      renderEarth3d();
+    }
+
+    /* ========================================================
+       9. AUDIO SYNTHESIS & NOTIFICATIONS
+       ======================================================== */
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioClass) audioCtx = new AudioClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playBeep(freq = 800, duration = 0.1) {
+      if (!state.audioActive) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playAlarmSound() {
+      if (!state.audioActive) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.linearRampToValueAtTime(440, now + 0.25);
+        osc.frequency.linearRampToValueAtTime(880, now + 0.5);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      state.audioActive = !state.audioActive;
+      document.getElementById('audioIcon').textContent = state.audioActive ? '🔊' : '🔇';
+      document.getElementById('audioText').textContent = state.audioActive ? 'SOM ATIVO' : 'MUDO';
+      showToast(state.audioActive ? 'Áudio ativado' : 'Áudio mutado');
+      if (state.audioActive) playBeep(900, 0.1);
+    }
+
+    function showToast(msg, icon = 'ℹ️') {
+      const toast = document.getElementById('toastNotification');
+      const text = document.getElementById('toastMessage');
+      const iconEl = document.getElementById('toastIcon');
+      if (!toast || !text) return;
+      text.textContent = msg;
+      if (iconEl) iconEl.textContent = icon === 'check' ? '✅' : (icon === 'flame' ? '🔥' : (icon === 'phone' ? '📲' : 'ℹ️'));
+      toast.classList.remove('opacity-0', 'translate-y-10');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-10');
+      }, 3500);
+    }
+
+    function startClock() {
+      setInterval(() => {
+        const now = new Date();
+        const str = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Manaus' });
+        const el = document.getElementById('headerClock');
+        if (el) el.textContent = `${str} UTC-4`;
+      }, 1000);
+    }
+
+    /* ========================================================
+       BOOTSTRAP APPLICATION
+       ======================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      initStreetCanvas();
+      initChart();
+      initEarth3dCanvas();
+      startClock();
+      updateWhatsAppTemplate();
+
+      loadScenario('stable', false);
+
+      const unlockAudio = () => {
+        getAudioContext();
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('keydown', unlockAudio);
+      };
+      document.addEventListener('click', unlockAudio);
+      document.addEventListener('keydown', unlockAudio);
+    });
+  </script>
+</body>
+</html>
