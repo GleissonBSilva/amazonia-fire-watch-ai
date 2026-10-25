@@ -12,7 +12,12 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
     console.warn('Backend fires API offline. Usando fallback de contingência:', err);
   }
   
-  // Resilient fallback covering key Brazilian biomes
+  // Informações simuladas só podem aparecer se a Simulação estiver ativa
+  if (!simulation) {
+    return [];
+  }
+
+  // Resilient fallback covering key Brazilian biomes (exclusivo para Modo Simulação)
   return [
     {
       id: "VIIRS-24H-FALLBACK-1",

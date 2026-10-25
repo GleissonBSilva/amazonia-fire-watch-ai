@@ -178,16 +178,14 @@ class AICopilotService:
                     "• **Isolamento da IA:** O ecossistema de detecção está agora respondendo EXCLUSIVAMENTE às variáveis (sensores de temperatura, câmeras térmicas e focos térmicos) situadas dentro da zona delimitada.\n"
                     "• **Processamento Focado:** Todos os fluxos ópticos e radiâncias externos são temporariamente omitidos para priorizar o ativo crítico enquadrado."
                 )
-            elif any(w in prompt_lower for w in ["planta", "baixa", "lg", "samsung", "fabrica", "fábrica", "setor", "extintor", "termic", "térmic"]):
+            elif any(w in prompt_lower for w in ["planta", "baixa", "samsung", "fabrica", "fábrica", "setor", "extintor", "termic", "térmic"]):
                 text = (
                     "🏢 **Camada de Planta Baixa Estrutural & Mapeamento Térmico Dinâmico:**\n\n"
-                    "• **Instalação:** LG Electronics do Brasil (Distrito Industrial de Manaus) - Galpão 01.\n"
-                    "• **Foco Identificado:** Setor A - Linha SMT (Forno de Refusão Convectivo 03).\n"
-                    "• **Variação Térmica:** Pico de **184.6°C** (Ambiente: 24.5°C | Delta: **+160.1°C**).\n"
-                    "• **Fumaça & Gases:** Concentração crítica de **485 ppm de CO** e PM2.5 em 382 µg/m³.\n"
-                    "• **Vetor de Dissipação:** Chamas e calor propagando-se a **1.6 m/s** (Azimute 68° Nordeste) rumo ao Setor B (Montagem de Telas) através dos dutos de exaustão e esteiras.\n"
-                    "• **Equipamentos de Combate Prontos:** Extintor CO₂ 5kg (EXT-01) e PQS 6kg (EXT-02) a menos de 15 metros; Hidrante HID-01 operacional no corredor norte.\n"
-                    "• **Gradiente Visual Térmico:** Núcleo vermelho vivo (#ef4444) no forno, irradiando calor em laranja (#f97316) e dispersão amarela (#eab308) sobre o layout arquitetônico."
+                    "• **Instalação:** Samsung Eletrônica da Amazônia (Distrito Industrial de Manaus) - Complexo Fabril.\n"
+                    "• **Status Operacional Real:** Quando a Simulação está desligada, as instalações industriais operam em regime nominal seguro (zero focos térmicos).\n"
+                    "• **Cenário de Simulação:** Ao ativar o Modo Simulação, o sistema reproduz um foco térmico controlado no Setor 02 (Bancada de Burn-in Test) com dissipação a 142.3°C para treinamento de brigadas e resposta CBMAM.\n"
+                    "• **Equipamentos de Combate:** Extintor CO₂ (EXT-02), PQS ABC (EXT-03) e hidrantes prediais geolocalizados em cada setor arquitetônico.\n"
+                    "• **Gradiente Visual Térmico:** Renderização arquitetônica com telemetria e isolamento de cerca virtual."
                 )
             elif any(w in prompt_lower for w in ["protocolo", "emergencia", "emergência", "automatico", "automático", "contagem", "30s", "99374"]):
                 text = (

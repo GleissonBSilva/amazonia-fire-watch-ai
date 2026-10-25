@@ -205,22 +205,22 @@ export const AutoEmergencyCountdown: React.FC<AutoEmergencyCountdownProps> = ({
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs space-y-1.5 font-mono">
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Instalação Afetada:</span>
-              <span className="text-white font-bold">{facility?.name || 'LG Electronics (Galpão 01)'}</span>
+              <span className="text-white font-bold">{facility?.name || 'Samsung Eletrônica (Complexo Fabril)'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Setor do Foco:</span>
-              <span className="text-red-400 font-bold">{incident?.sectorName || 'Setor A - Linha SMT'}</span>
+              <span className="text-red-400 font-bold">{incident?.sectorName || 'Setor 02 - Bancada de Burn-in Test'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Telemetria Térmica:</span>
               <span className="text-orange-300 font-bold">
-                {incident?.peakTempC.toFixed(1) || '184.6'}°C (Delta +{incident?.deltaTempC.toFixed(1) || '160.1'}°C)
+                {incident?.peakTempC.toFixed(1) || '142.3'}°C (Delta +{incident?.deltaTempC.toFixed(1) || '117.3'}°C)
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Dispersão Fumaça:</span>
               <span className="text-amber-300 font-bold">
-                {incident?.smokeConcentrationPpm || 485} ppm CO | {incident?.propagation.velocityMs || 1.6} m/s
+                {incident?.smokeConcentrationPpm || 310} ppm CO | {incident?.propagation.velocityMs || 1.2} m/s
               </span>
             </div>
           </div>

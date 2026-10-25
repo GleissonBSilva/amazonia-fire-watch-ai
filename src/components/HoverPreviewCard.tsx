@@ -118,9 +118,18 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-1 text-[8.5px] text-emerald-400 font-bold tracking-widest uppercase">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-          <span>FLIR LIVE</span>
+        <div className="flex items-center gap-1 text-[8.5px] font-bold tracking-widest uppercase">
+          {isSimulation ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span className="text-emerald-400">FLIR LIVE</span>
+            </>
+          ) : (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              <span className="text-cyan-400">ORBITAL REAL</span>
+            </>
+          )}
         </div>
       </div>
 

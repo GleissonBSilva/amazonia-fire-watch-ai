@@ -44,6 +44,7 @@ interface MainMapProps {
   onOpenFloorPlan?: (facilityId?: string) => void;
   onActivateGeofence?: (facility: Facility) => void;
   onTriggerAutoEmergency?: (facility: Facility) => void;
+  isSimulation?: boolean;
 }
 
 // Quick Viewports for Brazilian Biomes
@@ -205,6 +206,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   onOpenFloorPlan,
   onActivateGeofence,
   onTriggerAutoEmergency,
+  isSimulation = true,
 }) => {
   const [currentView, setCurrentView] = React.useState<{
     center: [number, number];
@@ -656,78 +658,94 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         )}
 
         {/* ========================================================
-            INSTALAÇÕES INDUSTRIAIS COM PLANTA BAIXA (LG & SAMSUNG)
+            INSTALAÇÕES INDUSTRIAIS COM PLANTA BAIXA
+            (Informações simuladas só aparecem se Simulação estiver ativa)
             ======================================================== */}
-        {INDUSTRIAL_FACILITIES.map((facility) => (
-          <Marker
-            key={`facility-${facility.id}`}
-            position={[facility.coordinates.lat, facility.coordinates.lng]}
-            icon={industrialFacilityIcon}
-          >
-            <Popup>
-              <div className="font-mono text-xs text-white max-w-[280px] bg-slate-950 p-2.5 rounded-lg border border-cyan-500/70 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-1 mb-1.5">
-                  <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">
-                    PLANTA INDUSTRIAL • PIM
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-red-950 text-red-300 border border-red-600/60 animate-pulse">
-                    FOCO INTERNO
-                  </span>
-                </div>
-
-                <div className="font-bold text-white text-[12px] leading-tight mb-1">
-                  {facility.name}
-                </div>
-                <div className="text-[10px] text-slate-300 mb-2 leading-tight">
-                  {facility.address} ({facility.totalAreaM2.toLocaleString('pt-BR')} m²)
-                </div>
-
-                {facility.activeIncident && (
-                  <div className="bg-red-950/40 border border-red-800/40 rounded p-1.5 mb-2 text-[10px]">
-                    <div className="text-red-300 font-bold flex items-center gap-1">
-                      <span>🔥 {facility.activeIncident.sectorName}</span>
-                    </div>
-                    <div className="text-slate-300 mt-0.5">
-                      Pico: <strong className="text-orange-300">{facility.activeIncident.peakTempC.toFixed(1)}°C</strong> | Fumaça: <strong className="text-amber-300">{facility.activeIncident.smokeConcentrationPpm} ppm</strong>
-                    </div>
+        {INDUSTRIAL_FACILITIES.map((facility) => {
+          const hasIncident = Boolean(isSimulation && facility.activeIncident);
+          return (
+            <Marker
+              key={`facility-${facility.id}`}
+              position={[facility.coordinates.lat, facility.coordinates.lng]}
+              icon={industrialFacilityIcon}
+            >
+              <Popup>
+                <div className="font-mono text-xs text-white max-w-[280px] bg-slate-950 p-2.5 rounded-lg border border-cyan-500/70 shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-1 mb-1.5">
+                    <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">
+                      PLANTA INDUSTRIAL • PIM
+                    </span>
+                    {hasIncident ? (
+                      <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-red-950 text-red-300 border border-red-600/60 animate-pulse">
+                        FOCO INTERNO (SIMULAÇÃO)
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/60">
+                        OPERAÇÃO NOMINAL
+                      </span>
+                    )}
                   </div>
-                )}
 
-                <div className="space-y-1.5 pt-1 border-t border-slate-800">
-                  {onOpenFloorPlan && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenFloorPlan(facility.id)}
-                      className="w-full py-1.5 bg-cyan-700 hover:bg-cyan-600 text-white rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
-                    >
-                      <span>🏢 Abrir Planta Baixa &amp; Térmica</span>
-                    </button>
+                  <div className="font-bold text-white text-[12px] leading-tight mb-1">
+                    {facility.name}
+                  </div>
+                  <div className="text-[10px] text-slate-300 mb-2 leading-tight">
+                    {facility.address} ({facility.totalAreaM2.toLocaleString('pt-BR')} m²)
+                  </div>
+
+                  {hasIncident && facility.activeIncident && (
+                    <div className="bg-red-950/40 border border-red-800/40 rounded p-1.5 mb-2 text-[10px]">
+                      <div className="text-red-300 font-bold flex items-center gap-1">
+                        <span>🔥 {facility.activeIncident.sectorName}</span>
+                      </div>
+                      <div className="text-slate-300 mt-0.5">
+                        Pico: <strong className="text-orange-300">{facility.activeIncident.peakTempC.toFixed(1)}°C</strong> | Fumaça: <strong className="text-amber-300">{facility.activeIncident.smokeConcentrationPpm} ppm</strong>
+                      </div>
+                    </div>
                   )}
 
-                  {onActivateGeofence && (
-                    <button
-                      type="button"
-                      onClick={() => onActivateGeofence(facility)}
-                      className="w-full py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-700/60 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
-                    >
-                      <span>🔒 Isolar Cerca Virtual Neste Galpão</span>
-                    </button>
+                  {!hasIncident && (
+                    <div className="bg-emerald-950/20 border border-emerald-800/30 rounded p-1.5 mb-2 text-[9.5px] text-emerald-300">
+                      Instalação sob monitoramento IOT nominal. Zero focos térmicos detectados.
+                    </div>
                   )}
 
-                  {onTriggerAutoEmergency && (
-                    <button
-                      type="button"
-                      onClick={() => onTriggerAutoEmergency(facility)}
-                      className="w-full py-1 bg-red-950 hover:bg-red-900 text-red-300 border border-red-700/60 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
-                    >
-                      <span>🚨 Protocolo de Emergência (30s)</span>
-                    </button>
-                  )}
+                  <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                    {onOpenFloorPlan && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenFloorPlan(facility.id)}
+                        className="w-full py-1.5 bg-cyan-700 hover:bg-cyan-600 text-white rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
+                      >
+                        <span>🏢 Abrir Planta Baixa &amp; Térmica</span>
+                      </button>
+                    )}
+
+                    {onActivateGeofence && (
+                      <button
+                        type="button"
+                        onClick={() => onActivateGeofence(facility)}
+                        className="w-full py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-700/60 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
+                      >
+                        <span>🔒 Isolar Cerca Virtual Neste Galpão</span>
+                      </button>
+                    )}
+
+                    {hasIncident && onTriggerAutoEmergency && (
+                      <button
+                        type="button"
+                        onClick={() => onTriggerAutoEmergency(facility)}
+                        className="w-full py-1 bg-red-950 hover:bg-red-900 text-red-300 border border-red-700/60 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer animate-pulse"
+                      >
+                        <span>🚨 Protocolo de Emergência (30s Simulado)</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          );
+        })}
 
         {/* Leaflet Draw Component - Delimitação por Retângulo / Polígono */}
         <LeafletDrawControl onAreaSelected={onAreaSelected} />

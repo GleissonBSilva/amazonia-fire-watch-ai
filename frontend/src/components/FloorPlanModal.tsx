@@ -29,6 +29,7 @@ interface FloorPlanModalProps {
   onActivateGeofence: (facility: Facility) => void;
   onTriggerAutoEmergency: (facility: Facility) => void;
   onFlyToFacility: (lat: number, lng: number) => void;
+  isSimulation?: boolean;
 }
 
 export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
@@ -38,6 +39,7 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
   onActivateGeofence,
   onTriggerAutoEmergency,
   onFlyToFacility,
+  isSimulation = true,
 }) => {
   const [activeFacilityIndex, setActiveFacilityIndex] = useState<number>(() => {
     if (!selectedFacilityId) return 0;
@@ -55,7 +57,7 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
   if (!isOpen) return null;
 
   const currentFacility = INDUSTRIAL_FACILITIES[activeFacilityIndex] || INDUSTRIAL_FACILITIES[0];
-  const incident = currentFacility.activeIncident;
+  const incident = isSimulation ? currentFacility.activeIncident : null;
 
   const getEquipmentIcon = (type: SafetyEquipment['type']) => {
     switch (type) {
@@ -110,12 +112,20 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
                 <span className="text-xs font-mono font-bold tracking-wider text-cyan-400 uppercase">
                   PLANTA BAIXA ESTRUTURAL & TERMOGRAFIA
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-950 text-red-300 border border-red-600/60 animate-pulse">
-                  ● DETECÇÃO TÉRMICA ATIVA
-                </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/70 text-amber-300 border border-amber-600/50">
-                  SIMULAÇÃO SEGURA
-                </span>
+                {isSimulation && incident ? (
+                  <>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-950 text-red-300 border border-red-600/60 animate-pulse">
+                      ● DETECÇÃO TÉRMICA ATIVA (SIMULAÇÃO)
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/70 text-amber-300 border border-amber-600/50">
+                      CENÁRIO SIMULADO
+                    </span>
+                  </>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/60 flex items-center gap-1">
+                    <CheckCircle2 size={11} /> OPERAÇÃO NOMINAL • ZERO FOCOS TÉRMICOS
+                  </span>
+                )}
               </div>
               <h2 className="text-sm md:text-base font-bold text-white tracking-wide">
                 {currentFacility.name}
@@ -225,6 +235,34 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
           </div>
         )}
 
+        {!incident && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-slate-900/60 border-b border-slate-800 text-xs">
+            <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px]">
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span> SENSORES IOT & FLIR NOMINAIS
+              </span>
+              <span className="text-slate-600">|</span>
+              <span>{currentFacility.sensorCount} Sensores Conectados</span>
+              <span className="text-slate-600">|</span>
+              <span>{currentFacility.cameraCount} Câmeras Térmicas em Varredura</span>
+              <span className="text-slate-600">|</span>
+              <span className="text-slate-400">Sem sinistros ativos na instalação</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  onActivateGeofence(currentFacility);
+                  onClose();
+                }}
+                className="h-7 px-3 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-300 hover:text-white font-mono text-[10.5px] font-bold flex items-center gap-1 transition-all"
+                title="Isolar processamento da IA neste galpão"
+              >
+                <span>🔒 Cerca Virtual</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* MAIN BODY: SPLIT VIEW (FLOOR PLAN SVG + TACTICAL SIDEBAR) */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 min-h-[440px] max-h-[68vh] overflow-hidden">
           
@@ -329,8 +367,11 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
                 {/* SECTORS RENDERING */}
                 {currentFacility.sectors.map((sector) => {
                   const isSelected = selectedSector?.id === sector.id;
-                  const isThreatened = sector.evacuationStatus === 'warning';
-                  const isEpicenter = sector.isHotspot;
+                  const isHot = Boolean(isSimulation && incident && (incident.sectorId === sector.id || sector.isHotspot));
+                  const isThreatened = Boolean(isSimulation && incident && sector.evacuationStatus === 'warning');
+                  const isEpicenter = isHot;
+                  const secTemp = isHot ? sector.currentTempC : sector.baselineTempC;
+                  const secSmoke = isHot ? sector.smokePpm : 0;
 
                   let strokeColor = '#334155';
                   let fillColor = '#090d16';
@@ -392,10 +433,10 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
                       {/* Sector Environmental Telemetry in Room Corner */}
                       <g transform={`translate(${sector.x + 15}, ${sector.y + 55})`}>
                         <text fill="#64748b" fontSize="10" fontFamily="monospace">
-                          Temp: <tspan fill={sector.currentTempC > 50 ? '#ef4444' : '#38bdf8'} fontWeight="bold">{sector.currentTempC.toFixed(1)}°C</tspan>
+                          Temp: <tspan fill={secTemp > 50 ? '#ef4444' : '#38bdf8'} fontWeight="bold">{secTemp.toFixed(1)}°C</tspan>
                         </text>
                         <text y="16" fill="#64748b" fontSize="10" fontFamily="monospace">
-                          Fumaça: <tspan fill={sector.smokePpm > 100 ? '#f59e0b' : '#94a3b8'}>{sector.smokePpm} ppm</tspan>
+                          Fumaça: <tspan fill={secSmoke > 100 ? '#f59e0b' : '#94a3b8'}>{secSmoke} ppm</tspan>
                         </text>
                         <text y="32" fill="#64748b" fontSize="9" fontFamily="monospace">
                           Status: <tspan fill={isEpicenter ? '#ef4444' : isThreatened ? '#f59e0b' : '#10b981'}>
@@ -591,13 +632,13 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 font-mono">
                     <div>
                       <span className="text-[10px] text-slate-500 block">TEMP. ATUAL</span>
-                      <span className={`font-bold ${selectedSector.currentTempC > 50 ? 'text-red-400' : 'text-slate-200'}`}>
-                        {selectedSector.currentTempC.toFixed(1)}°C
+                      <span className={`font-bold ${(isSimulation && incident && selectedSector.currentTempC > 50) ? 'text-red-400' : 'text-slate-200'}`}>
+                        {(isSimulation && incident ? selectedSector.currentTempC : selectedSector.baselineTempC).toFixed(1)}°C
                       </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-500 block">FUMAÇA</span>
-                      <span className="text-amber-300 font-bold">{selectedSector.smokePpm} ppm</span>
+                      <span className="text-amber-300 font-bold">{(isSimulation && incident ? selectedSector.smokePpm : 0)} ppm</span>
                     </div>
                   </div>
                 </div>
@@ -609,6 +650,19 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
             </div>
 
             {/* PROPAGATION & FIRE DYNAMICS SUMMARY */}
+            {!incident && (
+              <div className="bg-slate-950 border border-emerald-900/40 rounded-lg p-3 space-y-1.5 font-mono text-[11px]">
+                <span className="text-[10px] text-emerald-400 uppercase tracking-wider flex items-center gap-1 font-bold">
+                  <CheckCircle2 size={12} /> Monitoramento Nominal Ativo
+                </span>
+                <p className="text-slate-400 text-[10px] leading-relaxed">
+                  Todos os setores operam dentro dos parâmetros normativos. Nenhuma anomalia térmica detectada por sensores FLIR ou IOT.
+                </p>
+                <div className="text-[9.5px] text-slate-500 pt-1 border-t border-slate-900">
+                  ℹ️ Simulações de estresse térmico, evacuação e despacho automático só ficam visíveis quando o modo [SIMULAÇÃO] estiver ativo.
+                </div>
+              </div>
+            )}
             {incident && (
               <div className="bg-slate-950 border border-red-900/40 rounded-lg p-3 space-y-2">
                 <span className="text-[10px] font-mono text-red-400 uppercase tracking-wider flex items-center gap-1 font-bold">

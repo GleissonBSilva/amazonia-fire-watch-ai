@@ -84,7 +84,7 @@ export const App: React.FC = () => {
     facilityId?: string;
   } | null>(null);
   const [isFloorPlanOpen, setIsFloorPlanOpen] = useState<boolean>(false);
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('lg-eletronics-manaus');
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('samsung-manaus');
   const [isAutoEmergencyOpen, setIsAutoEmergencyOpen] = useState<boolean>(false);
   const [emergencyFacility, setEmergencyFacility] = useState<Facility | null>(null);
 
@@ -276,6 +276,10 @@ export const App: React.FC = () => {
   };
 
   const handleTriggerAutoEmergency = (facility: Facility) => {
+    if (!isSimulation) {
+      console.warn('Protocolo automatizado simulado bloqueado em Modo Operacional Real.');
+      return;
+    }
     setEmergencyFacility(facility);
     setIsAutoEmergencyOpen(true);
   };
@@ -318,9 +322,9 @@ export const App: React.FC = () => {
             return true;
           });
 
-          // Se a instalação fabril tiver incidente e o filtro estiver vazio, injetar ponto térmico do galpão
+          // Se a instalação fabril tiver incidente, simulação estiver ativa e o filtro estiver vazio, injetar ponto térmico
           const matchedFacility = INDUSTRIAL_FACILITIES.find(f => f.id === activeGeofence.facilityId);
-          if (matchedFacility && matchedFacility.activeIncident && displayFireSpots.length === 0) {
+          if (isSimulation && matchedFacility && matchedFacility.activeIncident && displayFireSpots.length === 0) {
             displayFireSpots = [{
               id: matchedFacility.activeIncident.id,
               latitude: matchedFacility.coordinates.lat,
@@ -355,6 +359,7 @@ export const App: React.FC = () => {
             onOpenFloorPlan={handleOpenFloorPlan}
             onActivateGeofence={handleActivateGeofence}
             onTriggerAutoEmergency={handleTriggerAutoEmergency}
+            isSimulation={isSimulation}
         heatmapSpots={heatmapSpots}
         osintAlerts={osintAlerts}
         onOsintClick={(alert) => {
@@ -734,16 +739,27 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Sensor Térmico FLIR Reduzido (h-36 = 144px) */}
+              {/* Sensor Térmico FLIR ou Telemetria Orbital Real */}
               <div className="relative h-36 bg-black rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center flex-shrink-0">
-                <img
-                  src={activeSpotDetail.video_url || 'http://localhost:8000/api/stream/live.mjpg'}
-                  alt="Feed ao Vivo em Memória"
-                  className="w-full h-full object-cover block"
-                />
-                <div className="absolute top-1.5 left-2 bg-red-600/90 px-1.5 py-0.2 rounded text-[8.5px] font-bold">
-                  RAM ZERO-DISK
-                </div>
+                {isSimulation && activeSpotDetail.has_video ? (
+                  <>
+                    <img
+                      src={activeSpotDetail.video_url || 'http://localhost:8000/api/stream/live.mjpg'}
+                      alt="Feed ao Vivo em Memória"
+                      className="w-full h-full object-cover block"
+                    />
+                    <div className="absolute top-1.5 left-2 bg-amber-600/90 px-1.5 py-0.2 rounded text-[8.5px] font-bold">
+                      SIMULAÇÃO YOLO (RAM)
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-slate-950 font-mono">
+                    <Satellite className="text-cyan-400 mb-1" size={24} />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Detecção Orbital Real (NASA / INPE)</span>
+                    <span className="text-[8.5px] text-slate-400 mt-0.5">Sensor VIIRS / MODIS (375m) • Radiometria Espectral</span>
+                    <span className="text-[8px] text-emerald-400 mt-1 font-semibold">Sem câmera de vídeo terrestre associada</span>
+                  </div>
+                )}
                 <div className="absolute top-1.5 right-2 bg-slate-900/90 text-cyan-300 px-1.5 py-0.2 rounded text-[8.5px] border border-cyan-800">
                   {activeSpotDetail.latitude.toFixed(4)}°, {activeSpotDetail.longitude.toFixed(4)}°
                 </div>
@@ -951,6 +967,7 @@ export const App: React.FC = () => {
         isOpen={isFloorPlanOpen}
         onClose={() => setIsFloorPlanOpen(false)}
         selectedFacilityId={selectedFacilityId}
+        isSimulation={isSimulation}
         onActivateGeofence={(fac) => {
           handleActivateGeofence(fac);
         }}
