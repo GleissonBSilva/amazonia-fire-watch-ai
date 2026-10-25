@@ -165,12 +165,14 @@ export const App: React.FC = () => {
       if (recent && isSimulation) {
         setAlertBannerSpot(recent);
       } else if (!isSimulation) {
-        setAlertBannerSpot(null);
+        // Em Dados Reais, exibe banner apenas se houver foco real do satélite (<3h)
+        const realRecent = spots.find(s => s.is_new_outbreak && !s.is_simulated);
+        setAlertBannerSpot(realRecent || null);
       }
     });
-    fetchHeatmapData().then(setHeatmapSpots);
+    fetchHeatmapData(isSimulation).then(setHeatmapSpots);
     fetchTimelineData().then(setTimelineData);
-    fetchOsintAlerts().then(setOsintAlerts);
+    fetchOsintAlerts(25, isSimulation).then(setOsintAlerts);
   }, [isSimulation]);
 
   const bringToFront = (id: string) => {
@@ -652,6 +654,7 @@ export const App: React.FC = () => {
         selectedArea={selectedArea}
         geofence={activeGeofence}
         activeFacility={selectedFacilityId}
+        isSimulation={isSimulation}
       />
 
       {/* 8. Janelas Flutuantes Desktop UI */}

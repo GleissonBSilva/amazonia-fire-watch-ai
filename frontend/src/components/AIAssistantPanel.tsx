@@ -6,6 +6,7 @@ interface AIAssistantPanelProps {
   selectedArea?: any;
   geofence?: { id: string; name: string; areaKm2: number; facilityId?: string } | null;
   activeFacility?: string | null;
+  isSimulation?: boolean;
 }
 
 export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
@@ -13,6 +14,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   selectedArea = null,
   geofence = null,
   activeFacility = null,
+  isSimulation = true,
 }) => {
   const [question, setQuestion] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
@@ -53,6 +55,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
           pergunta_operador: userText,
           cerca_virtual_ativa: geofence ? `${geofence.name} (${geofence.areaKm2} km²)` : null,
           planta_baixa_ativa: activeFacility || null,
+          is_simulation: isSimulation,
         }),
       });
       const data = await response.json();

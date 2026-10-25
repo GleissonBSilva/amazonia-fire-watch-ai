@@ -73,12 +73,15 @@ CONHECIMENTO COMPLETO DO PAINEL OPERACIONAL:
 """
 
 class AICopilotService:
-    def get_current_situational_summary(self) -> Dict[str, Any]:
+    def get_current_situational_summary(self, is_simulation: bool = True) -> Dict[str, Any]:
         """
         Synthesizes the real-time GIS state across Brazil.
         """
         now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-4)))
-        spots_24h = national_ingestion.get_realtime_24h_fires()
+        if is_simulation:
+            spots_24h = national_ingestion.get_realtime_24h_fires()
+        else:
+            spots_24h = national_ingestion._cache_real_24h or []
         clusters = spatial_engine.cluster_fires(spots_24h)
         osint_posts = osint_service.list_alerts(limit=5)
         
@@ -114,7 +117,15 @@ class AICopilotService:
         Generates tactical assistant answer grounded in current live GIS data
         or interface technical guidance.
         """
-        summary = self.get_current_situational_summary()
+        is_simulation = True
+        if context:
+            if "is_simulation" in context:
+                is_simulation = bool(context["is_simulation"])
+            elif "focos_ativos" in context and context["focos_ativos"]:
+                first = context["focos_ativos"][0]
+                is_simulation = bool(first.get("is_simulated", not str(first.get("id", "")).startswith("FIRMS-REAL")))
+
+        summary = self.get_current_situational_summary(is_simulation=is_simulation)
         prompt_lower = (user_prompt or "").lower().strip()
         
         now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-4)))

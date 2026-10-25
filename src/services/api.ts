@@ -79,9 +79,9 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
   ];
 }
 
-export async function fetchHeatmapData(): Promise<any[]> {
+export async function fetchHeatmapData(simulation: boolean = true): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/fires/heatmap`);
+    const res = await fetch(`${API_BASE_URL}/fires/heatmap?simulation=${simulation}`);
     if (res.ok) return await res.json();
   } catch (err) {}
   return [];
@@ -126,13 +126,18 @@ export async function sendCopilotPrompt(prompt: string): Promise<any> {
   };
 }
 
-export async function fetchOsintAlerts(limit: number = 25): Promise<OSINTAlert[]> {
+export async function fetchOsintAlerts(limit: number = 25, simulation: boolean = true): Promise<OSINTAlert[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/osint/alerts?limit=${limit}`);
+    const res = await fetch(`${API_BASE_URL}/osint/alerts?limit=${limit}&simulation=${simulation}`);
     if (res.ok) {
       return await res.json();
     }
   } catch (err) {}
+  
+  if (!simulation) {
+    // Em Modo Operacional Real, zero posts fictícios
+    return [];
+  }
   
   return [
     {

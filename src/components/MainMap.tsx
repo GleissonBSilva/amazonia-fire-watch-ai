@@ -536,6 +536,59 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         {/* ========================================================
             3. MARCADORES TÁTICOS C2 & POPUP DE COMANDO AEROESPACIAL
             ======================================================== */}
+        {/* DISPERSÃO EM TEMPO REAL DE FUMAÇA E POLUIÇÃO DO AR (AQI / PM2.5) */}
+        {overlays.smokePlume &&
+          fireSpots.map((spot) => {
+            const aqiVal = spot.aqi || 50;
+            const pm25Val = spot.pm25 || 15.0;
+            const frp = spot.frp_mw || 10.0;
+            const plumeRadiusMeters = Math.min(30000, Math.max(3500, frp * 350));
+            const plumeColor =
+              aqiVal > 300 ? '#7e22ce' :
+              aqiVal > 200 ? '#a855f7' :
+              aqiVal > 150 ? '#ef4444' :
+              aqiVal > 100 ? '#f97316' :
+              aqiVal > 50  ? '#eab308' : '#10b981';
+
+            return (
+              <Circle
+                key={`plume-dispersion-${spot.id}`}
+                center={[spot.latitude, spot.longitude]}
+                radius={plumeRadiusMeters}
+                pathOptions={{
+                  color: plumeColor,
+                  fillColor: plumeColor,
+                  fillOpacity: 0.18,
+                  weight: 1.2,
+                  dashArray: '4, 4',
+                }}
+              />
+            );
+          })}
+
+        {/* HALO TÉRMICO RADIOMÉTRICO EM TEMPO REAL (LST DAY) */}
+        {overlays.thermalMask &&
+          fireSpots.map((spot) => {
+            const tempC = Math.round(spot.bright_ti4_k - 273.15);
+            const frp = spot.frp_mw || 10.0;
+            const thermalRadiusMeters = Math.min(18000, Math.max(1800, frp * 180));
+            const thermalColor = tempC > 60 ? '#ef4444' : tempC > 40 ? '#f97316' : '#eab308';
+
+            return (
+              <Circle
+                key={`thermal-halo-${spot.id}`}
+                center={[spot.latitude, spot.longitude]}
+                radius={thermalRadiusMeters}
+                pathOptions={{
+                  color: thermalColor,
+                  fillColor: thermalColor,
+                  fillOpacity: 0.16,
+                  weight: 1.2,
+                }}
+              />
+            );
+          })}
+
         {(temporalMode === '24h' || temporalMode === 'historical') &&
           fireSpots.map((spot) => (
             <Marker
@@ -564,12 +617,20 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
                       className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
                         spot.is_arson_cluster
                           ? 'bg-purple-950 text-purple-300 border border-purple-500'
+                          : spot.is_new_outbreak
+                          ? 'bg-amber-950 text-amber-300 border border-amber-500'
                           : 'bg-red-950 text-red-300 border border-red-500'
                       }`}
                     >
-                      {spot.is_arson_cluster ? 'ARSON // CRIME' : 'CRITICAL // 01'}
+                      {spot.is_arson_cluster ? 'ARSON // CRIME' : spot.is_new_outbreak ? 'NOVO FOCO (<3H)' : 'FOCO REAL NASA'}
                     </span>
-                    <span className="text-[8.5px] text-emerald-400 font-bold">LIVE FEED // RAM</span>
+                    <span className="text-[8.5px] font-bold">
+                      {isSimulation && spot.has_video ? (
+                        <span className="text-emerald-400">LIVE FEED // RAM</span>
+                      ) : (
+                        <span className="text-cyan-400">NASA FIRMS // REAL</span>
+                      )}
+                    </span>
                   </div>
 
                   {/* FLIR IR Miniatura Tática */}
@@ -592,12 +653,16 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-slate-300 truncate mb-1">
+                  <div className="text-[10px] text-slate-300 truncate mb-1 font-bold">
                     {spot.address || `${spot.municipality} - ${spot.state}`}
                   </div>
-                  <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-2">
+                  <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-1">
                     <div>Sensor: <span className="text-white">{spot.satellite}</span></div>
                     <div>Confiança: <span className="text-emerald-400 font-bold">{(spot.confidence * 100).toFixed(0)}%</span></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-2 pt-1 border-t border-slate-800">
+                    <div>Qualidade Ar: <span className="text-amber-300 font-bold">AQI {spot.aqi || 45}</span></div>
+                    <div>Particulado: <span className="text-cyan-300 font-bold">{spot.pm25 || 12} µg/m³</span></div>
                   </div>
 
                   <button
@@ -673,7 +738,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
             INSTALAÇÕES INDUSTRIAIS COM PLANTA BAIXA
             (Informações simuladas só aparecem se Simulação estiver ativa)
             ======================================================== */}
-        {INDUSTRIAL_FACILITIES.map((facility) => {
+        {INDUSTRIAL_FACILITIES.filter((facility) => isSimulation || activeGeofence?.facilityId === facility.id).map((facility) => {
           const hasIncident = Boolean(isSimulation && facility.activeIncident);
           return (
             <Marker

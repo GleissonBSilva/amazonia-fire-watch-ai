@@ -17,9 +17,11 @@ async def get_national_fires(
     return national_ingestion.get_realtime_24h_fires()
 
 @router.get("/heatmap")
-async def get_monthly_heatmap():
+async def get_monthly_heatmap(
+    simulation: bool = Query(True, description="Se True, retorna cenário de simulação; se False, usa pontos reais da NASA")
+):
     """Returns accumulated month-to-date fire density points."""
-    return national_ingestion.get_monthly_heatmap_data()
+    return national_ingestion.get_monthly_heatmap_data(simulation=simulation)
 
 @router.get("/timeline")
 async def get_historical_timeline():
