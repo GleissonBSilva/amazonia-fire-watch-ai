@@ -26,7 +26,7 @@ echo   - Backend API: http://localhost:8000
 echo   - Documentacao Swagger: http://localhost:8000/docs
 echo   - Stream em Memoria: http://localhost:8000/api/stream/live.mjpg
 echo   - Frontend React: http://localhost:3000
-echo   - WhatsApp Destino: +55 92 99146-3640
+echo   - WhatsApp Destino: +55 92 99374-6740
 echo ========================================================
 echo.
 pause

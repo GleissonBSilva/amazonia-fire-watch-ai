@@ -20,8 +20,8 @@ from .api.copilot import router as copilot_router
 from .api.air_quality import router as air_quality_router
 
 # AMARRAÇÃO DE SEGURANÇA: Modo Simulação estrito (apenas para seu contato de homologação)
-DEV_PHONE_NUMBER = "5591991463640" 
-DEV_TELEGRAM_CHAT_ID = "991463640"
+DEV_PHONE_NUMBER = "5592993746740" 
+DEV_TELEGRAM_CHAT_ID = "993746740"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -215,6 +215,8 @@ class MapContext(BaseModel):
     focos_reincidentes: int
     bairro_referencia: Optional[str] = "Manaus e Região Metropolitana"
     pergunta_operador: str
+    cerca_virtual_ativa: Optional[str] = None
+    planta_baixa_ativa: Optional[str] = None
 
 @app.post("/api/ai/tactical-copilot")
 async def tactical_copilot(ctx: MapContext):

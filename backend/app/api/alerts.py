@@ -12,7 +12,7 @@ router = APIRouter(prefix="/alerts", tags=["Alerts"])
 async def dispatch_whatsapp_alert(payload: DelimitedAreaPayload):
     """
     Dispatches automated WhatsApp alert for detected or delimited fire area.
-    Target: +55 92 99146-3640
+    Target: +55 92 99374-6740
     """
     try:
         result = await whatsapp_dispatcher.dispatch_alert(

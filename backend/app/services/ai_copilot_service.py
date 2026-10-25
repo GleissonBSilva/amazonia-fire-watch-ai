@@ -39,7 +39,7 @@ CONHECIMENTO COMPLETO DO PAINEL OPERACIONAL:
      - "Hoje (24h)": Monitoramento tático em tempo real.
      - "Mês Atual (Calor)": Mancha térmica acumulada para identificar corredores de devastação.
      - "Anual / Histórico": Série temporal para cruzamento com o CAR (Cadastro Ambiental Rural) e detecção de reincidência criminosa intencional (Art. 41 da Lei 9.605/98).
-   • Indicador de Simulação (+55 91 99146-3640):
+   • Indicador de Simulação (+55 92 99374-6740):
      - Confirma que o sistema está em Sandbox Tático de Homologação, direcionando mensagens e alertas de emergência estritamente para o número do operador autorizado.
 
 2. DOCK INFERIOR (JANELAS TÁTICAS FLUTUANTES):
@@ -69,7 +69,7 @@ CONHECIMENTO COMPLETO DO PAINEL OPERACIONAL:
      - Radiância FRP (MW) e Temperatura Radiométrica
      - Nível exato de poluição do ar (AQI, PM2.5 e CO) com impacto à saúde
      - Quartel de Bombeiros (CBMAM) e Manancial de captação mais próximos com distância em km e tempo estimado
-     - Ações rápidas de Focar no Mapa, Despacho seguro WhatsApp (+55 91 99146-3640) e Abertura do Sensor Térmico FLIR.
+     - Ações rápidas de Focar no Mapa, Despacho seguro WhatsApp (+55 92 99374-6740) e Abertura do Sensor Térmico FLIR.
 """
 
 class AICopilotService:
@@ -165,11 +165,36 @@ class AICopilotService:
                     "• **Mês Atual (Calor):** Ativa a mancha agregada de calor para ver os principais focos do mês.\n"
                     "• **Anual / Histórico:** Recurso pericial para investigar queimas recorrentes nos mesmos perímetros agrícolas ou florestais protegidos, servindo como base probatória para autuação de crimes ambientais."
                 )
-            elif "simulacao" in prompt_lower or "simulação" in prompt_lower or "99146" in prompt_lower or "whatsapp" in prompt_lower or "despacho" in prompt_lower:
+            elif "simulacao" in prompt_lower or "simulação" in prompt_lower or "99374" in prompt_lower or "whatsapp" in prompt_lower or "despacho" in prompt_lower:
                 text = (
-                    "📲 **Indicador de Simulação & Despacho Seguro (+55 91 99146-3640):**\n\n"
+                    "📲 **Indicador de Simulação & Despacho Seguro (+55 92 99374-6740):**\n\n"
                     "• **Finalidade:** Trava de segurança operacional (Sandbox militar).\n"
                     "• **Funcionamento:** Garante que todos os despachos manuais ou automáticos gerados por detecções do YOLO ou delimitações de área sejam enviados única e exclusivamente para o operador autorizado de homologação, eliminando qualquer risco de disparo falso externo."
+                )
+            elif any(w in prompt_lower for w in ["cerca", "geofence", "isolamento", "galpao", "galpão"]):
+                text = (
+                    "🔒 **Módulo de Isolamento Geográfico (Cerca Virtual Ativa):**\n\n"
+                    "• **Conceito C2:** O operador delimitou uma cerca virtual (geofence) sobre o mapa operacional.\n"
+                    "• **Isolamento da IA:** O ecossistema de detecção está agora respondendo EXCLUSIVAMENTE às variáveis (sensores de temperatura, câmeras térmicas e focos térmicos) situadas dentro da zona delimitada.\n"
+                    "• **Processamento Focado:** Todos os fluxos ópticos e radiâncias externos são temporariamente omitidos para priorizar o ativo crítico enquadrado."
+                )
+            elif any(w in prompt_lower for w in ["planta", "baixa", "lg", "samsung", "fabrica", "fábrica", "setor", "extintor", "termic", "térmic"]):
+                text = (
+                    "🏢 **Camada de Planta Baixa Estrutural & Mapeamento Térmico Dinâmico:**\n\n"
+                    "• **Instalação:** LG Electronics do Brasil (Distrito Industrial de Manaus) - Galpão 01.\n"
+                    "• **Foco Identificado:** Setor A - Linha SMT (Forno de Refusão Convectivo 03).\n"
+                    "• **Variação Térmica:** Pico de **184.6°C** (Ambiente: 24.5°C | Delta: **+160.1°C**).\n"
+                    "• **Fumaça & Gases:** Concentração crítica de **485 ppm de CO** e PM2.5 em 382 µg/m³.\n"
+                    "• **Vetor de Dissipação:** Chamas e calor propagando-se a **1.6 m/s** (Azimute 68° Nordeste) rumo ao Setor B (Montagem de Telas) através dos dutos de exaustão e esteiras.\n"
+                    "• **Equipamentos de Combate Prontos:** Extintor CO₂ 5kg (EXT-01) e PQS 6kg (EXT-02) a menos de 15 metros; Hidrante HID-01 operacional no corredor norte.\n"
+                    "• **Gradiente Visual Térmico:** Núcleo vermelho vivo (#ef4444) no forno, irradiando calor em laranja (#f97316) e dispersão amarela (#eab308) sobre o layout arquitetônico."
+                )
+            elif any(w in prompt_lower for w in ["protocolo", "emergencia", "emergência", "automatico", "automático", "contagem", "30s", "99374"]):
+                text = (
+                    "🚨 **Protocolo Automatizado de Emergência (Simulado):**\n\n"
+                    "• **Regra de Ativação:** Caso a ameaça de incêndio seja confirmada pela IA e não haja interrupção pelo operador em 30 segundos, o despacho de emergência é acionado automaticamente.\n"
+                    "• **Trava de Segurança:** Para evitar alarmes falsos externos a órgãos oficiais, todos os alertas deste módulo são direcionados EXCLUSIVAMENTE ao telefone cadastrado do operador: **(92) 99374-6740** (+55 92 99374-6740).\n"
+                    "• **Ação do Operador:** O operador dispõe de um botão táctico de interrupção imediata `[ABORTAR / CANCELAR]` na interface C2."
                 )
             elif "camera" in prompt_lower or "câmera" in prompt_lower or "yolo" in prompt_lower or "ram" in prompt_lower:
                 text = (
@@ -220,7 +245,7 @@ class AICopilotService:
                 f"• Foco monitorado por IA no **Bairro Flores (Av. das Torres / Rua das Laranjeiras)** apresentando taxa de expansão ΔA/Δt = +1.80 m²/min.\n"
                 f"• **Alvos em risco direto:** Fiação elétrica a 8 metros (ETA 3.8 min) e habitações vizinhas a 14 metros.\n"
                 f"• Câmera tática em memória (`CAM-MN-042`) conectada com reconhecimento de labaredas ativado.\n"
-                f"• Canal WhatsApp (+55 91 99146-3640) parametrizado para despacho de teste."
+                f"• Canal WhatsApp (+55 92 99374-6740) parametrizado para despacho de teste."
             )
         elif any(w in prompt_lower for w in ["pantanal", "corumbá", "corumba", "pocone", "poconé"]):
             text = (

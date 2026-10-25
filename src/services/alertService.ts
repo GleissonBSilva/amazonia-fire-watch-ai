@@ -34,7 +34,7 @@ export async function sendWhatsAppFireAlert(areaData: {
       timestamp: new Date().toISOString(),
     });
 
-    const targetNumber = '5591991463640'; // Destino restrito de homologação
+    const targetNumber = '5592993746740'; // Destino restrito de homologação
     const textMessage =
       `*[MODO SIMULAÇÃO // HOMOLOGAÇÃO]*\n` +
       `🚨 *ALERTA AMAZÔNIA FIRE WATCH AI* 🚨\n\n` +
@@ -45,7 +45,7 @@ export async function sendWhatsAppFireAlert(areaData: {
       (areaData.airQualityAlert && areaData.airQualityAlert.aqi > 50
         ? `💨 *ALERTA POLUIÇÃO DO AR (CONAMA > 50):* AQI ${areaData.airQualityAlert.aqi} (${areaData.airQualityAlert.level}) | PM2.5: ${areaData.airQualityAlert.pm25} µg/m³\n`
         : '') +
-      `⚡ *Destino Simulação:* Exclusivo ao operador (+55 91 99146-3640)\n\n` +
+      `⚡ *Destino Simulação:* Exclusivo ao operador (+55 92 99374-6740)\n\n` +
       `🗺️ *Localização Google Maps:* ${mapsLink}\n\n` +
       `⚠️ _Trava de segurança ativa: nenhuma ocorrência real transmitida a órgãos externos._`;
 

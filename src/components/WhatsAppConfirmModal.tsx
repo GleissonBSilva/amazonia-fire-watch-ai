@@ -22,7 +22,7 @@ export const WhatsAppConfirmModal: React.FC<WhatsAppConfirmModalProps> = ({
 
   if (!isOpen) return null;
 
-  const targetNumber = '+55 91 99146-3640';
+  const targetNumber = '+55 92 99374-6740';
   const lat = selectedSpot ? selectedSpot.latitude : selectedArea ? selectedArea.center.lat : -3.11902;
   const lng = selectedSpot ? selectedSpot.longitude : selectedArea ? selectedArea.center.lng : -60.02173;
   const areaKm2 = selectedArea ? selectedArea.areaSqKm : 1.45;

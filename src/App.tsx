@@ -19,6 +19,9 @@ import { calculateAirQuality } from './data/airQuality';
 import { GoogleEarth3DWindow } from './components/GoogleEarth3DWindow';
 import { StreetViewWindow } from './components/StreetViewWindow';
 import { NewFireAlertBanner } from './components/NewFireAlertBanner';
+import { FloorPlanModal } from './components/FloorPlanModal';
+import { AutoEmergencyCountdown } from './components/AutoEmergencyCountdown';
+import { INDUSTRIAL_FACILITIES, Facility } from './data/facilityFloorPlans';
 
 // Encapsulated Tactical Clock Component to prevent full App / Leaflet re-renders every 1s
 const TacticalClock: React.FC = () => {
@@ -70,6 +73,20 @@ export const App: React.FC = () => {
   // Map Interactive Target & Search Marker
   const [targetMapLocation, setTargetMapLocation] = useState<{ center: [number, number]; zoom: number; trigger?: number } | null>(null);
   const [searchMarker, setSearchMarker] = useState<{ lat: number; lng: number; label: string } | null>(null);
+
+  // Módulo de Cerca Virtual (Isolamento Geográfico) & Planta Baixa
+  const [activeGeofence, setActiveGeofence] = useState<{
+    id: string;
+    name: string;
+    bounds?: [[number, number], [number, number]];
+    polygon?: [number, number][];
+    areaKm2: number;
+    facilityId?: string;
+  } | null>(null);
+  const [isFloorPlanOpen, setIsFloorPlanOpen] = useState<boolean>(false);
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('lg-eletronics-manaus');
+  const [isAutoEmergencyOpen, setIsAutoEmergencyOpen] = useState<boolean>(false);
+  const [emergencyFacility, setEmergencyFacility] = useState<Facility | null>(null);
 
   // WhatsApp Confirmation Modal
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
@@ -232,6 +249,37 @@ export const App: React.FC = () => {
     bringToFront('spotDetail');
   };
 
+  const handleActivateGeofence = (facility: Facility) => {
+    setActiveGeofence({
+      id: facility.id,
+      name: facility.name,
+      bounds: facility.bounds,
+      polygon: facility.polygon,
+      areaKm2: facility.areaKm2,
+      facilityId: facility.id,
+    });
+    setSelectedFacilityId(facility.id);
+    setTargetMapLocation({
+      center: [facility.coordinates.lat, facility.coordinates.lng],
+      zoom: 17,
+      trigger: Date.now(),
+    });
+  };
+
+  const handleClearGeofence = () => {
+    setActiveGeofence(null);
+  };
+
+  const handleOpenFloorPlan = (facilityId?: string) => {
+    if (facilityId) setSelectedFacilityId(facilityId);
+    setIsFloorPlanOpen(true);
+  };
+
+  const handleTriggerAutoEmergency = (facility: Facility) => {
+    setEmergencyFacility(facility);
+    setIsAutoEmergencyOpen(true);
+  };
+
   const handleLocationSelected = (loc: { lat: number; lng: number; label: string; address?: string }) => {
     setSearchMarker(loc);
     setTargetMapLocation({
@@ -254,9 +302,59 @@ export const App: React.FC = () => {
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none">
       {/* 1. Telão Master Fullscreen GIS (Cobertura Nacional Brasil) */}
-      <MainMap
-        onAreaSelected={handleAreaSelected}
-        fireSpots={onlyNewOutbreaks ? fireSpots.filter(f => f.is_new_outbreak) : fireSpots}
+      {(() => {
+        // Filtragem estrita do Ecossistema IA quando a Cerca Virtual está ativa
+        let displayFireSpots = fireSpots;
+        if (activeGeofence) {
+          displayFireSpots = fireSpots.filter((s) => {
+            if (activeGeofence.bounds) {
+              const [sw, ne] = activeGeofence.bounds;
+              const minLat = Math.min(sw[0], ne[0]);
+              const maxLat = Math.max(sw[0], ne[0]);
+              const minLng = Math.min(sw[1], ne[1]);
+              const maxLng = Math.max(sw[1], ne[1]);
+              return s.latitude >= minLat && s.latitude <= maxLat && s.longitude >= minLng && s.longitude <= maxLng;
+            }
+            return true;
+          });
+
+          // Se a instalação fabril tiver incidente e o filtro estiver vazio, injetar ponto térmico do galpão
+          const matchedFacility = INDUSTRIAL_FACILITIES.find(f => f.id === activeGeofence.facilityId);
+          if (matchedFacility && matchedFacility.activeIncident && displayFireSpots.length === 0) {
+            displayFireSpots = [{
+              id: matchedFacility.activeIncident.id,
+              latitude: matchedFacility.coordinates.lat,
+              longitude: matchedFacility.coordinates.lng,
+              frp_mw: 85.4,
+              confidence: 0.99,
+              municipality: 'Manaus',
+              state: 'AM',
+              address: `${matchedFacility.shortName} - ${matchedFacility.activeIncident.sectorName}`,
+              satellite: 'FLIR / IOT TÉRMICO',
+              biome: 'Amazônia (PIM Urbano)',
+              status: 'PENDENTE',
+              is_new_outbreak: true,
+              has_video: true,
+              bright_ti4_k: 457.6,
+              detected_at: matchedFacility.activeIncident.firstDetectedAt,
+              detected_iso: new Date().toISOString(),
+              is_recurrent: false,
+              is_arson_cluster: false
+            }];
+          }
+        } else if (onlyNewOutbreaks) {
+          displayFireSpots = fireSpots.filter(f => f.is_new_outbreak);
+        }
+
+        return (
+          <MainMap
+            onAreaSelected={handleAreaSelected}
+            fireSpots={displayFireSpots}
+            activeGeofence={activeGeofence}
+            onClearGeofence={handleClearGeofence}
+            onOpenFloorPlan={handleOpenFloorPlan}
+            onActivateGeofence={handleActivateGeofence}
+            onTriggerAutoEmergency={handleTriggerAutoEmergency}
         heatmapSpots={heatmapSpots}
         osintAlerts={osintAlerts}
         onOsintClick={(alert) => {
@@ -278,6 +376,8 @@ export const App: React.FC = () => {
         searchMarker={searchMarker}
         onOpenStreetView={handleOpenStreetView}
       />
+        );
+      })()}
 
       {/* Alerta Tático de Alta Nitidez de Novo Foco (<3h) ou Selecionado */}
       {alertBannerSpot && (
@@ -422,10 +522,10 @@ export const App: React.FC = () => {
               <button
                 onClick={() => setIsWhatsAppModalOpen(true)}
                 className="hidden 2xl:flex items-center space-x-1.5 text-amber-400 bg-slate-950/80 hover:bg-amber-950/40 px-2 py-1 rounded border border-amber-800/80 transition cursor-pointer text-[10px]"
-                title="Canal de teste de homologação (+55 91 99146-3640)"
+                title="Canal de teste de homologação (+55 92 99374-6740)"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                <span>TESTE: +55 91 99146-3640</span>
+                <span>TESTE: +55 92 99374-6740</span>
               </button>
             ) : (
               <div
@@ -444,6 +544,43 @@ export const App: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Faixa Indicadora de Cerca Virtual Ativa (Isolamento Geográfico da IA) */}
+      {activeGeofence && (
+        <div className="absolute top-11 left-0 right-0 z-30 bg-cyan-950/95 border-b-2 border-cyan-400 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-cyan-200 pointer-events-auto backdrop-blur-md shadow-2xl">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+            <span className="font-bold text-white text-xs">
+              🔒 CERCA VIRTUAL ATIVA: <span className="text-cyan-300">{activeGeofence.name}</span>
+            </span>
+            <span className="text-slate-500">|</span>
+            <span className="text-slate-300">
+              Área: <strong className="text-white">{activeGeofence.areaKm2.toFixed(3)} km²</strong> ({(activeGeofence.areaKm2 * 100).toFixed(1)} ha)
+            </span>
+            <span className="text-slate-500">|</span>
+            <span className="text-amber-300 font-bold hidden md:inline">
+              ⚡ Ecossistema IA focado e isolado exclusivamente nesta zona
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {activeGeofence.facilityId && (
+              <button
+                onClick={() => handleOpenFloorPlan(activeGeofence.facilityId)}
+                className="px-2.5 py-1 rounded bg-cyan-800 hover:bg-cyan-700 text-white border border-cyan-400 text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer shadow-md"
+              >
+                <span>🏢 Planta Baixa</span>
+              </button>
+            )}
+            <button
+              onClick={handleClearGeofence}
+              className="px-2.5 py-1 rounded bg-slate-800 hover:bg-red-900/90 text-slate-300 hover:text-white border border-slate-700 text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer"
+            >
+              <span>✕ Desativar Isolamento</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Faixa Indicadora de Modo Simulação */}
       {isSimulation && (
@@ -481,7 +618,7 @@ export const App: React.FC = () => {
             className="w-full py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <MessageSquare size={14} />
-            <span>DISPARAR WHATSAPP (+55 91 99146-3640)</span>
+            <span>DISPARAR WHATSAPP (+55 92 99374-6740)</span>
           </button>
         </div>
       )}
@@ -504,8 +641,13 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* 7. Co-piloto de IA Integrado (Grounded no Estado do Mapa) */}
-      <AIAssistantPanel fires={fireSpots} selectedArea={selectedArea} />
+      {/* 7. Co-piloto de IA Integrado (Grounded no Estado do Mapa & Cerca Virtual) */}
+      <AIAssistantPanel
+        fires={activeGeofence ? fireSpots.filter(s => s.latitude >= -3.15 && s.latitude <= -3.05) : fireSpots}
+        selectedArea={selectedArea}
+        geofence={activeGeofence}
+        activeFacility={selectedFacilityId}
+      />
 
       {/* 8. Janelas Flutuantes Desktop UI */}
       
@@ -690,7 +832,7 @@ export const App: React.FC = () => {
                 <span>
                   {status === 'ACIONADO_SIMULACAO'
                     ? `ACIONADO (${activeSpotDetail.dispatched_at || 'TESTE'})`
-                    : 'ACIONAR DESPACHO WHATSAPP (+55 91 99146-3640)'}
+                    : 'ACIONAR DESPACHO WHATSAPP (+55 92 99374-6740)'}
                 </span>
               </button>
             </div>
@@ -786,7 +928,47 @@ export const App: React.FC = () => {
       <BottomDock
         openWindows={openWindows}
         minimizedWindows={minimizedWindows}
-        onToggleWindow={toggleWindow}
+        onToggleWindow={(id) => {
+          if (id === 'floorPlan') {
+            setIsFloorPlanOpen(true);
+            return;
+          }
+          if (id === 'geofence') {
+            if (activeGeofence) {
+              setActiveGeofence(null);
+            } else {
+              handleActivateGeofence(INDUSTRIAL_FACILITIES[0]);
+            }
+            return;
+          }
+          toggleWindow(id);
+        }}
+        isGeofenceActive={Boolean(activeGeofence)}
+      />
+
+      {/* 11. Modal de Planta Baixa Estrutural e Mapeamento Térmico Dinâmico */}
+      <FloorPlanModal
+        isOpen={isFloorPlanOpen}
+        onClose={() => setIsFloorPlanOpen(false)}
+        selectedFacilityId={selectedFacilityId}
+        onActivateGeofence={(fac) => {
+          handleActivateGeofence(fac);
+        }}
+        onTriggerAutoEmergency={(fac) => {
+          handleTriggerAutoEmergency(fac);
+        }}
+        onFlyToFacility={(lat, lng) => {
+          setTargetMapLocation({ center: [lat, lng], zoom: 17, trigger: Date.now() });
+        }}
+      />
+
+      {/* 12. Modal de Protocolo Automatizado de Emergência (30s) */}
+      <AutoEmergencyCountdown
+        isOpen={isAutoEmergencyOpen}
+        onClose={() => setIsAutoEmergencyOpen(false)}
+        facility={emergencyFacility || INDUSTRIAL_FACILITIES[0]}
+        incident={(emergencyFacility || INDUSTRIAL_FACILITIES[0]).activeIncident}
+        defaultCountdownSeconds={30}
       />
     </div>
   );

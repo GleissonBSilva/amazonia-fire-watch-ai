@@ -1,7 +1,7 @@
 """
 Módulo de Despacho Automatizado de Alertas via WhatsApp
 Compatível com Baileys / Evolution API com fallback direto para URL Web/App.
-Destino padrão fixado: +55 92 99146-3640
+Destino padrão fixado: +55 92 99374-6740
 """
 from typing import Dict, Any, Optional
 from backend.app.services.whatsapp_dispatcher import whatsapp_dispatcher, WhatsAppDispatcher

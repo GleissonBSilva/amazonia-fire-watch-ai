@@ -248,7 +248,7 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
           onClick={handleDispatch}
           disabled={isDispatching}
           className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 shadow transition cursor-pointer"
-          title="Despachar alerta no WhatsApp (+55 91 99146-3640)"
+          title="Despachar alerta no WhatsApp (+55 92 99374-6740)"
         >
           {localStatus === 'ACIONADO_SIMULACAO' ? (
             <>

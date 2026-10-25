@@ -279,7 +279,7 @@ export const VideoStreamWindow: React.FC<VideoStreamWindowProps> = ({ onNewFireD
           className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded flex items-center gap-1.5 shadow transition-all cursor-pointer text-[10px]"
         >
           <Zap size={12} />
-          <span>{isAlerting ? 'Despachando...' : 'Despachar WhatsApp (+55 91 99146-3640)'}</span>
+          <span>{isAlerting ? 'Despachando...' : 'Despachar WhatsApp (+55 92 99374-6740)'}</span>
         </button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 """
-Automated WhatsApp Alert Dispatcher Module (+55 92 99146-3640).
+Automated WhatsApp Alert Dispatcher Module (+55 92 99374-6740).
 Integrates with Evolution API / Baileys and provides instant web API fallback.
 """
 
@@ -11,7 +11,7 @@ from ..config import settings
 
 class WhatsAppDispatcher:
     def __init__(self):
-        self.target_number: str = settings.WHATSAPP_TARGET_PHONE # 5592991463640
+        self.target_number: str = settings.WHATSAPP_TARGET_PHONE # 5592993746740
         self.api_url: str = settings.WHATSAPP_API_URL
         self.api_key: str = settings.WHATSAPP_API_KEY
 

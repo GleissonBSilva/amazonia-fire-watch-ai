@@ -1,18 +1,22 @@
 import React from 'react';
-import { Camera, Radio, Globe, Satellite, MessageSquare, Flame, Compass } from 'lucide-react';
+import { Camera, Radio, Globe, Satellite, MessageSquare, Flame, Compass, Layers, ShieldAlert } from 'lucide-react';
 
 interface BottomDockProps {
   openWindows: { [id: string]: boolean };
   minimizedWindows: { [id: string]: boolean };
   onToggleWindow: (id: string) => void;
+  isGeofenceActive?: boolean;
 }
 
 export const BottomDock: React.FC<BottomDockProps> = ({
   openWindows,
   minimizedWindows,
-  onToggleWindow
+  onToggleWindow,
+  isGeofenceActive = false,
 }) => {
   const dockItems = [
+    { id: 'floorPlan', label: 'Planta Baixa (Térmica)', icon: Layers, color: 'text-amber-400' },
+    { id: 'geofence', label: isGeofenceActive ? '🔒 Cerca Virtual (Ativa)' : 'Cerca Virtual (Isolar IA)', icon: ShieldAlert, color: isGeofenceActive ? 'text-cyan-300' : 'text-cyan-400' },
     { id: 'videoStream', label: 'Câmera Rua (YOLO)', icon: Camera, color: 'text-red-400' },
     { id: 'streetView', label: 'Visão da Rua (360°)', icon: Compass, color: 'text-cyan-300' },
     { id: 'osintFeed', label: 'OSINT Telegram/X', icon: Radio, color: 'text-amber-400' },
@@ -25,7 +29,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
   return (
     <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-40 h-10 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg px-2 py-0.5 flex items-center gap-1 shadow-2xl">
       {dockItems.map(item => {
-        const isOpen = openWindows[item.id];
+        const isOpen = openWindows[item.id] || (item.id === 'geofence' && isGeofenceActive);
         const isMin = minimizedWindows[item.id];
         const Icon = item.icon;
 

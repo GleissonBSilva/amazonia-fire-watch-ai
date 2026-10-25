@@ -6,7 +6,7 @@ import os
 
 class Settings:
     # Target phone number for CBMAM / CIOPS dispatch
-    WHATSAPP_TARGET_PHONE: str = os.getenv("WHATSAPP_TARGET_PHONE", "5592991463640")
+    WHATSAPP_TARGET_PHONE: str = os.getenv("WHATSAPP_TARGET_PHONE", "5592993746740")
     
     # Evolution API / Baileys webhook endpoint (optional local or remote bridge)
     WHATSAPP_API_URL: str = os.getenv("WHATSAPP_API_URL", "http://localhost:8080/message/sendText/cbmam")

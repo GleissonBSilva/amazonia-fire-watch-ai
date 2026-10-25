@@ -771,7 +771,7 @@
       <!-- Action Buttons -->
       <div class="space-y-1.5">
         <button onclick="sendWhatsAppFireAlertFromSelection()" class="w-full py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow flex items-center justify-center gap-1.5 text-xs">
-          <span>📲 DISPARAR ALERTA WHATSAPP (+55 92 99146-3640)</span>
+          <span>📲 DISPARAR ALERTA WHATSAPP (+55 92 99374-6740)</span>
         </button>
         <button onclick="clearAreaSelection()" class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs">
           <span>Limpar Delimitação Atual</span>
@@ -782,7 +782,7 @@
   </div>
 
   <!-- ========================================================
-       FLOATING WINDOW 5: ALERTA WHATSAPP (+55 92 99146-3640)
+       FLOATING WINDOW 5: ALERTA WHATSAPP (+55 92 99374-6740)
        ======================================================== -->
   <div id="win-whatsapp" class="tactical-window window-minimized" style="top: 100px; left: calc(50% - 220px); width: 440px; height: 530px; z-index: 105;">
     <div class="window-titlebar bg-gradient-to-r from-emerald-950 to-slate-900" onmousedown="WindowManager.dragStart(event, 'win-whatsapp')">
@@ -801,7 +801,7 @@
       <div class="bg-slate-900/90 p-2.5 rounded border border-emerald-500/40 space-y-2">
         <div class="flex items-center justify-between">
           <span class="text-slate-300 font-bold">DESTINO OFICIAL:</span>
-          <span class="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold rounded">+55 92 99146-3640</span>
+          <span class="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold rounded">+55 92 99374-6740</span>
         </div>
         <div class="flex items-center justify-between pt-2 border-t border-slate-800">
           <div>
@@ -826,7 +826,7 @@
 
       <!-- Dispatch Button -->
       <button onclick="executeWhatsAppDispatch()" class="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow-[0_0_15px_rgba(0,245,155,0.3)] flex items-center justify-center gap-2 text-sm transition-all">
-        <span>📲 ENVIAR AGORA PARA +55 92 99146-3640</span>
+        <span>📲 ENVIAR AGORA PARA +55 92 99374-6740</span>
       </button>
 
       <!-- Dispatch History Log -->
@@ -1101,7 +1101,7 @@
       <span class="text-[9px]">Delimitar Área</span>
       <div class="dock-indicator"></div>
     </div>
-    <div class="dock-item" id="dock-whatsapp" onclick="WindowManager.toggle('win-whatsapp')" title="Central de Alerta WhatsApp (+55 92 99146-3640)">
+    <div class="dock-item" id="dock-whatsapp" onclick="WindowManager.toggle('win-whatsapp')" title="Central de Alerta WhatsApp (+55 92 99374-6740)">
       <span class="text-base text-emerald-400">📲</span>
       <span class="text-[9px] text-emerald-300 font-bold">WhatsApp</span>
       <div class="dock-indicator"></div>
@@ -1157,7 +1157,7 @@
       simTimeSeconds: 300,
       audioActive: true,
       autoDispatchWhatsApp: false,
-      whatsappNumber: '5592991463640',
+      whatsappNumber: '5592993746740',
       visionMode: 'rgb',
       drawMode: null,
       drawnItems: null,
@@ -1719,7 +1719,7 @@
        4. WHATSAPP ALERT SERVICE (src/services/alertService.ts)
        ======================================================== */
     async function sendWhatsAppFireAlert(areaData) {
-      const targetNumber = state.whatsappNumber; // 5592991463640
+      const targetNumber = state.whatsappNumber; // 5592993746740
       const mapsLink = `https://www.google.com/maps?q=${areaData.lat.toFixed(5)},${areaData.lng.toFixed(5)}`;
 
       const textMessage = 
@@ -1750,7 +1750,7 @@
       window.open(`https://api.whatsapp.com/send?phone=${targetNumber}&text=${encodedText}`, '_blank', 'width=800,height=700');
 
       playAlarmSound();
-      showToast(`Alerta despachado para WhatsApp (+55 92 99146-3640)`, 'phone');
+      showToast(`Alerta despachado para WhatsApp (+55 92 99374-6740)`, 'phone');
 
       // Registra no histórico
       const historyList = document.getElementById('dispatchHistoryList');

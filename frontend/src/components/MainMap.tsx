@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, WMSTileLayer, Circle, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, WMSTileLayer, Circle, Marker, Popup, Polygon, Rectangle, useMap } from 'react-leaflet';
+import { INDUSTRIAL_FACILITIES, Facility } from '../data/facilityFloorPlans';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -31,6 +32,18 @@ interface MainMapProps {
   externalTargetView?: { center: [number, number]; zoom: number; trigger?: number } | null;
   searchMarker?: { lat: number; lng: number; label: string; address?: string } | null;
   onOpenStreetView?: (location: { lat: number; lng: number; label: string; address?: string }) => void;
+  activeGeofence?: {
+    id: string;
+    name: string;
+    bounds?: [[number, number], [number, number]];
+    polygon?: [number, number][];
+    areaKm2: number;
+    facilityId?: string;
+  } | null;
+  onClearGeofence?: () => void;
+  onOpenFloorPlan?: (facilityId?: string) => void;
+  onActivateGeofence?: (facility: Facility) => void;
+  onTriggerAutoEmergency?: (facility: Facility) => void;
 }
 
 // Quick Viewports for Brazilian Biomes
@@ -38,6 +51,7 @@ const BRAZIL_VIEWPORTS = {
   brasil: { center: [-14.235, -51.925] as [number, number], zoom: 4 },
   amazonia: { center: [-4.2, -63.0] as [number, number], zoom: 6 },
   manaus: { center: [-3.089, -60.021] as [number, number], zoom: 12 },
+  distritoIndustrial: { center: [-3.1015, -59.9445] as [number, number], zoom: 16 },
   pantanal: { center: [-17.5, -56.8] as [number, number], zoom: 7 },
   cerrado: { center: [-12.5, -46.5] as [number, number], zoom: 6 },
 };
@@ -186,6 +200,11 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   externalTargetView = null,
   searchMarker = null,
   onOpenStreetView,
+  activeGeofence = null,
+  onClearGeofence,
+  onOpenFloorPlan,
+  onActivateGeofence,
+  onTriggerAutoEmergency,
 }) => {
   const [currentView, setCurrentView] = React.useState<{
     center: [number, number];
@@ -293,6 +312,20 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
       </div>
     `,
     iconSize: [32, 32],
+  });
+
+  // Custom Icon for Industrial Facilities (LG / Samsung Floor Plans)
+  const industrialFacilityIcon = L.divIcon({
+    className: 'custom-facility-marker',
+    html: `
+      <div class="relative flex items-center justify-center -top-4 -left-4 w-9 h-9 cursor-pointer group">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-60"></span>
+        <div class="relative w-8 h-8 rounded-lg bg-slate-950/95 border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.8)] flex items-center justify-center text-cyan-300 font-bold text-xs group-hover:scale-110 transition-transform">
+          🏢
+        </div>
+      </div>
+    `,
+    iconSize: [36, 36],
   });
 
   const activeLayerConfig = MAP_LAYERS[currentLayer] || MAP_LAYERS.satellite;
@@ -592,6 +625,110 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           </Marker>
         ))}
 
+        
+        {/* ========================================================
+            CERCA VIRTUAL / GEOFENCE ATIVA (POLÍGONO NEON ILUMINADO)
+            ======================================================== */}
+        {activeGeofence && activeGeofence.polygon && (
+          <Polygon
+            positions={activeGeofence.polygon}
+            pathOptions={{
+              color: '#06b6d4',
+              fillColor: '#0891b2',
+              fillOpacity: 0.16,
+              weight: 3,
+              dashArray: '8, 6',
+            }}
+          />
+        )}
+
+        {activeGeofence && !activeGeofence.polygon && activeGeofence.bounds && (
+          <Rectangle
+            bounds={activeGeofence.bounds}
+            pathOptions={{
+              color: '#06b6d4',
+              fillColor: '#0891b2',
+              fillOpacity: 0.16,
+              weight: 3,
+              dashArray: '8, 6',
+            }}
+          />
+        )}
+
+        {/* ========================================================
+            INSTALAÇÕES INDUSTRIAIS COM PLANTA BAIXA (LG & SAMSUNG)
+            ======================================================== */}
+        {INDUSTRIAL_FACILITIES.map((facility) => (
+          <Marker
+            key={`facility-${facility.id}`}
+            position={[facility.coordinates.lat, facility.coordinates.lng]}
+            icon={industrialFacilityIcon}
+          >
+            <Popup>
+              <div className="font-mono text-xs text-white max-w-[280px] bg-slate-950 p-2.5 rounded-lg border border-cyan-500/70 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-1 mb-1.5">
+                  <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">
+                    PLANTA INDUSTRIAL • PIM
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-red-950 text-red-300 border border-red-600/60 animate-pulse">
+                    FOCO INTERNO
+                  </span>
+                </div>
+
+                <div className="font-bold text-white text-[12px] leading-tight mb-1">
+                  {facility.name}
+                </div>
+                <div className="text-[10px] text-slate-300 mb-2 leading-tight">
+                  {facility.address} ({facility.totalAreaM2.toLocaleString('pt-BR')} m²)
+                </div>
+
+                {facility.activeIncident && (
+                  <div className="bg-red-950/40 border border-red-800/40 rounded p-1.5 mb-2 text-[10px]">
+                    <div className="text-red-300 font-bold flex items-center gap-1">
+                      <span>🔥 {facility.activeIncident.sectorName}</span>
+                    </div>
+                    <div className="text-slate-300 mt-0.5">
+                      Pico: <strong className="text-orange-300">{facility.activeIncident.peakTempC.toFixed(1)}°C</strong> | Fumaça: <strong className="text-amber-300">{facility.activeIncident.smokeConcentrationPpm} ppm</strong>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                  {onOpenFloorPlan && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenFloorPlan(facility.id)}
+                      className="w-full py-1.5 bg-cyan-700 hover:bg-cyan-600 text-white rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
+                    >
+                      <span>🏢 Abrir Planta Baixa &amp; Térmica</span>
+                    </button>
+                  )}
+
+                  {onActivateGeofence && (
+                    <button
+                      type="button"
+                      onClick={() => onActivateGeofence(facility)}
+                      className="w-full py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-700/60 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
+                    >
+                      <span>🔒 Isolar Cerca Virtual Neste Galpão</span>
+                    </button>
+                  )}
+
+                  {onTriggerAutoEmergency && (
+                    <button
+                      type="button"
+                      onClick={() => onTriggerAutoEmergency(facility)}
+                      className="w-full py-1 bg-red-950 hover:bg-red-900 text-red-300 border border-red-700/60 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
+                    >
+                      <span>🚨 Protocolo de Emergência (30s)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
         {/* Leaflet Draw Component - Delimitação por Retângulo / Polígono */}
         <LeafletDrawControl onAreaSelected={onAreaSelected} />
       </MapContainer>
@@ -616,6 +753,13 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           className="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 font-bold"
         >
           🏙️ Manaus
+        </button>
+        <button
+          onClick={() => setCurrentView(BRAZIL_VIEWPORTS.distritoIndustrial)}
+          className="px-2 py-0.5 rounded bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-700 font-bold"
+          title="Distrito Industrial I - Fábricas LG e Samsung"
+        >
+          🏭 Distrito Industrial (PIM)
         </button>
         <button
           onClick={() => setCurrentView(BRAZIL_VIEWPORTS.pantanal)}

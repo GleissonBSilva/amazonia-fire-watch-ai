@@ -14,7 +14,7 @@ python -m pip install -r backend\requirements.txt --quiet
 
 echo [2/2] Iniciando Servidor FastAPI em http://localhost:8000...
 echo - Visao em Memoria: io.BytesIO (Zero Disco)
-echo - Despacho WhatsApp: +55 92 99146-3640
+echo - Despacho WhatsApp: +55 92 99374-6740
 echo - OSINT Banco de Dados: SQLite (osint_alerts.db)
 echo.
 

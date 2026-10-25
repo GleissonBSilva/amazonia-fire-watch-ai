@@ -16,8 +16,8 @@ export const WhatsAppAlertModal: React.FC<WhatsAppAlertModalProps> = ({
   selectedArea,
   activeSpot,
 }) => {
-  const targetPhone = '+55 91 99146-3640';
-  const targetNumberDigits = '5591991463640';
+  const targetPhone = '+55 92 99374-6740';
+  const targetNumberDigits = '5592993746740';
 
   const lat = selectedArea ? selectedArea.center.lat : activeSpot ? activeSpot.latitude : -3.089;
   const lng = selectedArea ? selectedArea.center.lng : activeSpot ? activeSpot.longitude : -60.021;
