@@ -17,6 +17,7 @@ import { Flame, ShieldAlert, Radio, Satellite, Globe, MessageSquare, Clock, Cale
 import { findNearestInfrastructure } from './data/emergencyInfrastructure';
 import { calculateAirQuality } from './data/airQuality';
 import { GoogleEarth3DWindow } from './components/GoogleEarth3DWindow';
+import { StreetViewWindow } from './components/StreetViewWindow';
 import { NewFireAlertBanner } from './components/NewFireAlertBanner';
 
 // Encapsulated Tactical Clock Component to prevent full App / Leaflet re-renders every 1s
@@ -85,7 +86,8 @@ export const App: React.FC = () => {
     firms: 101,
     googleEarth: 102,
     bdqueimadas: 103,
-    spotDetail: 107
+    spotDetail: 107,
+    streetView: 108
   });
 
   const [openWindows, setOpenWindows] = useState<{ [id: string]: boolean }>({
@@ -95,7 +97,8 @@ export const App: React.FC = () => {
     googleEarth: false,
     bdqueimadas: false,
     whatsappAlert: false,
-    spotDetail: false
+    spotDetail: false,
+    streetView: false
   });
 
   const [minimizedWindows, setMinimizedWindows] = useState<{ [id: string]: boolean }>({
@@ -105,11 +108,20 @@ export const App: React.FC = () => {
     googleEarth: false,
     bdqueimadas: false,
     whatsappAlert: false,
-    spotDetail: false
+    spotDetail: false,
+    streetView: false
   });
 
   const [activeSpotDetail, setActiveSpotDetail] = useState<FireSpot | null>(null);
   const [alertBannerSpot, setAlertBannerSpot] = useState<FireSpot | null>(null);
+  const [streetViewLocation, setStreetViewLocation] = useState<{ lat: number; lng: number; label: string; address?: string } | null>(null);
+
+  const handleOpenStreetView = (loc: { lat: number; lng: number; label: string; address?: string }) => {
+    setStreetViewLocation(loc);
+    setOpenWindows(prev => ({ ...prev, streetView: true }));
+    setMinimizedWindows(prev => ({ ...prev, streetView: false }));
+    bringToFront('streetView');
+  };
 
   useEffect(() => {
     // Load nationwide fires, heatmap and OSINT once on mount
@@ -197,7 +209,7 @@ export const App: React.FC = () => {
     bringToFront('spotDetail');
   };
 
-  const handleLocationSelected = (loc: { lat: number; lng: number; label: string }) => {
+  const handleLocationSelected = (loc: { lat: number; lng: number; label: string; address?: string }) => {
     setSearchMarker(loc);
     setTargetMapLocation({
       center: [loc.lat, loc.lng],
@@ -241,6 +253,7 @@ export const App: React.FC = () => {
         showHeatmapOverlay={Boolean(activeOverlays.heatmap || showHeatmapOverlay)}
         externalTargetView={targetMapLocation}
         searchMarker={searchMarker}
+        onOpenStreetView={handleOpenStreetView}
       />
 
       {/* Alerta Tático de Alta Nitidez de Novo Foco (<3h) ou Selecionado */}
@@ -287,7 +300,14 @@ export const App: React.FC = () => {
 
         {/* Campo de Busca Compacto (w-48 ou w-56) */}
         <div className="hidden lg:block flex-shrink-0">
-          <SearchBar onLocationSelected={handleLocationSelected} />
+          <SearchBar
+            onLocationSelected={handleLocationSelected}
+            onOpenStreetView={handleOpenStreetView}
+            onOpenEarth3D={(lat, lng) => {
+              setCurrentLayer('google_earth');
+              setTargetMapLocation({ center: [lat, lng], zoom: 16, trigger: Date.now() });
+            }}
+          />
         </div>
 
         {/* Seletor Compacto de Camadas e Overlays */}
@@ -658,6 +678,29 @@ export const App: React.FC = () => {
         defaultPosition={{ x: 320, y: 140 }}
         defaultSize={{ width: 620, height: 430 }}
       />
+
+      {/* G. Visão da Rua (Street View 360° em Tempo Real) */}
+      <FloatingWindow
+        id="streetView"
+        title={`Visão da Rua • ${streetViewLocation?.label || 'Street View 360°'}`}
+        isOpen={openWindows.streetView}
+        isMinimized={minimizedWindows.streetView}
+        zIndex={windowZ.streetView}
+        onFocus={bringToFront}
+        onClose={closeWindow}
+        onMinimize={minimizeWindow}
+        defaultPosition={{ x: 80, y: 70 }}
+        defaultSize={{ width: 620, height: 440 }}
+      >
+        {streetViewLocation && (
+          <StreetViewWindow
+            location={streetViewLocation}
+            onFlyTo={(lat, lng) => {
+              setTargetMapLocation({ center: [lat, lng], zoom: 17, trigger: Date.now() });
+            }}
+          />
+        )}
+      </FloatingWindow>
 
       {/* 9. Modal de Confirmação e Despacho Seguro WhatsApp */}
       <WhatsAppConfirmModal

@@ -29,7 +29,8 @@ interface MainMapProps {
   activeOverlays?: ActiveOverlaysState;
   showHeatmapOverlay?: boolean;
   externalTargetView?: { center: [number, number]; zoom: number; trigger?: number } | null;
-  searchMarker?: { lat: number; lng: number; label: string } | null;
+  searchMarker?: { lat: number; lng: number; label: string; address?: string } | null;
+  onOpenStreetView?: (location: { lat: number; lng: number; label: string; address?: string }) => void;
 }
 
 // Quick Viewports for Brazilian Biomes
@@ -184,6 +185,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   showHeatmapOverlay = false,
   externalTargetView = null,
   searchMarker = null,
+  onOpenStreetView,
 }) => {
   const [currentView, setCurrentView] = React.useState<{
     center: [number, number];
@@ -446,9 +448,38 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
                 <div className="font-bold text-cyan-400 mb-1 flex items-center gap-1">
                   <span>🎯 COORDENADA SELECIONADA:</span>
                 </div>
-                <div className="text-[11px] text-slate-200">{searchMarker.label}</div>
-                <div className="text-[10px] text-slate-400 mt-1">
+                <div className="text-[11.5px] font-bold text-white leading-tight">{searchMarker.label}</div>
+                {searchMarker.address && (
+                  <div className="text-[10px] text-slate-300 mt-0.5 leading-tight">{searchMarker.address}</div>
+                )}
+                <div className="text-[9.5px] text-cyan-300 mt-1 font-mono">
                   LAT: {searchMarker.lat.toFixed(5)}° // LON: {searchMarker.lng.toFixed(5)}°
+                </div>
+
+                <div className="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5">
+                  {onOpenStreetView && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenStreetView({
+                        lat: searchMarker.lat,
+                        lng: searchMarker.lng,
+                        label: searchMarker.label,
+                        address: searchMarker.address
+                      })}
+                      className="flex-1 py-1 px-1.5 bg-sky-700 hover:bg-sky-600 text-white rounded font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer"
+                    >
+                      <span>🚶‍♂️ Visão da Rua (Street View)</span>
+                    </button>
+                  )}
+                  <a
+                    href={`https://earth.google.com/web/@${searchMarker.lat},${searchMarker.lng},50a,500d,35y,0t,0r`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-1 px-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 rounded font-bold text-[10px] flex items-center justify-center gap-1 transition"
+                    title="Abrir no Google Earth 3D"
+                  >
+                    <span>🌐 3D</span>
+                  </a>
                 </div>
               </div>
             </Popup>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Radio, Globe, Satellite, MessageSquare, Flame } from 'lucide-react';
+import { Camera, Radio, Globe, Satellite, MessageSquare, Flame, Compass } from 'lucide-react';
 
 interface BottomDockProps {
   openWindows: { [id: string]: boolean };
@@ -14,6 +14,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
 }) => {
   const dockItems = [
     { id: 'videoStream', label: 'Câmera Rua (YOLO)', icon: Camera, color: 'text-red-400' },
+    { id: 'streetView', label: 'Visão da Rua (360°)', icon: Compass, color: 'text-cyan-300' },
     { id: 'osintFeed', label: 'OSINT Telegram/X', icon: Radio, color: 'text-amber-400' },
     { id: 'firms', label: 'NASA FIRMS', icon: Satellite, color: 'text-amber-300' },
     { id: 'googleEarth', label: 'Google Earth 3D', icon: Globe, color: 'text-sky-300' },
