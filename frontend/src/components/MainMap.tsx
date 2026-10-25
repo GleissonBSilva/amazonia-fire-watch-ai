@@ -5,7 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import 'leaflet-draw';
-import { Crosshair, ExternalLink } from 'lucide-react';
+import { Crosshair, ExternalLink, Wind, Thermometer } from 'lucide-react';
 import {
   DelimitedArea,
   OSINTAlert,
@@ -152,6 +152,15 @@ const LeafletDrawControl: React.FC<{ onAreaSelected: (data: DelimitedArea) => vo
 };
 
 // Static WMS Configuration Objects to prevent Leaflet layer.setParams / redraw flicker
+// Data recente válida para garantir retorno 100% de raster no NASA GIBS WMS
+const getGibsDate = () => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - 2); // 2 dias atrás garante mosaico completo gerado pela NASA
+  return d.toISOString().split('T')[0];
+};
+
+const GIBS_DATE = getGibsDate();
+
 const STATIC_WMS_CONFIG = {
   goes16: {
     layers: 'GOES-East_ABI_GeoColor',
@@ -164,18 +173,21 @@ const STATIC_WMS_CONFIG = {
     format: 'image/png',
     transparent: true,
     version: '1.3.0',
+    time: GIBS_DATE,
   },
   thermalMask: {
     layers: 'MODIS_Terra_Land_Surface_Temp_Day',
     format: 'image/png',
     transparent: true,
     version: '1.3.0',
+    time: GIBS_DATE,
   },
   nasaFirms: {
     layers: 'VIIRS_SNPP_Thermal_Anomalies_375m_All',
     format: 'image/png',
     transparent: true,
     version: '1.3.0',
+    time: GIBS_DATE,
   },
   inpeBdqueimadas: {
     layers: 'bdqueimadas:focos_24h',
@@ -751,6 +763,71 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         <LeafletDrawControl onAreaSelected={onAreaSelected} />
       </MapContainer>
 
+      {/* HUD: Legenda Dinâmica de Poluição do Ar (AQI & Aerossóis MODIS) */}
+      {overlays.smokePlume && (
+        <div className="absolute bottom-14 left-4 z-20 bg-slate-950/95 backdrop-blur-md border border-purple-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">
+          <div className="flex items-center justify-between border-b border-purple-900/50 pb-1 mb-1.5">
+            <span className="text-[10.5px] font-bold text-purple-300 flex items-center gap-1.5">
+              <Wind size={13} className="text-purple-400" /> POLUIÇÃO DO AR (AQI / PM2.5)
+            </span>
+            <span className="text-[8px] bg-purple-950 text-purple-200 border border-purple-600 px-1 py-0.2 rounded font-bold">
+              NASA GIBS
+            </span>
+          </div>
+          <div className="text-[9.5px] text-slate-300 mb-2 leading-tight">
+            Pluma de aerossóis ópticos (AOD) e dispersão de fuligem atmosférica (MODIS Terra).
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[9px]">
+              <span className="text-slate-400">Escala de Severidade (CONAMA / EPA):</span>
+              <span className="text-purple-300 font-bold">{GIBS_DATE}</span>
+            </div>
+            <div className="grid grid-cols-6 gap-0.5 h-2.5 rounded overflow-hidden">
+              <div className="bg-[#10b981]" title="Boa (0-50)" />
+              <div className="bg-[#eab308]" title="Moderada (51-100)" />
+              <div className="bg-[#f97316]" title="Ruim (101-150)" />
+              <div className="bg-[#ef4444]" title="Muito Ruim (151-200)" />
+              <div className="bg-[#a855f7]" title="Péssima (201-300)" />
+              <div className="bg-[#7e22ce]" title="Perigosa (>300)" />
+            </div>
+            <div className="flex justify-between text-[8px] text-slate-400 font-bold">
+              <span className="text-emerald-400">0 (Boa)</span>
+              <span className="text-yellow-400">50 (Alerta)</span>
+              <span className="text-purple-400">300+ (Perigosa)</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HUD: Legenda Dinâmica de Temperatura da Superfície (LST Day) */}
+      {overlays.thermalMask && (
+        <div className="absolute bottom-14 left-4 z-20 bg-slate-950/95 backdrop-blur-md border border-orange-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">
+          <div className="flex items-center justify-between border-b border-orange-900/50 pb-1 mb-1.5">
+            <span className="text-[10.5px] font-bold text-orange-300 flex items-center gap-1.5">
+              <Thermometer size={13} className="text-orange-400" /> MÁSCARA TÉRMICA (LST DAY)
+            </span>
+            <span className="text-[8px] bg-orange-950 text-orange-200 border border-orange-600 px-1 py-0.2 rounded font-bold">
+              MODIS 1KM
+            </span>
+          </div>
+          <div className="text-[9.5px] text-slate-300 mb-2 leading-tight">
+            Mapeamento da temperatura radiométrica da superfície terrestre diurna.
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[9px]">
+              <span className="text-slate-400">Gradiente Radiométrico:</span>
+              <span className="text-orange-300 font-bold">{GIBS_DATE}</span>
+            </div>
+            <div className="w-full h-2.5 rounded overflow-hidden bg-gradient-to-r from-blue-600 via-green-500 via-yellow-400 via-orange-500 to-red-600" />
+            <div className="flex justify-between text-[8px] text-slate-400 font-bold">
+              <span className="text-blue-400">&lt; 15°C (Água/Frio)</span>
+              <span className="text-yellow-400">30°C</span>
+              <span className="text-red-400">&gt; 50°C (Crítico)</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Barra Flutuante de Atalhos Regionais */}
       <div className="absolute top-16 left-12 z-20 flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1.5 shadow-2xl font-mono text-xs pointer-events-auto">
         <span className="text-[10px] text-slate-400 px-1 font-bold">REGIONAL:</span>
@@ -775,7 +852,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         <button
           onClick={() => setCurrentView(BRAZIL_VIEWPORTS.distritoIndustrial)}
           className="px-2 py-0.5 rounded bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-700 font-bold"
-          title="Distrito Industrial I - Fábricas LG e Samsung"
+          title="Distrito Industrial I - Complexo Industrial de Manaus"
         >
           🏭 Distrito Industrial (PIM)
         </button>
