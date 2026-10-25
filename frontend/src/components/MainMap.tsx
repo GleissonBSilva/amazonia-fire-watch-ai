@@ -302,7 +302,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
       <MapContainer
         center={[-14.235, -51.925]} // Centro Geográfico do Brasil
         zoom={5}
-        maxZoom={19}
+        maxZoom={22}
         scrollWheelZoom={true}
         zoomControl={false}
         className="w-full h-full"
@@ -316,8 +316,8 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           key={`base-${currentLayer}`}
           url={activeLayerConfig.url}
           attribution={activeLayerConfig.attribution}
-          maxZoom={19}
-          maxNativeZoom={activeLayerConfig.maxNativeZoom || 16}
+          maxZoom={activeLayerConfig.maxZoom || 22}
+          maxNativeZoom={activeLayerConfig.maxNativeZoom || 20}
         />
 
         {/* Camadas Transparentes de Referência da Base (Bairros, Ruas e Rodovias) */}
@@ -326,7 +326,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
             <TileLayer
               key={`overlay-${currentLayer}-${ov.id}`}
               url={ov.url}
-              maxZoom={19}
+              maxZoom={activeLayerConfig.maxZoom || 22}
               maxNativeZoom={ov.maxNativeZoom || 16}
               zIndex={2}
             />

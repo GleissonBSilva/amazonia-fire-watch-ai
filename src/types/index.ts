@@ -77,7 +77,7 @@ export interface WindowState {
 
 export type TemporalMode = '24h' | 'month' | 'historical' | 'recent_3h';
 
-export type MapLayerType = 'satellite' | 'google_earth' | 'streets' | 'dark' | 'topo';
+export type MapLayerType = 'google_hybrid' | 'satellite' | 'google_earth' | 'streets' | 'dark' | 'topo';
 
 export interface ActiveOverlaysState {
   nasaFirms: boolean;
@@ -107,33 +107,40 @@ export interface MapLayerConfig {
 }
 
 export const MAP_LAYERS: Record<MapLayerType, MapLayerConfig> = {
+  google_hybrid: {
+    name: 'Google Satélite HD',
+    url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps / Maxar &mdash; Satélite Híbrido Ultra-HD (Zoom 22)',
+    maxZoom: 22,
+    maxNativeZoom: 21,
+  },
   satellite: {
-    name: 'Satélite Híbrido',
+    name: 'Esri Satélite Híbrido',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, CNES/Airbus DS',
-    maxZoom: 19,
-    maxNativeZoom: 17,
+    maxZoom: 21,
+    maxNativeZoom: 18,
     overlays: [
       {
         id: 'boundaries-places',
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-        maxZoom: 19,
-        maxNativeZoom: 17,
+        maxZoom: 21,
+        maxNativeZoom: 18,
       },
       {
         id: 'transportation',
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
-        maxZoom: 19,
-        maxNativeZoom: 17,
+        maxZoom: 21,
+        maxNativeZoom: 18,
       },
     ],
   },
   google_earth: {
-    name: 'Google Earth 3D',
-    url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-    attribution: '&copy; Google Earth 3D / Maxar Technologies &mdash; Topografia & Imagens de Satélite',
-    maxZoom: 20,
-    maxNativeZoom: 18,
+    name: 'Google Earth 3D (Terreno)',
+    url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Earth 3D &mdash; Topografia e Terreno Sombreado',
+    maxZoom: 22,
+    maxNativeZoom: 20,
   },
   streets: {
     name: 'Ruas Claras',

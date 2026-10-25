@@ -43,7 +43,7 @@ export const App: React.FC = () => {
   const [selectedArea, setSelectedArea] = useState<DelimitedArea | null>(null);
   const [temporalMode, setTemporalMode] = useState<TemporalMode>('24h');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [currentLayer, setCurrentLayer] = useState<MapLayerType>('satellite');
+  const [currentLayer, setCurrentLayer] = useState<MapLayerType>('google_hybrid');
   const [showHeatmapOverlay, setShowHeatmapOverlay] = useState<boolean>(false);
   const [activeOverlays, setActiveOverlays] = useState<ActiveOverlaysState>({
     nasaFirms: false,

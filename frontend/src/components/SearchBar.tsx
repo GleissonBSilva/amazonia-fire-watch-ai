@@ -9,6 +9,7 @@ export interface SearchBarProps {
 }
 
 const QUICK_SUGGESTIONS = [
+  { label: 'Samsung (Distrito Industrial, Manaus)', q: '-3.09918, -59.94411' },
   { label: 'CEP 69050-030 (Pq. 10, Manaus)', q: '69050-030' },
   { label: 'Av. Djalma Batista (Manaus)', q: 'Avenida Djalma Batista, Manaus' },
   { label: 'BR-230 Transamazônica (Lábrea)', q: 'BR-230, Lábrea' },
