@@ -112,6 +112,23 @@ export const App: React.FC = () => {
     streetView: false
   });
 
+  const [isSimulation, setIsSimulation] = useState<boolean>(() => {
+    const saved = localStorage.getItem('isSimulation');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const toggleSimulationMode = () => {
+    const nextVal = !isSimulation;
+    setIsSimulation(nextVal);
+    localStorage.setItem('isSimulation', String(nextVal));
+    if (!nextVal) {
+      // Switching to REAL: clear simulated items
+      setHoveredSpot(null);
+      setAlertBannerSpot(null);
+      setOpenWindows(prev => ({ ...prev, videoStream: false }));
+    }
+  };
+
   const [activeSpotDetail, setActiveSpotDetail] = useState<FireSpot | null>(null);
   const [alertBannerSpot, setAlertBannerSpot] = useState<FireSpot | null>(null);
   const [streetViewLocation, setStreetViewLocation] = useState<{ lat: number; lng: number; label: string; address?: string } | null>(null);
@@ -124,18 +141,20 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Load nationwide fires, heatmap and OSINT once on mount
-    fetchNationalFires().then(spots => {
+    // Load nationwide fires based on simulation mode
+    fetchNationalFires(isSimulation).then(spots => {
       setFireSpots(spots);
       const recent = spots.find(s => s.is_new_outbreak);
-      if (recent) {
+      if (recent && isSimulation) {
         setAlertBannerSpot(recent);
+      } else if (!isSimulation) {
+        setAlertBannerSpot(null);
       }
     });
     fetchHeatmapData().then(setHeatmapSpots);
     fetchTimelineData().then(setTimelineData);
     fetchOsintAlerts().then(setOsintAlerts);
-  }, []);
+  }, [isSimulation]);
 
   const bringToFront = (id: string) => {
     const nextZ = topZ + 1;
@@ -181,6 +200,10 @@ export const App: React.FC = () => {
     }
   };
   const handleNewFireDetected = (spot: FireSpot) => {
+    if (!isSimulation) {
+      console.warn('Detecção de vídeo descartada: Modo Operacional Real ativo.');
+      return;
+    }
     setFireSpots(prev => {
       const exists = prev.some(s => s.id === spot.id);
       if (exists) return prev;
@@ -260,6 +283,7 @@ export const App: React.FC = () => {
       {alertBannerSpot && (
         <NewFireAlertBanner
           spot={alertBannerSpot}
+          isSimulation={isSimulation}
           onClose={() => setAlertBannerSpot(null)}
           onFlyTo={(lat, lng) => {
             setTargetMapLocation({
@@ -277,6 +301,7 @@ export const App: React.FC = () => {
       {hoveredSpot && (
         <HoverPreviewCard
           spot={hoveredSpot}
+          isSimulation={isSimulation}
           position={hoverPosition}
           onOpenDetails={handleSpotClick}
           onStatusChange={handleSpotStatusChange}
@@ -369,22 +394,68 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Badge Discreto de Simulação & Relógio */}
+        {/* Toggle Switch: Modo Simulação vs Operação Real */}
         <div className="flex items-center space-x-2 text-xs font-mono flex-shrink-0">
-          <button
-            onClick={() => setIsWhatsAppModalOpen(true)}
-            className="hidden xl:flex items-center space-x-1.5 text-emerald-400 bg-slate-950/80 hover:bg-emerald-950/40 px-2 py-1 rounded border border-emerald-800/80 transition cursor-pointer text-[10px]"
-            title="Canal de teste seguro restrito"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>SIMULAÇÃO: +55 91 99146-3640</span>
-          </button>
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={toggleSimulationMode}
+              className={`h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-all shadow-sm border cursor-pointer ${
+                isSimulation
+                  ? 'bg-amber-950/90 text-amber-300 border-amber-500/80 hover:bg-amber-900/90 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                  : 'bg-emerald-950/90 text-emerald-300 border-emerald-500/80 hover:bg-emerald-900/90 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+              }`}
+              title={isSimulation ? 'Modo Simulação Ativo. Clique para mudar para Dados Reais de Satélite' : 'Modo Operação Real Ativo. Clique para alternar para Simulação'}
+            >
+              <span className="text-[11px]">{isSimulation ? '🧪' : '🛰️'}</span>
+              <span>{isSimulation ? 'SIMULAÇÃO' : 'DADOS REAIS'}</span>
+              
+              <div
+                className={`w-7 h-3.5 rounded-full p-0.5 transition-colors flex items-center ${
+                  isSimulation ? 'bg-amber-600 justify-start' : 'bg-emerald-500 justify-end'
+                }`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform" />
+              </div>
+            </button>
+
+            {isSimulation ? (
+              <button
+                onClick={() => setIsWhatsAppModalOpen(true)}
+                className="hidden 2xl:flex items-center space-x-1.5 text-amber-400 bg-slate-950/80 hover:bg-amber-950/40 px-2 py-1 rounded border border-amber-800/80 transition cursor-pointer text-[10px]"
+                title="Canal de teste de homologação (+55 91 99146-3640)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>TESTE: +55 91 99146-3640</span>
+              </button>
+            ) : (
+              <div
+                className="hidden 2xl:flex items-center space-x-1.5 text-emerald-400 bg-slate-950/80 px-2 py-1 rounded border border-emerald-800/80 text-[10px] font-bold"
+                title="Consumindo órbitas reais NASA FIRMS e INPE"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>NASA FIRMS &amp; INPE (REAL)</span>
+              </div>
+            )}
+          </div>
+
           <div className="hidden sm:flex items-center space-x-1 text-slate-300 bg-slate-950/80 px-2 py-1 rounded border border-slate-800 text-[11px]">
             <Clock size={11} className="text-amber-300" />
             <TacticalClock />
           </div>
         </div>
       </header>
+
+      {/* Faixa Indicadora de Modo Simulação */}
+      {isSimulation && (
+        <div className="absolute top-11 left-0 right-0 z-10 bg-amber-500/10 border-b border-amber-500/30 px-3 py-0.5 flex items-center justify-between text-[10px] font-mono text-amber-300 pointer-events-none backdrop-blur-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span className="font-bold">MODO SIMULAÇÃO ATIVO</span>
+            <span className="text-slate-400">• Ocorrências fictícias de demonstração</span>
+          </div>
+          <span className="text-amber-400/90 font-bold">🔒 TRAVA DE SEGURANÇA LIGADA: DESPACHOS EXTERNOS BLOQUEADOS</span>
+        </div>
+      )}
 
       {/* 4. Drawer Lateral de Focos Detectados (Collapsible Sidebar) */}
       <FiresDrawer
@@ -605,7 +676,8 @@ export const App: React.FC = () => {
                       lng: activeSpotDetail.longitude,
                       areaSqKm: 1.45,
                       criticidade: 'CRÍTICA',
-                      airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: airQuality.pm25 }
+                      airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: airQuality.pm25 },
+                      isSimulation
                     });
                     handleSpotStatusChange(activeSpotDetail.id, 'ACIONADO_SIMULACAO', nowStr);
                   } catch (e) {

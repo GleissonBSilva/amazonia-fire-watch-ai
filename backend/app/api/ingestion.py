@@ -2,14 +2,18 @@
 API Endpoints for National INPE & NASA FIRMS Ingestion.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from ..services.inpe_firms_ingestion import national_ingestion
 
 router = APIRouter(prefix="/fires", tags=["National Fires Ingestion"])
 
 @router.get("/national")
-async def get_national_fires():
-    """Returns real-time 24h active fire spots across Brazil."""
+async def get_national_fires(
+    simulation: bool = Query(True, description="Se True, retorna cenário de simulação; se False, consome NASA FIRMS e INPE reais")
+):
+    """Returns real-time 24h active fire spots across Brazil (simulated or real satellite)."""
+    if not simulation:
+        return await national_ingestion.get_real_satellite_fires()
     return national_ingestion.get_realtime_24h_fires()
 
 @router.get("/heatmap")

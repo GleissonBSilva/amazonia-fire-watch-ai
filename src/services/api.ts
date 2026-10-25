@@ -2,9 +2,9 @@ import { OSINTAlert, VideoDetectionStatus, FireSpot } from '../types';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-export async function fetchNationalFires(): Promise<FireSpot[]> {
+export async function fetchNationalFires(simulation: boolean = true): Promise<FireSpot[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/fires/national`);
+    const res = await fetch(`${API_BASE_URL}/fires/national?simulation=${simulation}`);
     if (res.ok) {
       return await res.json();
     }

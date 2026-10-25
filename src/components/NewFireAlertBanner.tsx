@@ -25,6 +25,7 @@ export interface NewFireAlertBannerProps {
   onFlyTo: (lat: number, lng: number) => void;
   onOpenDetails: (spot: FireSpot) => void;
   onStatusChange?: (spotId: string, newStatus: any, dispatchedAt: string) => void;
+  isSimulation?: boolean;
 }
 
 export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
@@ -33,6 +34,7 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
   onFlyTo,
   onOpenDetails,
   onStatusChange,
+  isSimulation = true,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -58,6 +60,7 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
         areaSqKm: 1.45,
         criticidade: spot.frp_mw >= 40 ? 'CRÍTICA' : 'ALTA',
         airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: airQuality.pm25 },
+        isSimulation,
       });
       setLocalStatus('ACIONADO_SIMULACAO');
       setDispatchedTime(nowStr);
@@ -88,9 +91,18 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
           </span>
-          <span className="text-[12px] font-black tracking-wider text-yellow-300 uppercase">
-            {spot.is_new_outbreak ? '🚨 NOVO FOCO DETECTADO (<3H)' : '🔥 FOCO ATIVO SELECIONADO'}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase border ${
+              isSimulation
+                ? 'bg-amber-950 text-amber-300 border-amber-600'
+                : 'bg-emerald-950 text-emerald-300 border-emerald-500'
+            }`}>
+              {isSimulation ? 'SIMULAÇÃO' : 'REAL NASA/INPE'}
+            </span>
+            <span className="text-[11.5px] font-black tracking-wider text-yellow-300 uppercase truncate max-w-[200px]">
+              {spot.is_new_outbreak ? '🚨 NOVO FOCO (<3H)' : '🔥 FOCO SELECIONADO'}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center space-x-1.5">

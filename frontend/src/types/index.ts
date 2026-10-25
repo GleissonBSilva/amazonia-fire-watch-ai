@@ -37,6 +37,7 @@ export interface FireSpot {
   aqi?: number;
   pm25?: number;
   air_quality_level?: string;
+  is_simulated?: boolean;
 }
 
 export interface OSINTAlert {

@@ -10,6 +10,7 @@ interface HoverPreviewCardProps {
   position: { x: number; y: number };
   onOpenDetails: (spot: FireSpot) => void;
   onStatusChange?: (spotId: string, newStatus: any, dispatchedAt: string) => void;
+  isSimulation?: boolean;
 }
 
 export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
@@ -17,6 +18,7 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
   position,
   onOpenDetails,
   onStatusChange,
+  isSimulation = true,
 }) => {
   // Constrain position to anchor cleanly without covering the map center
   const cardWidth = 360;
@@ -52,6 +54,7 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
         areaSqKm: 1.45,
         criticidade: spot.frp_mw >= 40 ? 'CRÍTICA' : 'ALTA',
         airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: airQuality.pm25 },
+        isSimulation,
       });
 
       setLocalStatus('ACIONADO_SIMULACAO');
@@ -89,6 +92,13 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
       {/* 1. CABEÇALHO HUD */}
       <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 mb-2">
         <div className="flex items-center gap-1.5">
+          <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase border ${
+            isSimulation
+              ? 'bg-amber-950 text-amber-300 border-amber-600'
+              : 'bg-emerald-950 text-emerald-300 border-emerald-500'
+          }`}>
+            {isSimulation ? 'SIMULAÇÃO' : 'REAL ORBITAL'}
+          </span>
           {isNew && (
             <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-yellow-950 text-yellow-300 border border-yellow-500 animate-pulse">
               NOVO &lt;3H
@@ -116,7 +126,7 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
 
       {/* 2. JANELA DO SENSOR TÉRMICO FLIR (h-36 = 144px) */}
       <div className="relative w-full h-36 rounded-lg overflow-hidden border border-slate-700/70 mb-2 bg-black flex items-center justify-center">
-        {spot.video_url ? (
+        {(isSimulation && spot.video_url) ? (
           <img
             src={spot.video_url}
             alt="Live Stream"
