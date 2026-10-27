@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Rnd } from 'react-rnd';
+import { Maximize2, Square } from 'lucide-react';
 import {
   X,
   Flame,
@@ -53,6 +55,7 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
   const [showPropagationVector, setShowPropagationVector] = useState<boolean>(true);
   const [selectedSector, setSelectedSector] = useState<FloorPlanSector | null>(null);
   const [selectedEquipment, setSelectedEquipment] = useState<SafetyEquipment | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   if (!isOpen) return null;
 
@@ -98,11 +101,26 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-2 md:p-4">
-      <div className="relative w-full max-w-6xl max-h-[96vh] flex flex-col bg-slate-950 border border-cyan-500/40 rounded-xl shadow-2xl overflow-hidden font-sans">
-        
-        {/* TOP STATUS HEADER */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 border-b border-slate-800">
+    <Rnd
+      default={{
+        x: Math.max(20, (window.innerWidth - 980) / 2),
+        y: Math.max(20, (window.innerHeight - 680) / 2),
+        width: 980,
+        height: 680,
+      }}
+      minWidth={440}
+      minHeight={340}
+      bounds="window"
+      dragHandleClassName="floorplan-window-handle"
+      enableResizing={!isMaximized}
+      disableDragging={isMaximized}
+      className={`fixed z-50 flex flex-col bg-slate-950 border border-cyan-500/50 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-sans select-none ${
+        isMaximized ? '!inset-2 !w-auto !h-auto !transform-none' : ''
+      }`}
+    >
+      <div className="relative w-full h-full flex flex-col overflow-hidden">
+        {/* TOP STATUS HEADER (Draggable Handle) */}
+        <div className="floorplan-window-handle flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 cursor-move select-none flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-500/60 flex items-center justify-center text-cyan-400">
               <Layers size={18} />
@@ -744,6 +762,6 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </Rnd>
   );
 };

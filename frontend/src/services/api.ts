@@ -2,18 +2,62 @@ import { OSINTAlert, VideoDetectionStatus, FireSpot } from '../types';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-export async function fetchNationalFires(simulation: boolean = true): Promise<FireSpot[]> {
+
+// Helper de requisição resiliente com timeout controlado (evita travamento do navegador em caso de backend lento)
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 2500): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${API_BASE_URL}/fires/national?simulation=${simulation}`);
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return response;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+export async function fetchNationalFires(simulation: boolean = true): Promise<FireSpot[]> {
+  // 1. Tenta consulta ao backend FastAPI com timeout estrito de 2.5s
+  try {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/fires/national?simulation=${simulation}`, {}, 2500);
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        try {
+          localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(data));
+        } catch {}
+        return data;
+      }
     }
   } catch (err) {
-    console.warn('Backend fires API offline. Usando fallback de contingência:', err);
+    // Backend offline ou com latência - segue imediatamente para o cache estático
   }
   
-  // Informações simuladas só podem aparecer se a Simulação estiver ativa
+  // 2. Em Modo Operacional Real (ou contingência): consome imediatamente o cache estático local de satélite da NASA (servido em <5ms)
   if (!simulation) {
+    try {
+      const cacheRes = await fetchWithTimeout('/real_firms_cache.json', {}, 2000);
+      if (cacheRes.ok) {
+        const cachedSpots: FireSpot[] = await cacheRes.json();
+        if (Array.isArray(cachedSpots) && cachedSpots.length > 0) {
+          try {
+            localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(cachedSpots));
+          } catch {}
+          return cachedSpots;
+        }
+      }
+    } catch (cacheErr) {}
+
+    // Fallback de contingência pelo localStorage
+    try {
+      const local = localStorage.getItem('amazonia_fire_spots_cache');
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+
     return [];
   }
 
@@ -81,7 +125,7 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
 
 export async function fetchHeatmapData(simulation: boolean = true): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/fires/heatmap?simulation=${simulation}`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/fires/heatmap?simulation=${simulation}`, {}, 2000);
     if (res.ok) return await res.json();
   } catch (err) {}
   return [];
@@ -89,7 +133,7 @@ export async function fetchHeatmapData(simulation: boolean = true): Promise<any[
 
 export async function fetchTimelineData(): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/fires/timeline`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/fires/timeline`, {}, 2500);
     if (res.ok) return await res.json();
   } catch (err) {}
   return [];
@@ -128,7 +172,7 @@ export async function sendCopilotPrompt(prompt: string): Promise<any> {
 
 export async function fetchOsintAlerts(limit: number = 25, simulation: boolean = true): Promise<OSINTAlert[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/osint/alerts?limit=${limit}&simulation=${simulation}`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/osint/alerts?limit=${limit}&simulation=${simulation}`, {}, 2000);
     if (res.ok) {
       return await res.json();
     }

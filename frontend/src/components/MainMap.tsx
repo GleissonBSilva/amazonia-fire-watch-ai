@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, WMSTileLayer, Circle, Marker, Popup, Polygon, Rectangle, useMap } from 'react-leaflet';
 import { INDUSTRIAL_FACILITIES, Facility } from '../data/facilityFloorPlans';
+import { fetchLatestRainViewerRadar } from '../services/weatherService';
+import { classifyFireAuthenticity, SmokeColorKey } from '../services/fireClassificationService';
+import { KNOWN_LAND_PARCELS } from '../services/landRegistryService';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -45,6 +48,7 @@ interface MainMapProps {
   onActivateGeofence?: (facility: Facility) => void;
   onTriggerAutoEmergency?: (facility: Facility) => void;
   isSimulation?: boolean;
+  onInspectMapPoint?: (lat: number, lng: number) => void;
 }
 
 // Quick Viewports for Brazilian Biomes
@@ -53,6 +57,8 @@ const BRAZIL_VIEWPORTS = {
   amazonia: { center: [-4.2, -63.0] as [number, number], zoom: 6 },
   manaus: { center: [-3.089, -60.021] as [number, number], zoom: 12 },
   distritoIndustrial: { center: [-3.1015, -59.9445] as [number, number], zoom: 16 },
+  barcelos: { center: [-1.6075, -61.7471] as [number, number], zoom: 9 },
+  labrea: { center: [-7.2594, -64.7981] as [number, number], zoom: 9 },
   pantanal: { center: [-17.5, -56.8] as [number, number], zoom: 7 },
   cerrado: { center: [-12.5, -46.5] as [number, number], zoom: 6 },
 };
@@ -151,6 +157,28 @@ const LeafletDrawControl: React.FC<{ onAreaSelected: (data: DelimitedArea) => vo
   return null;
 };
 
+// Inspector ao Clicar em Qualquer Área do Mapa
+const MapClickInspector: React.FC<{ onInspect?: (lat: number, lng: number) => void }> = ({ onInspect }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!onInspect) return;
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      const orig = e.originalEvent as any;
+      if (orig && orig.target && typeof orig.target.closest === 'function') {
+        if (orig.target.closest('.leaflet-control, .leaflet-popup, button, a')) {
+          return;
+        }
+      }
+      onInspect(e.latlng.lat, e.latlng.lng);
+    };
+    map.on('click', handleClick);
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onInspect]);
+  return null;
+};
+
 // Static WMS Configuration Objects to prevent Leaflet layer.setParams / redraw flicker
 // Data recente válida para garantir retorno 100% de raster no NASA GIBS WMS
 const getGibsDate = () => {
@@ -219,12 +247,54 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   onActivateGeofence,
   onTriggerAutoEmergency,
   isSimulation = true,
+  onInspectMapPoint,
 }) => {
   const [currentView, setCurrentView] = React.useState<{
     center: [number, number];
     zoom: number;
     trigger?: number;
   } | null>(null);
+  const [rainRadarPath, setRainRadarPath] = React.useState<string | null>(null);
+  const [filterOnlyRealFires, setFilterOnlyRealFires] = React.useState<boolean>(false);
+  const [smokeColorFilter, setSmokeColorFilter] = React.useState<SmokeColorKey>('all');
+
+  React.useEffect(() => {
+    if (activeOverlays?.rainRadar) {
+      fetchLatestRainViewerRadar().then((path) => {
+        if (path) setRainRadarPath(path);
+      });
+    }
+  }, [activeOverlays?.rainRadar]);
+
+  // Contagem e Filtragem por Autenticidade e por Cor da Nuvem de Fumaça
+  const { realFiresCount, smokeCounts, filteredDisplaySpots } = React.useMemo(() => {
+    let realCount = 0;
+    const counts = { all: 0, green: 0, yellow: 0, orange: 0, red: 0, purple: 0, dark_purple: 0 };
+
+    const classified = fireSpots.map(s => {
+      const auth = classifyFireAuthenticity(s);
+      if (auth.isRealVegetationFire) realCount++;
+      counts.all++;
+      if (counts[auth.smokeColorKey] !== undefined) {
+        counts[auth.smokeColorKey]++;
+      }
+      return { spot: s, auth };
+    });
+
+    let display = classified;
+    if (filterOnlyRealFires) {
+      display = display.filter(c => c.auth.isRealVegetationFire);
+    }
+    if (smokeColorFilter !== 'all') {
+      display = display.filter(c => c.auth.smokeColorKey === smokeColorFilter);
+    }
+
+    return {
+      realFiresCount: realCount,
+      smokeCounts: counts,
+      filteredDisplaySpots: display.map(c => c.spot),
+    };
+  }, [fireSpots, filterOnlyRealFires, smokeColorFilter]);
 
   // Consolidated Overlays State
   const overlays: ActiveOverlaysState = activeOverlays || {
@@ -240,75 +310,76 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   // MARCADOR TÁTICO MILITAR SVG (RETÍCULO C2 + RADAR PING RIPPLE)
   // Sem cliparts ou emojis infantis de fogo
   // ========================================================
-  const getTacticalRadarIcon = (spot: FireSpot) => {
-    let color = '#ffb703'; // Anomalia Moderada (< 25 MW)
-    let tag = 'MOD';
-
+  const getRealisticFlameIcon = (spot: FireSpot) => {
+    const auth = classifyFireAuthenticity(spot);
+    const frp = spot.frp_mw || 0;
     const isNew = spot.is_new_outbreak;
     const isDispatched = spot.status === 'ACIONADO_SIMULACAO';
 
-    if (spot.is_arson_cluster) {
-      color = '#b5179e'; // Suspeita de Ação Criminosa / Reincidência
-      tag = 'ARSON';
-    } else if (spot.frp_mw >= 50) {
-      color = '#ff1e27'; // Severidade Crítica (FRP > 50 MW)
-      tag = 'CRIT';
-    } else if (spot.frp_mw >= 25) {
-      color = '#ff6b00'; // Alerta Alto (25 - 50 MW)
-      tag = 'HIGH';
+    // FALSO POSITIVO / RUÍDO TÉRMICO / INDUSTRIAL
+    if (!auth.isRealVegetationFire) {
+      return L.divIcon({
+        className: 'custom-flame-marker',
+        html: `
+          <div class="relative flex items-center justify-center -top-4 -left-4 w-8 h-8 select-none pointer-events-auto opacity-75 hover:opacity-100 transition">
+            <div class="w-6 h-6 rounded-md bg-slate-900 border border-slate-600 flex items-center justify-center text-slate-300 text-[10px] shadow-md">
+              ${auth.fireType === 'CALOR_INDUSTRIAL' ? '🏭' : '☀️'}
+            </div>
+            <div class="absolute -bottom-2 bg-slate-950/95 text-[7px] font-mono px-1 rounded border border-slate-700 text-slate-400 whitespace-nowrap">
+              ${auth.fireType === 'CALOR_INDUSTRIAL' ? 'IND' : 'SOL'} ${Math.round(frp)}M
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+      });
     }
 
-    if (isNew) {
-      tag = 'NOVO <3H';
-    }
-    if (isDispatched) {
-      tag = 'ACIONADO';
-    }
-
-    const hasVideo = spot.has_video;
+    // INCÊNDIO REAL DE VEGETAÇÃO: Representação em Chamas Animadas
+    const isCritical = frp >= 50;
+    const flameSize = isCritical ? 'w-10 h-10' : frp >= 25 ? 'w-8 h-8' : 'w-7 h-7';
+    const glowColor = isCritical ? 'rgba(255, 30, 0, 0.95)' : 'rgba(255, 120, 0, 0.85)';
+    const pulseSize = isCritical ? 'w-12 h-12' : 'w-9 h-9';
 
     return L.divIcon({
-      className: 'custom-tactical-radar-marker',
+      className: 'custom-flame-marker',
       html: `
-        <div class="relative flex items-center justify-center -top-5 -left-5 w-10 h-10 select-none pointer-events-auto">
-          <!-- Anel Tático Sonar de Alerta para Novos Surgimentos (< 180 min) -->
-          ${
-            isNew
-              ? `<span class="absolute inline-flex h-12 w-12 rounded-full border-2 border-yellow-300 opacity-90 animate-ping"></span>`
-              : `<span class="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping" style="background-color: ${color};"></span>`
-          }
-          <span class="absolute inline-flex h-7 w-7 rounded-full opacity-35" style="border: 1px dashed ${isNew ? '#facc15' : color};"></span>
+        <div class="relative flex items-center justify-center -top-6 -left-6 w-12 h-12 select-none pointer-events-auto cursor-pointer group">
+          <!-- Brilho térmico pulsante da chama -->
+          <div class="absolute ${pulseSize} rounded-full blur-md opacity-75 animate-pulse" style="background: radial-gradient(circle, ${glowColor} 0%, rgba(255, 140, 0, 0.35) 60%, transparent 100%);"></div>
 
-          <!-- Retículo Concêntrico Militar SVG -->
-          <svg class="relative w-8 h-8 drop-shadow-[0_0_8px_${color}]" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Anel Externo Graduado -->
-            <circle cx="16" cy="16" r="13" stroke="${color}" stroke-width="1.2" stroke-dasharray="2 1.5" opacity="0.85" />
-            <!-- Cantos de Enquadramento Militar [ ] -->
-            <path d="M7 11V7H11" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />
-            <path d="M25 11V7H21" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />
-            <path d="M7 21V25H11" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />
-            <path d="M25 21V25H21" stroke="${color}" stroke-width="1.5" stroke-linecap="round" />
-            <!-- Mira Central e Núcleo Térmico -->
-            <line x1="16" y1="5" x2="16" y2="9" stroke="${color}" stroke-width="1.2" />
-            <line x1="16" y1="23" x2="16" y2="27" stroke="${color}" stroke-width="1.2" />
-            <line x1="5" y1="16" x2="9" y2="16" stroke="${color}" stroke-width="1.2" />
-            <line x1="23" y1="16" x2="27" y2="16" stroke="${color}" stroke-width="1.2" />
-            <circle cx="16" cy="16" r="3.2" fill="${color}" stroke="#050b14" stroke-width="1" />
+          <!-- Anel Sonar para Novos Surgimentos (< 3h) -->
+          ${isNew ? '<span class="absolute inline-flex h-12 w-12 rounded-full border-2 border-yellow-300 opacity-90 animate-ping"></span>' : ''}
+
+          <!-- Chama Animada em SVG Realista -->
+          <svg class="relative ${flameSize} filter drop-shadow-[0_0_8px_rgba(255,69,0,0.95)] animate-flame transition-transform group-hover:scale-125" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Labareda Externa -->
+            <path d="M12 2C10.5 4.5 9 7.5 9 10C9 10.5 9.1 11 9.2 11.5C8 10.5 7.5 9 7.5 9C5 12 5 15.5 7 18C8.5 20 10.5 21 12 21C14.5 21 17 19.5 18 17C19.5 14 18.5 10 16 7C16 7 15.5 8.5 14.5 9.5C14.5 7 13.5 4 12 2Z" fill="url(#flameGrad-${spot.id})"/>
+            <!-- Núcleo Ardente Incandescente -->
+            <path d="M12 9C11 11 10.5 12.5 10.5 14C10.5 16 11.5 17.5 12.5 17.5C13.5 17.5 14.5 16.5 14.5 14.5C14.5 13 13.8 11.5 13 10.5C13 10.5 12.5 9.8 12 9Z" fill="#ffeb3b" opacity="0.95"/>
+            <defs>
+              <linearGradient id="flameGrad-${spot.id}" x1="12" y1="2" x2="12" y2="21" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="${isCritical ? '#ff0000' : '#ff3700'}"/>
+                <stop offset="55%" stop-color="#ff7700"/>
+                <stop offset="100%" stop-color="#ffdd00"/>
+              </linearGradient>
+            </defs>
           </svg>
 
-          <!-- Tag Visual de Alerta Tático (FRP / Novo Surgimento / Acionado) -->
-          <div class="absolute -bottom-3 bg-slate-950/95 text-[8px] font-mono px-1 py-0.2 rounded border ${
-            isNew
-              ? 'border-yellow-400 text-yellow-300 font-bold shadow-[0_0_8px_rgba(250,204,21,0.5)]'
+          <!-- Tag Tática de FRP -->
+          <div class="absolute -bottom-2 bg-slate-950/95 text-[7.5px] font-mono px-1 rounded border ${
+            isCritical
+              ? 'border-red-500 text-red-300 font-bold shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+              : isNew
+              ? 'border-yellow-400 text-yellow-300 font-bold'
               : isDispatched
               ? 'border-emerald-500 text-emerald-300 font-bold'
-              : 'border-slate-700 text-slate-200'
-          } tracking-tighter whitespace-nowrap shadow-xl">
-            ${isNew ? 'NOVO // RISCO IMEDIATO' : hasVideo ? 'FLIR' : tag} ${Math.round(spot.frp_mw)}M
+              : 'border-orange-500/80 text-amber-300 font-bold'
+          } whitespace-nowrap shadow-xl">
+            🔥 ${isCritical ? 'CRÍT ' : ''}${Math.round(frp)}M
           </div>
         </div>
       `,
-      iconSize: [40, 40],
+      iconSize: [48, 48],
     });
   };
 
@@ -347,10 +418,12 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   return (
     <div className="absolute inset-0 w-full h-full z-0 overflow-hidden bg-slate-950">
       <MapContainer
-        center={[-14.235, -51.925]} // Centro Geográfico do Brasil
-        zoom={5}
+        center={[15.0, 0.0]} // Visão Global Planetária
+        zoom={3}
+        minZoom={2}
         maxZoom={22}
         scrollWheelZoom={true}
+        worldCopyJump={true}
         zoomControl={false}
         className="w-full h-full"
       >
@@ -457,6 +530,83 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           />
         )}
 
+        {/* OVERLAY: Radar de Chuva & Precipitação Real (RainViewer API Oficial) */}
+        {overlays.rainRadar && rainRadarPath && (
+          <TileLayer
+            key={`rain-radar-${rainRadarPath}`}
+            url={`https://tilecache.rainviewer.com${rainRadarPath}/256/{z}/{x}/{y}/2/1_1.png`}
+            attribution="&copy; RainViewer &mdash; Radar de Precipitação em Tempo Real"
+            opacity={0.68}
+            zIndex={12}
+          />
+        )}
+
+        {/* OVERLAY: Malha Fundiária CAR / SICAR / Terras Indígenas / UCs */}
+        {overlays.carCadastre &&
+          KNOWN_LAND_PARCELS.map((parcel, idx) => {
+            const isProtected = parcel.cadastral_type === 'TERRA_INDIGENA' || parcel.cadastral_type === 'UNIDADE_CONSERVACAO';
+            const color = isProtected
+              ? '#a855f7'
+              : parcel.car_status === 'ATIVO'
+              ? '#10b981'
+              : parcel.car_status === 'PENDENTE'
+              ? '#eab308'
+              : '#ef4444';
+
+            return (
+              <Polygon
+                key={`car-polygon-${idx}`}
+                positions={parcel.polygon}
+                pathOptions={{
+                  color,
+                  weight: 2,
+                  dashArray: isProtected ? '6, 6' : undefined,
+                  fillColor: color,
+                  fillOpacity: 0.18,
+                }}
+              >
+                <Popup className="font-mono text-xs">
+                  <div className="p-1 space-y-1">
+                    <div className="font-bold text-white text-[11px] border-b border-slate-700 pb-0.5">
+                      {parcel.property_name}
+                    </div>
+                    <div className="text-[9.5px] text-slate-300">
+                      <strong>Titular:</strong> {parcel.owner_name} ({parcel.owner_document})
+                    </div>
+                    <div className="text-[9px] text-slate-400 font-mono">
+                      <strong>CAR:</strong> {parcel.car_receipt}
+                    </div>
+                    <div className="flex items-center justify-between text-[8.5px] pt-1">
+                      <span className="font-bold" style={{ color }}>
+                        {isProtected ? parcel.cadastral_type : `CAR ${parcel.car_status}`}
+                      </span>
+                      <span>{parcel.total_area_ha} ha</span>
+                    </div>
+                  </div>
+                </Popup>
+              </Polygon>
+            );
+          })}
+
+        {/* HALO GEOESTACIONÁRIO GOES-16 (Alerta Quente em Tempo Real ~10-15m) */}
+        {fireSpots
+          .filter((s) => s.is_geostationary_preliminary || s.satellite?.includes('GOES'))
+          .map((spot) => (
+            <Circle
+              key={`goes16-halo-${spot.id}`}
+              center={[spot.latitude, spot.longitude]}
+              radius={3500}
+              pathOptions={{
+                color: '#f97316',
+                fillColor: '#ea580c',
+                fillOpacity: 0.28,
+                weight: 2,
+                dashArray: '5, 5',
+                className: 'animate-pulse',
+              }}
+            />
+          ))}
+
         {/* OVERLAY: Heatmap de Densidade Térmica */}
         {(overlays.heatmap || showHeatmapOverlay || temporalMode === 'month') &&
           heatmapSpots.map((spot, idx) => (
@@ -536,33 +686,43 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         {/* ========================================================
             3. MARCADORES TÁTICOS C2 & POPUP DE COMANDO AEROESPACIAL
             ======================================================== */}
-        {/* DISPERSÃO EM TEMPO REAL DE FUMAÇA E POLUIÇÃO DO AR (AQI / PM2.5) */}
-        {overlays.smokePlume &&
-          fireSpots.map((spot) => {
-            const aqiVal = spot.aqi || 50;
-            const pm25Val = spot.pm25 || 15.0;
-            const frp = spot.frp_mw || 10.0;
-            const plumeRadiusMeters = Math.min(30000, Math.max(3500, frp * 350));
-            const plumeColor =
-              aqiVal > 300 ? '#7e22ce' :
-              aqiVal > 200 ? '#a855f7' :
-              aqiVal > 150 ? '#ef4444' :
-              aqiVal > 100 ? '#f97316' :
-              aqiVal > 50  ? '#eab308' : '#10b981';
+        {/* DISPERSÃO EM TEMPO REAL DA NUVEM DE FUMAÇA SEPARADA POR CORES (CONAMA / EPA) */}
+        {(overlays.smokePlume || true) &&
+          filteredDisplaySpots.map((spot) => {
+            const auth = classifyFireAuthenticity(spot);
+            // Mostra a nuvem de fumaça sempre para incêndios reais ou quando o overlay smokePlume estiver ativado
+            if (!overlays.smokePlume && !auth.isRealVegetationFire) return null;
+
+            const radiusM = auth.smokeRadiusMeters;
+            const color = auth.smokeColor;
 
             return (
-              <Circle
-                key={`plume-dispersion-${spot.id}`}
-                center={[spot.latitude, spot.longitude]}
-                radius={plumeRadiusMeters}
-                pathOptions={{
-                  color: plumeColor,
-                  fillColor: plumeColor,
-                  fillOpacity: 0.18,
-                  weight: 1.2,
-                  dashArray: '4, 4',
-                }}
-              />
+              <React.Fragment key={`smoke-cloud-group-${spot.id}`}>
+                {/* 1. Pluma Externa Translúcida de Dispersão Atmosférica */}
+                <Circle
+                  center={[spot.latitude, spot.longitude]}
+                  radius={radiusM}
+                  pathOptions={{
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.12,
+                    weight: 1,
+                    dashArray: '3, 4',
+                  }}
+                />
+
+                {/* 2. Núcleo Denso de Fumaça e Fuligem */}
+                <Circle
+                  center={[spot.latitude, spot.longitude]}
+                  radius={Math.round(radiusM * 0.45)}
+                  pathOptions={{
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.28,
+                    weight: 1.5,
+                  }}
+                />
+              </React.Fragment>
             );
           })}
 
@@ -590,11 +750,11 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           })}
 
         {(temporalMode === '24h' || temporalMode === 'historical') &&
-          fireSpots.map((spot) => (
+          filteredDisplaySpots.map((spot) => (
             <Marker
               key={spot.id}
               position={[spot.latitude, spot.longitude]}
-              icon={getTacticalRadarIcon(spot)}
+              icon={getRealisticFlameIcon(spot)}
               eventHandlers={{
                 mouseover: (e) => {
                   const mapPoint = e.target._map.latLngToContainerPoint(e.latlng);
@@ -661,8 +821,8 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
                     <div>Confiança: <span className="text-emerald-400 font-bold">{(spot.confidence * 100).toFixed(0)}%</span></div>
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-2 pt-1 border-t border-slate-800">
-                    <div>Qualidade Ar: <span className="text-amber-300 font-bold">AQI {spot.aqi || 45}</span></div>
-                    <div>Particulado: <span className="text-cyan-300 font-bold">{spot.pm25 || 12} µg/m³</span></div>
+                    <div>Qualidade Ar: <span className="text-amber-300 font-bold">{spot.aqi != null ? `AQI ${spot.aqi}` : 'N/A'}</span></div>
+                    <div>Particulado: <span className="text-cyan-300 font-bold">{spot.pm25 != null ? `${spot.pm25} µg/m³` : 'N/A'}</span></div>
                   </div>
 
                   <button
@@ -914,6 +1074,63 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         >
           🏙️ Manaus
         </button>
+        {/* Seletor Visual Rápido de Filtro por Cor de Fumaça */}
+        <div className="flex items-center gap-1 bg-slate-950/90 border border-purple-800/60 rounded px-1.5 py-0.5">
+          <span className="text-[9px] text-purple-300 font-bold flex items-center gap-1">
+            <Wind size={10} className="text-purple-400" />
+            <span>COR FUMAÇA:</span>
+          </span>
+          <button
+            onClick={() => setSmokeColorFilter('all')}
+            className={`px-1.5 py-0.2 rounded text-[8.5px] font-bold transition ${smokeColorFilter === 'all' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            TODAS
+          </button>
+          <button
+            onClick={() => setSmokeColorFilter(smokeColorFilter === 'green' ? 'all' : 'green')}
+            className={`w-3.5 h-3.5 rounded-full bg-emerald-500 transition-transform ${smokeColorFilter === 'green' ? 'scale-125 ring-2 ring-white shadow' : 'opacity-75 hover:opacity-100'}`}
+            title={`Fumaça Leve (Verde - AQI <= 50) [${smokeCounts.green} focos]`}
+          />
+          <button
+            onClick={() => setSmokeColorFilter(smokeColorFilter === 'yellow' ? 'all' : 'yellow')}
+            className={`w-3.5 h-3.5 rounded-full bg-yellow-400 transition-transform ${smokeColorFilter === 'yellow' ? 'scale-125 ring-2 ring-white shadow' : 'opacity-75 hover:opacity-100'}`}
+            title={`Fumaça Moderada (Amarelo - AQI 51-100) [${smokeCounts.yellow} focos]`}
+          />
+          <button
+            onClick={() => setSmokeColorFilter(smokeColorFilter === 'orange' ? 'all' : 'orange')}
+            className={`w-3.5 h-3.5 rounded-full bg-orange-500 transition-transform ${smokeColorFilter === 'orange' ? 'scale-125 ring-2 ring-white shadow' : 'opacity-75 hover:opacity-100'}`}
+            title={`Fumaça Densa (Laranja - AQI 101-150) [${smokeCounts.orange} focos]`}
+          />
+          <button
+            onClick={() => setSmokeColorFilter(smokeColorFilter === 'red' ? 'all' : 'red')}
+            className={`w-3.5 h-3.5 rounded-full bg-red-500 transition-transform ${smokeColorFilter === 'red' ? 'scale-125 ring-2 ring-white shadow' : 'opacity-75 hover:opacity-100'}`}
+            title={`Fumaça Severa (Vermelho - AQI 151-200) [${smokeCounts.red} focos]`}
+          />
+          <button
+            onClick={() => setSmokeColorFilter(smokeColorFilter === 'purple' ? 'all' : 'purple')}
+            className={`w-3.5 h-3.5 rounded-full bg-purple-500 transition-transform ${smokeColorFilter === 'purple' ? 'scale-125 ring-2 ring-white shadow' : 'opacity-75 hover:opacity-100'}`}
+            title={`Fumaça Muito Densa (Roxo - AQI 201-300) [${smokeCounts.purple} focos]`}
+          />
+          <button
+            onClick={() => setSmokeColorFilter(smokeColorFilter === 'dark_purple' ? 'all' : 'dark_purple')}
+            className={`w-3.5 h-3.5 rounded-full bg-[#581c87] border border-purple-400 transition-transform ${smokeColorFilter === 'dark_purple' ? 'scale-125 ring-2 ring-white shadow' : 'opacity-75 hover:opacity-100'}`}
+            title={`Fumaça Tóxica / Emergência (Púrpura - AQI > 300) [${smokeCounts.dark_purple} focos]`}
+          />
+        </div>
+
+        {/* Filtro Antifalso Positivo: Isolar Apenas Incêndios Reais de Vegetação */}
+        <button
+          onClick={() => setFilterOnlyRealFires(!filterOnlyRealFires)}
+          className={`px-2.5 py-0.5 rounded transition-all font-bold flex items-center gap-1 border ${
+            filterOnlyRealFires
+              ? 'bg-red-600 text-white border-red-400 shadow-md shadow-red-950 animate-pulse'
+              : 'bg-slate-800 text-amber-300 border-amber-600/60 hover:bg-slate-700'
+          }`}
+          title="Filtrar e separar apenas incêndios reais de vegetação (FRP >= 20 MW, sem ruído solar ou polos industriais)"
+        >
+          <span>🔥 Queimadas Reais ({realFiresCount})</span>
+        </button>
+
         <button
           onClick={() => setCurrentView(BRAZIL_VIEWPORTS.distritoIndustrial)}
           className="px-2 py-0.5 rounded bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-700 font-bold"

@@ -52,3 +52,42 @@ html, body, #root {
   mix-blend-mode: screen !important;
   pointer-events: none !important;
 }
+
+/* Animated Flame & Smoke Plume Styles for Real Fires */
+@keyframes flame-flicker {
+  0%, 100% {
+    transform: scale(1) rotate(-1deg);
+    filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.9));
+  }
+  25% {
+    transform: scale(1.1, 0.94) rotate(2deg);
+    filter: drop-shadow(0 0 12px rgba(255, 140, 0, 1));
+  }
+  50% {
+    transform: scale(0.95, 1.06) rotate(-2deg);
+    filter: drop-shadow(0 0 9px rgba(255, 30, 0, 0.9));
+  }
+  75% {
+    transform: scale(1.06, 1.02) rotate(1.5deg);
+    filter: drop-shadow(0 0 14px rgba(255, 200, 0, 1));
+  }
+}
+
+.animate-flame {
+  transform-origin: bottom center;
+  animation: flame-flicker 1.3s ease-in-out infinite;
+}
+
+.custom-flame-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+@keyframes pulse-smoke {
+  0%, 100% { opacity: 0.22; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.05); }
+}
+
+.animate-pulse-smoke {
+  animation: pulse-smoke 4s ease-in-out infinite;
+}

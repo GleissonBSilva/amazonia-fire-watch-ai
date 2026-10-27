@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Flame,
+  Satellite,
   AlertTriangle,
   Wind,
   Truck,
@@ -13,11 +14,13 @@ import {
   Check,
   Radio,
   ExternalLink,
+  Globe,
 } from 'lucide-react';
 import { FireSpot } from '../types';
 import { calculateAirQuality } from '../data/airQuality';
 import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
 import { sendWhatsAppFireAlert } from '../services/alertService';
+import { queryLandRegistry } from '../services/landRegistryService';
 
 export interface NewFireAlertBannerProps {
   spot: FireSpot;
@@ -41,8 +44,35 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
   const [localStatus, setLocalStatus] = useState<string>(spot.status || 'PENDENTE');
   const [dispatchedTime, setDispatchedTime] = useState<string | null>(spot.dispatched_at || null);
 
-  const airQuality = calculateAirQuality(spot.frp_mw, 0.8);
-  const infra = findNearestInfrastructure(spot.latitude, spot.longitude);
+  useEffect(() => {
+    setLocalStatus(spot.status || 'PENDENTE');
+    setDispatchedTime(spot.dispatched_at || null);
+  }, [spot.id, spot.status, spot.dispatched_at]);
+
+  const isBrazil = spot.is_brazil !== false;
+  const landRegistry = spot.land_registry || queryLandRegistry(spot.latitude, spot.longitude, spot.municipality, spot.state);
+
+  const airQuality = spot.aqi != null
+    ? {
+        aqi: spot.aqi,
+        pm25: spot.pm25 ?? 'N/A',
+        co_ppm: (spot.frp_mw * 0.08).toFixed(1),
+        level: spot.air_quality_level || 'MONITORADO',
+        categoryNumber: spot.aqi > 300 ? 6 : spot.aqi > 200 ? 5 : spot.aqi > 150 ? 4 : spot.aqi > 100 ? 3 : spot.aqi > 50 ? 2 : 1,
+        badgeBg: 'bg-amber-950/80',
+        badgeText: 'text-amber-300',
+        badgeBorder: 'border-amber-600',
+        alertTriggered: spot.aqi > 50,
+        healthImpact: 'Qualidade do ar monitorada pelos sensores orbitais.',
+        operationalRecommendation: 'Acompanhar dispersão de fumaça via satélite GOES-16.'
+      }
+    : isSimulation
+    ? calculateAirQuality(spot.frp_mw, 0.8)
+    : null;
+
+  const rawInfra = findNearestInfrastructure(spot.latitude, spot.longitude);
+  const isBaseWithinRange = isBrazil && rawInfra.nearestStation.distanceKm <= 250;
+  const isWaterWithinRange = isBrazil && rawInfra.nearestWater.distanceKm <= 250;
 
   const copyCoords = () => {
     navigator.clipboard.writeText(`${spot.latitude.toFixed(5)}, ${spot.longitude.toFixed(5)}`);
@@ -59,7 +89,7 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
         lng: spot.longitude,
         areaSqKm: 1.45,
         criticidade: spot.frp_mw >= 40 ? 'CRÍTICA' : 'ALTA',
-        airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: airQuality.pm25 },
+        airQualityAlert: airQuality ? { aqi: airQuality.aqi, level: airQuality.level, pm25: Number(airQuality.pm25) || 0 } : undefined,
         isSimulation,
       });
       setLocalStatus('ACIONADO_SIMULACAO');
@@ -119,19 +149,69 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
         </div>
       </div>
 
+      {/* FAIXA EXPLÍCITA DE SEPARAÇÃO: DADO REAL DE SATÉLITE vs SIMULAÇÃO */}
+      {spot.is_simulated ? (
+        <div className="bg-amber-950/90 border border-amber-500 rounded px-2 py-1 text-[9px] text-amber-200 flex items-center justify-between mb-2">
+          <span className="font-bold flex items-center gap-1 text-amber-300">
+            <AlertTriangle size={12} className="text-amber-400" />
+            <span>MODO SIMULAÇÃO • EXERCÍCIO DE TREINAMENTO</span>
+          </span>
+          <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-900 text-amber-200 border border-amber-600">
+            SINTÉTICO
+          </span>
+        </div>
+      ) : (
+        <div className="bg-emerald-950/90 border border-emerald-500 rounded px-2 py-1 text-[9px] text-emerald-200 flex items-center justify-between mb-2">
+          <span className="font-bold flex items-center gap-1 text-emerald-300">
+            <Satellite size={12} className="text-emerald-400" />
+            <span>DETECÇÃO ORBITAL REAL • SATÉLITES NASA / NOAA</span>
+          </span>
+          <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-emerald-900 text-emerald-200 border border-emerald-600">
+            100% REAL
+          </span>
+        </div>
+      )}
+
+      {/* Alerta de Soberania / Limite Geográfico se Foco Internacional */}
+      {!isBrazil && (
+        <div className="bg-amber-950/80 border border-amber-500/80 rounded px-2 py-1 text-[9px] text-amber-200 flex items-center gap-1.5 mb-2">
+          <Globe size={12} className="text-amber-400 flex-shrink-0" />
+          <span>
+            <strong>PAÍS VIZINHO ({spot.country_name || spot.state}):</strong> Foco fora do território brasileiro (IBGE).
+          </span>
+        </div>
+      )}
+
       {/* 2. LOCALIZAÇÃO E COORDENADAS NÍTIDAS */}
       <div className="bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 mb-2.5">
         <div className="flex items-start justify-between gap-2">
           <div>
             <div className="text-[13px] font-black text-white uppercase tracking-wide">
-              {spot.municipality} - {spot.state}
+              {isBrazil ? `${spot.municipality} - ${spot.state}` : `${spot.municipality}`}
             </div>
             <div className="text-[11px] font-medium text-slate-300 leading-tight mt-0.5">
-              {spot.address || 'Perímetro Rural sob Monitoramento'}
+              {spot.address || 'Perímetro sob Monitoramento'}
             </div>
+            {landRegistry && (
+              <div className="mt-1 flex items-center gap-1.5 text-[9px] text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800">
+                <span className="font-bold">CAR:</span>
+                <span className="font-mono truncate max-w-[150px]">{landRegistry.car_receipt}</span>
+                <span className="text-slate-400">•</span>
+                <span className="truncate max-w-[120px]">{landRegistry.property_name}</span>
+                <span className={`px-1 rounded text-[7.5px] font-bold ${
+                  landRegistry.car_status === 'ATIVO' ? 'bg-emerald-950 text-emerald-300' : 'bg-red-950 text-red-300'
+                }`}>
+                  {landRegistry.car_status}
+                </span>
+              </div>
+            )}
           </div>
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-red-950 text-red-300 border border-red-600 flex-shrink-0">
-            {spot.biome}
+          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border flex-shrink-0 ${
+            isBrazil
+              ? 'bg-red-950 text-red-300 border-red-600'
+              : 'bg-amber-950 text-amber-300 border-amber-600'
+          }`}>
+            {isBrazil ? spot.biome : `${spot.country_name || 'VIZINHO'}`}
           </span>
         </div>
 
@@ -153,55 +233,76 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
         </div>
       </div>
 
-      {/* 3. NÍVEL DE POLUIÇÃO DO AR (AQI & PM2.5) - DESTAQUE CRISTALINO */}
+      {/* 3. NÍVEL DE POLUIÇÃO DO AR (AQI & PM2.5) */}
       <div className="bg-slate-900/95 rounded-lg p-2.5 border border-slate-700/80 mb-2.5">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center space-x-1.5 text-xs font-bold text-white">
             <Wind size={13} className="text-sky-400" />
             <span className="tracking-wide uppercase text-[11px]">Nível de Poluição do Ar (AQI)</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">
-              CAT {airQuality.categoryNumber}/6
+          {airQuality ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                CAT {airQuality.categoryNumber}/6
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${airQuality.badgeBg} ${airQuality.badgeText} ${airQuality.badgeBorder}`}>
+                AQI {airQuality.aqi} • {airQuality.level}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[9px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-bold border border-slate-700">
+              N/A (Sem sensor local)
             </span>
-            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${airQuality.badgeBg} ${airQuality.badgeText} ${airQuality.badgeBorder}`}>
-              AQI {airQuality.aqi} • {airQuality.level}
-            </span>
-          </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-[10.5px] bg-slate-950/70 rounded p-1.5 border border-slate-800/80">
-          <div>
-            <span className="text-slate-400 text-[9.5px]">Material Particulado:</span>
-            <div className="text-white font-bold text-[11px]">
-              PM2.5: <span className="text-amber-400">{airQuality.pm25} µg/m³</span>
+        {airQuality ? (
+          <>
+            <div className="grid grid-cols-2 gap-2 text-[10.5px] bg-slate-950/70 rounded p-1.5 border border-slate-800/80">
+              <div>
+                <span className="text-slate-400 text-[9.5px]">Material Particulado:</span>
+                <div className="text-white font-bold text-[11px]">
+                  PM2.5: <span className="text-amber-400">{airQuality.pm25} µg/m³</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[9.5px]">Monóxido de Carbono:</span>
+                <div className="text-white font-bold text-[11px]">
+                  CO: <span className="text-cyan-400">{airQuality.co_ppm} ppm</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div>
-            <span className="text-slate-400 text-[9.5px]">Monóxido de Carbono:</span>
-            <div className="text-white font-bold text-[11px]">
-              CO: <span className="text-cyan-400">{airQuality.co_ppm} ppm</span>
-            </div>
-          </div>
-        </div>
 
-        <div className="mt-1.5 text-[10px] text-slate-300 font-sans leading-tight">
-          <strong className="text-yellow-300">Impacto:</strong> {airQuality.healthImpact}
-        </div>
-        <div className="mt-1 text-[9.5px] text-slate-400 font-sans leading-tight">
-          <strong className="text-emerald-400">Medida:</strong> {airQuality.operationalRecommendation}
-        </div>
+            {/* Aviso Explícito de Medição Estimada Sem Sensor de Solo */}
+            {(spot.is_estimated_aqi || !isSimulation) && (
+              <div className="mt-1.5 text-[9px] text-amber-300 font-bold bg-amber-950/70 border border-amber-600/70 rounded px-2 py-1 flex items-center gap-1.5">
+                <AlertTriangle size={11} className="text-amber-400 flex-shrink-0" />
+                <span>⚠️ Estimativa via FRP/Pluma Orbital (Sem sensor de solo no local)</span>
+              </div>
+            )}
 
-        {/* ALERTA DE POLUIÇÃO ATIVADO QUANDO AQI > 50 */}
-        {airQuality.alertTriggered && (
-          <div className="mt-2 bg-amber-950/90 border border-amber-500/80 rounded p-1.5 flex items-center justify-between text-[10px] text-amber-200 animate-pulse">
-            <div className="flex items-center gap-1.5 font-bold">
-              <AlertTriangle size={13} className="text-amber-400 flex-shrink-0" />
-              <span>ALERTA DE AR ATIVO: AQI {airQuality.aqi} &gt; 50 ({airQuality.level})</span>
+            <div className="mt-1.5 text-[10px] text-slate-300 font-sans leading-tight">
+              <strong className="text-yellow-300">Impacto:</strong> {airQuality.healthImpact}
             </div>
-            <span className="text-[8.5px] bg-amber-900/90 text-amber-100 border border-amber-600 px-1 py-0.2 rounded font-black uppercase">
-              CONAMA 491
-            </span>
+            <div className="mt-1 text-[9.5px] text-slate-400 font-sans leading-tight">
+              <strong className="text-emerald-400">Medida:</strong> {airQuality.operationalRecommendation}
+            </div>
+
+            {airQuality.alertTriggered && (
+              <div className="mt-2 bg-amber-950/90 border border-amber-500/80 rounded p-1.5 flex items-center justify-between text-[10px] text-amber-200 animate-pulse">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertTriangle size={13} className="text-amber-400 flex-shrink-0" />
+                  <span>ALERTA DE AR ATIVO: AQI {airQuality.aqi} &gt; 50 ({airQuality.level})</span>
+                </div>
+                <span className="text-[8.5px] bg-amber-900/90 text-amber-100 border border-amber-600 px-1 py-0.2 rounded font-black uppercase">
+                  CONAMA 491
+                </span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-[10px] text-slate-400 bg-slate-950/50 p-2 rounded border border-slate-800/60">
+            Estação física de solo não disponível para esta coordenada remota.
           </div>
         )}
       </div>
@@ -220,15 +321,41 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
           <div className="flex items-center gap-1 text-slate-300 truncate">
             <Truck size={11} className="text-red-400 flex-shrink-0" />
             <span className="truncate">
-              <strong>{infra.nearestStation.name}</strong>
+              {isBrazil ? (
+                isBaseWithinRange ? (
+                  <strong>{rawInfra.nearestStation.name}</strong>
+                ) : (
+                  <strong className="text-slate-400">Base: N/A (&gt;250 km)</strong>
+                )
+              ) : (
+                <strong className="text-slate-400">Base: N/A (Jurisdição Exterior)</strong>
+              )}
             </span>
           </div>
           <div className="text-slate-400 text-[9.5px]">
-            Distância: <strong className="text-white">{infra.nearestStation.distanceKm} km</strong> (~{infra.nearestStation.estimatedMinutes} min)
+            {isBrazil ? (
+              isBaseWithinRange ? (
+                <>Distância: <strong className="text-white">{rawInfra.nearestStation.distanceKm} km</strong> (~{rawInfra.nearestStation.estimatedMinutes} min)</>
+              ) : (
+                <span>Fora do raio de cobertura</span>
+              )
+            ) : (
+              <span>Monitoramento internacional</span>
+            )}
           </div>
           <div className="flex items-center gap-1 text-slate-300 text-[9px] truncate pt-0.5 border-t border-slate-800">
             <Droplets size={10} className="text-cyan-400 flex-shrink-0" />
-            <span className="truncate">{infra.nearestWater.name} ({infra.nearestWater.distanceKm} km)</span>
+            <span className="truncate">
+              {isBrazil ? (
+                isWaterWithinRange ? (
+                  `${rawInfra.nearestWater.name} (${rawInfra.nearestWater.distanceKm} km)`
+                ) : (
+                  'Manancial: N/A (>250 km)'
+                )
+              ) : (
+                'Recurso: N/A (Exterior)'
+              )}
+            </span>
           </div>
         </div>
       </div>
@@ -268,12 +395,10 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
           className="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold rounded-md text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition cursor-pointer"
           title="Abrir telemetria FLIR completa"
         >
-          <Flame size={12} />
-          <span>FLIR C2</span>
+          <ExternalLink size={12} />
+          <span>Detalhes</span>
         </button>
       </div>
     </aside>
   );
 };
-
-export default NewFireAlertBanner;

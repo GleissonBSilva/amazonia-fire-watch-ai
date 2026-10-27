@@ -1,12 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, ChevronDown, Satellite, Globe, Radio, Wind, Thermometer, CloudRain } from 'lucide-react';
+import { Layers, ChevronDown, Satellite, Globe, Radio, Wind, Thermometer, CloudRain, Building } from 'lucide-react';
 import { MapLayerType, MAP_LAYERS, ActiveOverlaysState } from '../types';
+
+export interface GlobalSector {
+  id: string;
+  name: string;
+  flag: string;
+  center: [number, number];
+  zoom: number;
+}
+
+export const GLOBAL_SECTORS: GlobalSector[] = [
+  { id: 'global', name: 'Mundo (Visão Global 360°)', flag: '🌐', center: [15, 0], zoom: 2 },
+  { id: 'amazonia', name: 'América do Sul (Amazônia/Pantanal)', flag: '🇧🇷', center: [-4.0, -62.0], zoom: 5 },
+  { id: 'north_america', name: 'América do Norte (EUA/Canadá)', flag: '🇺🇸', center: [42.0, -100.0], zoom: 4 },
+  { id: 'europe', name: 'Europa & Mediterrâneo', flag: '🇪🇺', center: [42.0, 15.0], zoom: 4 },
+  { id: 'africa', name: 'África (Bacia do Congo/Savanas)', flag: '🌍', center: [-2.0, 24.0], zoom: 4 },
+  { id: 'asia', name: 'Ásia & Indonésia (Bornéu)', flag: '🇮🇩', center: [2.0, 115.0], zoom: 4 },
+  { id: 'oceania', name: 'Oceania & Austrália (Bushfires)', flag: '🇦🇺', center: [-25.0, 134.0], zoom: 4 },
+  { id: 'siberia', name: 'Sibéria & Taiga Boreal', flag: '🏔️', center: [62.0, 110.0], zoom: 3 },
+];
 
 export interface LayerNavigationBarProps {
   currentLayer: MapLayerType;
   onSelectBaseLayer: (layer: MapLayerType) => void;
   activeOverlays: ActiveOverlaysState;
   onToggleOverlay: (overlayKey: keyof ActiveOverlaysState) => void;
+  onSelectGlobalSector?: (center: [number, number], zoom: number, label: string) => void;
 }
 
 export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
@@ -14,8 +34,12 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
   onSelectBaseLayer,
   activeOverlays,
   onToggleOverlay,
+  onSelectGlobalSector,
 }) => {
   const [isBaseDropdownOpen, setIsBaseDropdownOpen] = useState(false);
+  const [isSectorDropdownOpen, setIsSectorDropdownOpen] = useState(false);
+  const [currentSector, setCurrentSector] = useState<string>('global');
+  const sectorRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on click outside
@@ -23,6 +47,9 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsBaseDropdownOpen(false);
+      }
+      if (sectorRef.current && !sectorRef.current.contains(e.target as Node)) {
+        setIsSectorDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -33,28 +60,77 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
 
   return (
     <div className="flex items-center space-x-1.5 bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-lg p-0.5 text-xs font-mono select-none">
-      {/* 1. SELETOR BASE COMPACTO (DROPDOWN PILL) */}
+      {/* SELETOR 0: TEATRO DE OPERAÇÕES GLOBAL (Continentes / Planeta) */}
+      <div className="relative" ref={sectorRef}>
+        <button
+          onClick={() => setIsSectorDropdownOpen(!isSectorDropdownOpen)}
+          className="flex items-center gap-1 px-2 py-1 rounded bg-slate-900 border border-cyan-700/80 hover:bg-slate-800 text-cyan-300 transition-all font-bold h-7 shadow-sm"
+          title="Navegar por Continente / Teatro Operacional Planetário"
+        >
+          <Globe size={13} className="text-cyan-400 animate-spin-slow" />
+          <span className="truncate max-w-[125px]">
+            {GLOBAL_SECTORS.find(s => s.id === currentSector)?.name.split(' (')[0] || 'Mundo'}
+          </span>
+          <ChevronDown size={11} className={`text-cyan-400 transition-transform ${isSectorDropdownOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isSectorDropdownOpen && (
+          <div className="absolute top-full left-0 mt-1 w-64 bg-slate-950 border border-cyan-800 rounded-lg shadow-2xl py-1 z-50 overflow-hidden backdrop-blur-md">
+            <div className="px-3 py-1 text-[10px] text-cyan-400 uppercase tracking-wider font-bold border-b border-slate-800 flex items-center justify-between">
+              <span>Teatros Globais</span>
+              <span className="text-[9px] bg-cyan-950 text-cyan-300 px-1 rounded">PLANETÁRIO</span>
+            </div>
+            {GLOBAL_SECTORS.map((sec) => {
+              const isSelected = currentSector === sec.id;
+              return (
+                <button
+                  key={sec.id}
+                  onClick={() => {
+                    setCurrentSector(sec.id);
+                    setIsSectorDropdownOpen(false);
+                    if (onSelectGlobalSector) {
+                      onSelectGlobalSector(sec.center, sec.zoom, sec.name);
+                    }
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between transition-colors ${
+                    isSelected
+                      ? 'bg-cyan-950/80 text-cyan-200 font-bold border-l-2 border-cyan-400'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span>{sec.flag}</span>
+                    <span className="truncate">{sec.name}</span>
+                  </span>
+                  {isSelected && <span className="text-[9px] text-cyan-400 flex-shrink-0">Ativo</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="h-4 w-[1px] bg-slate-800" />
+
+      {/* SELETOR 1: CAMADA BASE (Dropdown compacto) */}
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsBaseDropdownOpen(!isBaseDropdownOpen)}
-          className="h-7 px-2.5 py-0.5 rounded-md bg-slate-900 hover:bg-slate-850 border border-slate-700/80 text-white font-medium text-[11px] flex items-center gap-1.5 transition-all shadow-sm"
-          title="Alternar textura base do mapa"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-slate-200 transition-all font-semibold h-7"
+          title="Selecionar Mapa Base"
         >
-          <Layers size={13} className="text-emerald-400" />
-          <span className="truncate max-w-[110px]">{currentLayerName}</span>
-          <ChevronDown
-            size={12}
-            className={`text-slate-400 transition-transform ${isBaseDropdownOpen ? 'rotate-180 text-emerald-400' : ''}`}
-          />
+          <Layers size={13} className="text-cyan-400" />
+          <span className="truncate max-w-[130px]">{currentLayerName}</span>
+          <ChevronDown size={12} className={`text-slate-400 transition-transform ${isBaseDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
-        {/* Dropdown Menu das Camadas Base */}
         {isBaseDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 w-44 bg-slate-900/95 border border-slate-700 rounded-lg shadow-2xl backdrop-blur-md overflow-hidden z-50 divide-y divide-slate-800 animate-fade-in font-mono text-[11px]">
-            <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-slate-400 bg-slate-950/60">
-              Textura Base do Mapa
+          <div className="absolute top-full left-0 mt-1 w-56 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl py-1 z-50 overflow-hidden">
+            <div className="px-3 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800">
+              Mapas Base
             </div>
             {(Object.keys(MAP_LAYERS) as MapLayerType[]).map((layerKey) => {
+              const layer = MAP_LAYERS[layerKey];
               const isSelected = currentLayer === layerKey;
               return (
                 <button
@@ -63,14 +139,14 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
                     onSelectBaseLayer(layerKey);
                     setIsBaseDropdownOpen(false);
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 flex items-center justify-between transition-colors ${
+                  className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between transition-colors ${
                     isSelected
-                      ? 'bg-emerald-600/30 text-emerald-300 font-bold border-l-2 border-emerald-400'
+                      ? 'bg-cyan-950/70 text-cyan-300 font-bold border-l-2 border-cyan-400'
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <span>{MAP_LAYERS[layerKey].name}</span>
-                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
+                  <span>{layer.name}</span>
+                  {isSelected && <span className="text-[10px] text-cyan-400">Ativo</span>}
                 </button>
               );
             })}
@@ -78,12 +154,11 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
         )}
       </div>
 
-      {/* Separador Tático Discreto */}
-      <div className="h-4 w-[1px] bg-slate-800 mx-0.5 flex-shrink-0" />
+      <div className="h-4 w-[1px] bg-slate-800" />
 
-      {/* 2. BOTÕES DE OVERLAYS SOBREPOSTOS COMPACTOS (PILLS 28px) */}
+      {/* SELETOR 2: OVERLAYS DE SATÉLITE EM TEMPO REAL (Pílulas Toggle Multi-seleção) */}
       <div className="flex items-center space-x-1">
-        {/* OVERLAY: NASA FIRMS */}
+        {/* OVERLAY: NASA FIRMS (VIIRS 375m) */}
         <button
           onClick={() => onToggleOverlay('nasaFirms')}
           className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
@@ -91,10 +166,10 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
               ? 'bg-amber-600/90 text-white border-amber-400 font-bold shadow-sm shadow-amber-950'
               : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
           }`}
-          title="Focos térmicos VIIRS 375m (NASA FIRMS WMS)"
+          title="Focos de Calor VIIRS 375m em Tempo Quase-Real (NASA FIRMS / GIBS)"
         >
           <Satellite size={12} className={activeOverlays.nasaFirms ? 'text-amber-200 animate-pulse' : 'text-amber-400'} />
-          <span>NASA</span>
+          <span>FIRMS</span>
         </button>
 
         {/* OVERLAY: Google Earth 3D */}
@@ -102,12 +177,12 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
           onClick={() => onToggleOverlay('googleEarth3d')}
           className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
             activeOverlays.googleEarth3d
-              ? 'bg-sky-600/90 text-white border-sky-400 font-bold shadow-sm shadow-sky-950'
+              ? 'bg-blue-600/90 text-white border-blue-400 font-bold shadow-sm shadow-blue-950'
               : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
           }`}
-          title="Textura e relevo topográfico 3D (Google Earth)"
+          title="Auditoria 3D em Alta Resolução (Google Earth / Topografia de Terreno)"
         >
-          <Globe size={12} className={activeOverlays.googleEarth3d ? 'text-sky-200' : 'text-sky-400'} />
+          <Globe size={12} className={activeOverlays.googleEarth3d ? 'text-blue-200 animate-pulse' : 'text-blue-400'} />
           <span>Earth 3D</span>
         </button>
 
@@ -125,18 +200,36 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
           <span>INPE</span>
         </button>
 
-        {/* OVERLAY: Satélite Meteorológico GOES-16 (Fumaça & Nuvens ao Vivo) */}
+        {/* OVERLAY: Satélite Meteorológico GOES-16 (Fumaça & Nuvens ao Vivo a cada 10-15m) */}
         <button
           onClick={() => onToggleOverlay('goes16')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
+          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 border ${
             activeOverlays.goes16
               ? 'bg-cyan-600/90 text-white border-cyan-400 font-bold shadow-sm shadow-cyan-950'
               : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
           }`}
-          title="Satélite Meteorológico GOES-16 (GeoColor NOAA/NASA / Fumaça e Nuvens ao Vivo)"
+          title="Satélite Meteorológico NOAA GOES-16 ABI • Varreduras a cada 10-15 min • Detecção instantânea de calor"
         >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+          </span>
           <CloudRain size={12} className={activeOverlays.goes16 ? 'text-cyan-200 animate-pulse' : 'text-cyan-400'} />
-          <span>GOES-16</span>
+          <span>GOES-16 (~10m)</span>
+        </button>
+
+        {/* OVERLAY: Malha Fundiária CAR / SICAR / Terras Indígenas / UCs */}
+        <button
+          onClick={() => onToggleOverlay('carCadastre')}
+          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
+            activeOverlays.carCadastre
+              ? 'bg-amber-600/90 text-white border-amber-400 font-bold shadow-sm shadow-amber-950'
+              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
+          }`}
+          title="Malha Fundiária de Imóveis Rurais (CAR / SICAR / Terras Indígenas / UCs)"
+        >
+          <Building size={12} className={activeOverlays.carCadastre ? 'text-amber-200 animate-pulse' : 'text-amber-400'} />
+          <span>CAR/SICAR</span>
         </button>
 
         {/* OVERLAY: Poluição do Ar & Pluma de Fumaça (Aerossol MODIS/GOES / AQI) */}
@@ -163,12 +256,10 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
           }`}
           title="Gradiente térmico de temperatura da superfície terrestre (LST Day)"
         >
-          <Thermometer size={12} className={activeOverlays.thermalMask ? 'text-orange-200' : 'text-orange-400'} />
-          <span>Temp</span>
+          <Thermometer size={12} className={activeOverlays.thermalMask ? 'text-orange-200 animate-pulse' : 'text-orange-400'} />
+          <span>Térmica</span>
         </button>
       </div>
     </div>
   );
 };
-
-export default LayerNavigationBar;

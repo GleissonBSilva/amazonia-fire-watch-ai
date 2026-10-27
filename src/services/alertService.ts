@@ -12,6 +12,10 @@ export async function sendWhatsAppFireAlert(areaData: {
   imageBase64?: string;
   airQualityAlert?: { aqi: number; level: string; pm25: number };
   isSimulation?: boolean;
+  municipio?: string;
+  isRecurrent?: boolean;
+  targetPhone?: string;
+  customMessage?: string;
 }) {
   const isSim =
     areaData.isSimulation !== undefined

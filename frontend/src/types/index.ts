@@ -11,6 +11,41 @@ export interface DelimitedArea {
 
 export type FireSpotStatus = 'PENDENTE' | 'ACIONADO_SIMULACAO' | 'EQUIPE_DESIGNADA' | 'COMBATE_ATIVO';
 
+export type CarStatus = 'ATIVO' | 'PENDENTE' | 'CANCELADO' | 'SUSPENSO';
+
+export interface LandRegistryMatch {
+  car_receipt: string; // Ex: AM-1300201-B78F90875AC14207908B1F548842EA35
+  property_name: string; // Ex: Fazenda Santa Helena
+  owner_name: string; // Ex: JOSÉ ROBERTO DE MENDONÇA
+  owner_document: string; // Ex: ***.482.912-**
+  car_status: CarStatus;
+  status_reason?: string;
+  total_area_ha: number;
+  legal_reserve_ha: number;
+  app_area_ha: number;
+  sigef_parcel_code?: string;
+  cadastral_type: 'IMOVEL_RURAL_PRIVADO' | 'TERRA_INDIGENA' | 'UNIDADE_CONSERVACAO' | 'ASSENTAMENTO_INCRA' | 'GLEBA_PUBLICA';
+  indigenous_land?: string;
+  conservation_unit?: string;
+  infraction_risk: 'CRITICO' | 'ALTO' | 'MEDIO';
+  estimated_fine_brl: number;
+  legal_infraction_articles: string[];
+  bounds?: { minLat: number; maxLat: number; minLng: number; maxLng: number };
+}
+
+export interface InfractionDossier {
+  protocolNumber: string;
+  timestamp: string;
+  property: LandRegistryMatch;
+  spot: FireSpot;
+  burntAreaHaEstimate: number;
+  estimatedFineBrl: number;
+  environmentalDamageEstimate: string;
+  infractionArticles: string[];
+  responsibleAuthority: string;
+  officerSignatureProtocol: string;
+}
+
 export interface FireSpot {
   id: string;
   latitude: number;
@@ -38,6 +73,27 @@ export interface FireSpot {
   pm25?: number;
   air_quality_level?: string;
   is_simulated?: boolean;
+  is_brazil?: boolean;
+  country_code?: string;
+  country_name?: string;
+  continent?: string;
+  is_estimated_aqi?: boolean;
+  weather?: FireWeatherInfo;
+  detection_type?: 'PRELIMINAR_GEOESTACIONARIO' | 'CONFIRMADO_POLAR';
+  is_geostationary_preliminary?: boolean;
+  awaiting_polar_confirmation?: boolean;
+  goes16_detection_time?: string;
+  land_registry?: LandRegistryMatch;
+}
+
+export interface FireWeatherInfo {
+  temperature_c: number;
+  relative_humidity: number;
+  wind_speed_kmh: number;
+  wind_direction_deg: number;
+  precipitation_mm: number;
+  fire_spread_risk: 'EXTREMO' | 'ALTO' | 'MODERADO' | 'BAIXO' | 'EXTINCAO_CHUVA';
+  risk_reason: string;
 }
 
 export interface OSINTAlert {
@@ -87,8 +143,10 @@ export interface ActiveOverlaysState {
   goes16?: boolean;
   smokePlume: boolean;
   thermalMask: boolean;
+  rainRadar?: boolean;
   heatmap?: boolean;
   airQuality?: boolean;
+  carCadastre?: boolean;
 }
 
 export interface MapLayerOverlay {

@@ -1,11 +1,13 @@
 """
 OSINT Monitoring & Social Feed Webhook Endpoints.
+Equipado com cache em memória (TTL 30s) para mitigar sobrecarga de polling.
 """
 
 from fastapi import APIRouter, HTTPException
 from typing import List
 from ..models import OSINTWebhookPayload, OSINTItemResponse
 from ..services.osint_service import osint_service
+from ..services.simple_cache import memory_cache
 
 router = APIRouter(prefix="/osint", tags=["OSINT Social Feed"])
 
@@ -25,12 +27,21 @@ async def receive_osint_post(payload: OSINTWebhookPayload):
     )
     if not result:
         return {"status": "IGNORED", "reason": "No relevant fire keywords matched"}
+    
+    # Invalida cache de alertas para atualização imediata
+    memory_cache.clear()
     return {"status": "STORED", "alert": result}
 
 @router.get("/alerts", response_model=List[OSINTItemResponse])
 async def get_osint_alerts(limit: int = 25):
     """
-    Returns latest stored OSINT alerts to plot on map and display in floating window.
+    Returns latest stored OSINT alerts to plot on map and display in floating window with 30s cache.
     """
+    cache_key = f"osint_alerts_{limit}"
+    cached = memory_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     alerts = osint_service.list_alerts(limit=limit)
+    memory_cache.set(cache_key, alerts, ttl=30)
     return alerts

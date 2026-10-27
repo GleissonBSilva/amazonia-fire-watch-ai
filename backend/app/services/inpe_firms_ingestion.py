@@ -12,6 +12,7 @@ import csv
 import io
 import httpx
 from typing import List, Dict, Any
+from .spatial_classifier import classify_location
 
 # Major monitoring hubs and critical fire zones across Brazil
 BRAZIL_REGIONS = [
@@ -129,6 +130,17 @@ class NationalIngestionService:
         self._cache_real_24h = []
         self._last_real_fetch = None
         self._last_refresh = None
+        
+        # Pré-carregamento imediato do cache real de satélite na inicialização (0ms de latência)
+        cache_file = os.path.join(os.path.dirname(__file__), "..", "..", "real_firms_cache.json")
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    self._cache_real_24h = json.load(f)
+                    self._last_real_fetch = datetime.datetime.now(datetime.timezone.utc)
+            except Exception:
+                pass
+                
         self._generate_national_datasets()
 
     def _generate_national_datasets(self):
@@ -280,10 +292,13 @@ class NationalIngestionService:
             })
         self._cache_historical = timeline
 
-    def get_realtime_24h_fires(self) -> List[Dict[str, Any]]:
-        return self._cache_24h
+    def get_realtime_24h_fires(self, filter_brazil_only: bool = False) -> List[Dict[str, Any]]:
+        spots = self._cache_24h
+        if filter_brazil_only:
+            return [s for s in spots if s.get("is_brazil", True)]
+        return spots
 
-    async def get_real_satellite_fires(self, limit: int = 500) -> List[Dict[str, Any]]:
+    async def get_real_satellite_fires(self, limit: int = 2000, filter_brazil_only: bool = False) -> List[Dict[str, Any]]:
         """
         Fetches real-time 24h satellite observations directly from NASA FIRMS VIIRS 375m & INPE.
         Filters for Brazilian territory, computes real air quality from satellite FRP,
@@ -296,13 +311,27 @@ class NationalIngestionService:
         if self._cache_real_24h and self._last_real_fetch:
             time_diff = (now - self._last_real_fetch).total_seconds()
             if time_diff < 900:
-                return self._cache_real_24h[:limit]
+                spots = self._cache_real_24h[:limit]
+                if filter_brazil_only:
+                    return [s for s in spots if s.get("is_brazil", True)]
+                return spots
 
         cache_file = os.path.join(os.path.dirname(__file__), "..", "..", "real_firms_cache.json")
+        if not self._cache_real_24h and os.path.exists(cache_file):
+            try:
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    self._cache_real_24h = json.load(f)
+                    self._last_real_fetch = now
+                    spots = self._cache_real_24h[:limit]
+                    if filter_brazil_only:
+                        return [s for s in spots if s.get("is_brazil", True)]
+                    return spots
+            except Exception:
+                pass
 
         try:
             url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_America_24h.csv"
-            async with httpx.AsyncClient(timeout=35.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     content = resp.text
@@ -338,17 +367,20 @@ class NationalIngestionService:
                                 det_str = f"{acq_date} {acq_time[:2]}:{acq_time[2:]}:00 UTC"
                                 iso_str = now.isoformat()
 
-                            state_code, state_name, biome = get_brazil_location(lat, lng)
+                            loc = classify_location(lat, lng)
                             aq = compute_air_quality(frp)
 
                             real_spots.append({
                                 "id": f"FIRMS-REAL-{uid}",
                                 "latitude": round(lat, 5),
                                 "longitude": round(lng, 5),
-                                "biome": biome,
-                                "state": state_code,
-                                "municipality": f"{state_name} ({biome})",
-                                "address": f"Detecção Orbital NASA FIRMS VIIRS 375m • {state_name}",
+                                "is_brazil": loc["is_brazil"],
+                                "country_code": loc["country_code"],
+                                "country_name": loc["country_name"],
+                                "biome": loc["biome"],
+                                "state": loc["state"],
+                                "municipality": loc["municipality"],
+                                "address": loc["address"],
                                 "satellite": "Suomi-NPP (VIIRS 375m)",
                                 "frp_mw": round(frp, 1),
                                 "bright_ti4_k": round(bright_ti4, 1),
@@ -367,7 +399,8 @@ class NationalIngestionService:
                                 "hover_thumbnail": None,
                                 "aqi": aq["aqi"],
                                 "pm25": aq["pm25"],
-                                "air_quality_level": aq["air_quality_level"]
+                                "air_quality_level": aq["air_quality_level"],
+                                "is_estimated_aqi": True
                             })
                             uid += 1
 
@@ -383,6 +416,8 @@ class NationalIngestionService:
                         except Exception:
                             pass
 
+                        if filter_brazil_only:
+                            return [s for s in self._cache_real_24h if s.get("is_brazil", True)][:limit]
                         return self._cache_real_24h[:limit]
         except Exception as e:
             print("Erro ao consumir satélite real NASA FIRMS:", e)
@@ -393,11 +428,17 @@ class NationalIngestionService:
                 with open(cache_file, "r", encoding="utf-8") as cf:
                     self._cache_real_24h = json.load(cf)
                     self._last_real_fetch = now
-                    return self._cache_real_24h[:limit]
+                    spots = self._cache_real_24h[:limit]
+                    if filter_brazil_only:
+                        return [s for s in spots if s.get("is_brazil", True)]
+                    return spots
             except Exception:
                 pass
 
-        return (self._cache_real_24h or [])[:limit]
+        spots = (self._cache_real_24h or [])[:limit]
+        if filter_brazil_only:
+            return [s for s in spots if s.get("is_brazil", True)]
+        return spots
 
     def get_monthly_heatmap_data(self, simulation: bool = True) -> List[Dict[str, Any]]:
         if not simulation and self._cache_real_24h:

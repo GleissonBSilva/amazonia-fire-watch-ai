@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MessageSquare, X, Send, Copy, Check, ShieldAlert, MapPin, ExternalLink, Flame, AlertTriangle } from 'lucide-react';
+import { Rnd } from 'react-rnd';
+import { MessageSquare, X, Send, Copy, Check, ShieldAlert, MapPin, ExternalLink, Flame, AlertTriangle, Maximize2, Square } from 'lucide-react';
 import { sendWhatsAppFireAlert } from '../services/alertService';
 import { FireSpot, DelimitedArea } from '../types';
 
@@ -19,6 +20,7 @@ export const WhatsAppConfirmModal: React.FC<WhatsAppConfirmModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentSuccess, setSentSuccess] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   if (!isOpen) return null;
 
@@ -33,7 +35,7 @@ export const WhatsAppConfirmModal: React.FC<WhatsAppConfirmModalProps> = ({
   const mapsLink = `https://www.google.com/maps?q=${lat.toFixed(5)},${lng.toFixed(5)}`;
 
   const formattedMessage =
-    `*[MODO SIMULAÇÃO - AMAPÁ/AMAZONAS]*\n` +
+    `*[ALERTA TÁTICO CBMAM / CIOPS]*\n` +
     `🚨 *ALERTA AMAZÔNIA FIRE WATCH AI* 🚨\n\n` +
     `${isRecurrent ? '🚨 *SUSPEITA DE AÇÃO REINCIDENTE/CRIME*' : '🔥 *FOCO TÉRMICO IDENTIFICADO*'}\n` +
     `📍 *Local:* ${localNome}\n` +
@@ -42,7 +44,7 @@ export const WhatsAppConfirmModal: React.FC<WhatsAppConfirmModalProps> = ({
     `📐 *Área Estimada:* ~${areaKm2.toFixed(2)} km² (${(areaKm2 * 100).toFixed(1)} ha)\n` +
     `🛰️ *Satélite:* NOAA-20 (VIIRS 375m) / INPE\n` +
     `🗺️ *Localização Google Maps:* ${mapsLink}\n\n` +
-    `⚠️ _Mensagem de teste interna direcionada exclusivamente ao operador de homologação._`;
+    `_Protocolo: CBMAM-FW-2026-928174_`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(formattedMessage);
@@ -57,141 +59,139 @@ export const WhatsAppConfirmModal: React.FC<WhatsAppConfirmModalProps> = ({
         lat,
         lng,
         areaSqKm: areaKm2,
-        criticidade: isRecurrent ? 'CRÍTICA' : 'ALTA'
+        criticidade: isRecurrent ? 'CRÍTICA' : 'ALTA',
+        municipio,
+        isRecurrent,
+        targetPhone: '5592993746740',
+        customMessage: formattedMessage,
       });
       setSentSuccess(true);
       setTimeout(() => {
         setSentSuccess(false);
         onClose();
-      }, 1600);
+      }, 1500);
     } catch (err) {
-      console.error('Falha no envio seguro:', err);
+      console.error('Falha no disparo do WhatsApp:', err);
     } finally {
       setSending(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in font-mono select-none">
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden text-white flex flex-col text-xs">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-800/90 border-b border-slate-700">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30">
-              <MessageSquare size={16} />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-xs">Despacho Tático WhatsApp</h3>
-              <p className="text-[10px] text-emerald-400 font-bold">Modo Simulação Segura Ativo</p>
-            </div>
+    <Rnd
+      default={{
+        x: Math.max(30, (window.innerWidth - 560) / 2),
+        y: Math.max(30, (window.innerHeight - 520) / 2),
+        width: 560,
+        height: 520,
+      }}
+      minWidth={340}
+      minHeight={280}
+      bounds="window"
+      dragHandleClassName="confirm-window-handle"
+      enableResizing={!isMaximized}
+      disableDragging={isMaximized}
+      className={`fixed z-50 flex flex-col bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none ${
+        isMaximized ? '!inset-3 !w-auto !h-auto !transform-none' : ''
+      }`}
+    >
+      {/* Titlebar móvel */}
+      <div className="confirm-window-handle px-4 py-2.5 bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 border-b border-emerald-900/60 flex items-center justify-between cursor-move select-none flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded-lg bg-emerald-600 text-white">
+            <MessageSquare size={15} />
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700">
+          <div>
+            <h2 className="text-xs font-bold text-white tracking-wide">
+              CONFIRMAÇÃO DE DESPACHO OPERACIONAL
+            </h2>
+            <span className="text-[9px] text-emerald-300">
+              Destino Autorizado: {targetNumber}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-slate-400">
+          <button
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="p-1 hover:text-white hover:bg-slate-800 rounded transition"
+            title={isMaximized ? 'Restaurar' : 'Maximizar'}
+          >
+            {isMaximized ? <Square size={12} /> : <Maximize2 size={12} />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1 hover:text-red-400 hover:bg-slate-800 rounded transition"
+            title="Fechar"
+          >
             <X size={15} />
           </button>
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-3">
-          {/* Card Resumo do Foco Selecionado */}
-          <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                Resumo do Foco Selecionado
-              </span>
-              <span
-                className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${
-                  isRecurrent
-                    ? 'bg-purple-950 text-purple-300 border-purple-700'
-                    : 'bg-red-950 text-red-300 border-red-700'
-                }`}
-              >
-                {isRecurrent ? 'REINCIDENTE / CRIME' : 'ANOMALIA TÉRMICA'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-800/80">
-              <div>
-                <span className="text-slate-400 text-[10px] block">MUNICÍPIO / LOCAL:</span>
-                <span className="text-white font-bold truncate block">{municipio}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[10px] block">COORDENADAS:</span>
-                <span className="text-cyan-400 font-bold">{lat.toFixed(5)}, {lng.toFixed(5)}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[10px] block">POTÊNCIA (FRP):</span>
-                <span className="text-amber-400 font-bold">{frpMw} MW</span>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[10px] block">STATUS REINCIDÊNCIA:</span>
-                <span className={isRecurrent ? 'text-purple-400 font-bold' : 'text-emerald-400 font-bold'}>
-                  {isRecurrent ? 'Detectado no Histórico' : 'Primeira Ocorrência'}
-                </span>
-              </div>
-            </div>
+      {/* Conteúdo */}
+      <div className="p-4 space-y-3 overflow-y-auto flex-1 text-xs text-slate-200">
+        <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1 text-[10px]">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">Local / Alvo:</span>
+            <span className="text-white font-bold truncate max-w-[320px]">{localNome}</span>
           </div>
-
-          {/* Destinatário com Trava de Segurança */}
-          <div className="flex items-center justify-between p-2.5 bg-slate-950 rounded-lg border border-emerald-500/40">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-[11px] text-slate-300">Destino de Teste Restrito:</span>
-            </div>
-            <span className="text-xs font-bold text-emerald-400 tracking-wide">{targetNumber}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">Coordenadas:</span>
+            <span className="text-cyan-400 font-bold">{lat.toFixed(5)}, {lng.toFixed(5)}</span>
           </div>
-
-          {/* Preview da Mensagem Formatada */}
-          <div>
-            <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-              Preview da Mensagem Tática:
-            </label>
-            <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-[10px] text-slate-300 whitespace-pre-wrap max-h-36 overflow-y-auto leading-relaxed">
-              {formattedMessage}
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">Potência Térmica:</span>
+            <span className="text-amber-400 font-bold">{frpMw} MW</span>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-950/90 border-t border-slate-800 gap-2">
-          <button
-            onClick={handleCopy}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg flex items-center gap-1.5 transition text-xs font-bold"
-          >
-            {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-            <span>{copied ? 'Copiado!' : 'Copiar Texto'}</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition text-xs font-bold"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleDispatch}
-              disabled={sending || sentSuccess}
-              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg flex items-center gap-1.5 transition shadow-lg font-bold text-xs cursor-pointer"
-            >
-              {sending ? (
-                <span>Despachando...</span>
-              ) : sentSuccess ? (
-                <>
-                  <Check size={14} className="text-white" />
-                  <span>Alerta Confirmado!</span>
-                </>
-              ) : (
-                <>
-                  <Send size={13} />
-                  <span>Confirmar Disparo de Teste</span>
-                </>
-              )}
-            </button>
-          </div>
+        <div>
+          <label className="text-[10px] text-slate-400 font-bold block mb-1">
+            Pré-visualização do Relatório WhatsApp:
+          </label>
+          <pre className="p-2 rounded bg-slate-950 border border-slate-800 text-[9.5px] text-slate-300 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto leading-relaxed">
+            {formattedMessage}
+          </pre>
         </div>
       </div>
-    </div>
+
+      {/* Rodapé */}
+      <div className="px-4 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between flex-shrink-0">
+        <button
+          onClick={handleCopy}
+          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10.5px] flex items-center gap-1 transition"
+        >
+          {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+          <span>{copied ? 'Copiado!' : 'Copiar Texto'}</span>
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onClose}
+            className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10.5px] transition"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleDispatch}
+            disabled={sending}
+            className="px-3.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10.5px] flex items-center gap-1.5 transition shadow disabled:opacity-50"
+          >
+            {sentSuccess ? (
+              <>
+                <Check size={13} className="text-white" />
+                <span>Despacho Confirmado!</span>
+              </>
+            ) : (
+              <>
+                <Send size={12} />
+                <span>{sending ? 'Enviando...' : 'Confirmar e Enviar'}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </Rnd>
   );
 };
-
-export default WhatsAppConfirmModal;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MessageSquare, X, Send, MapPin, AlertTriangle, ShieldCheck, Check } from 'lucide-react';
+import { Rnd } from 'react-rnd';
+import { MessageSquare, X, Send, MapPin, AlertTriangle, ShieldCheck, Check, Maximize2, Square } from 'lucide-react';
 import { sendWhatsAppFireAlert } from '../services/alertService';
 import { DelimitedArea, FireSpot } from '../types';
 
@@ -42,8 +43,8 @@ export const WhatsAppAlertModal: React.FC<WhatsAppAlertModalProps> = ({
   const [messageText, setMessageText] = useState(defaultMessage);
   const [sending, setSending] = useState(false);
   const [sentSuccess, setSentSuccess] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
-  // Update default message when lat/lng change
   React.useEffect(() => {
     setMessageText(defaultMessage);
   }, [lat, lng, areaSqKm, localNome]);
@@ -58,113 +59,131 @@ export const WhatsAppAlertModal: React.FC<WhatsAppAlertModalProps> = ({
         lng,
         areaSqKm,
         criticidade: 'CRÍTICA',
+        municipio: activeSpot ? activeSpot.municipality : 'Manaus',
+        isRecurrent: activeSpot?.is_recurrent,
+        targetPhone: targetNumberDigits,
+        customMessage: messageText,
       });
       setSentSuccess(true);
       setTimeout(() => {
         setSentSuccess(false);
         onClose();
-      }, 1800);
+      }, 1500);
+    } catch (err) {
+      console.error(err);
     } finally {
       setSending(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-mono select-none">
-      <div className="w-full max-w-lg bg-slate-900 border border-emerald-500/50 rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <MessageSquare className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-sm">Disparo de Alerta WhatsApp</h3>
-              <p className="text-[11px] text-slate-400">
-                Canal Oficial de Operação: <strong className="text-emerald-400">{targetPhone}</strong>
-              </p>
-            </div>
+    <Rnd
+      default={{
+        x: Math.max(30, (window.innerWidth - 540) / 2),
+        y: Math.max(30, (window.innerHeight - 480) / 2),
+        width: 540,
+        height: 480,
+      }}
+      minWidth={340}
+      minHeight={260}
+      bounds="window"
+      dragHandleClassName="whatsapp-window-handle"
+      enableResizing={!isMaximized}
+      disableDragging={isMaximized}
+      className={`fixed z-50 flex flex-col bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none ${
+        isMaximized ? '!inset-3 !w-auto !h-auto !transform-none' : ''
+      }`}
+    >
+      {/* Titlebar móvel */}
+      <div className="whatsapp-window-handle px-4 py-2.5 bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 border-b border-emerald-900/60 flex items-center justify-between cursor-move select-none flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded-lg bg-emerald-600 text-white">
+            <MessageSquare size={15} />
           </div>
+          <div>
+            <h2 className="text-xs font-bold text-white tracking-wide">
+              DESPACHO OFICIAL WHATSAPP
+            </h2>
+            <span className="text-[9px] text-emerald-300">
+              Canal de Emergência: {targetPhone}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-slate-400">
           <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="p-1 hover:text-white hover:bg-slate-800 rounded transition"
+            title={isMaximized ? 'Restaurar' : 'Maximizar'}
           >
-            <X className="w-5 h-5" />
+            {isMaximized ? <Square size={12} /> : <Maximize2 size={12} />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1 hover:text-red-400 hover:bg-slate-800 rounded transition"
+            title="Fechar"
+          >
+            <X size={15} />
           </button>
         </div>
+      </div>
 
-        {/* Informações da Operação */}
-        <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
+      {/* Conteúdo */}
+      <div className="p-4 space-y-3 overflow-y-auto flex-1 text-xs text-slate-200">
+        <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1 text-[10px]">
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-red-400" /> Coordenadas Alvo:
-            </span>
-            <span className="text-white font-bold">{lat.toFixed(5)}, {lng.toFixed(5)}</span>
+            <span className="text-slate-400">Alvo do Acionamento:</span>
+            <span className="text-white font-bold">{localNome}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 flex items-center gap-1">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Área Estimada:
-            </span>
-            <span className="text-amber-300 font-bold">~{areaSqKm.toFixed(2)} km² ({areaHa} ha)</span>
+            <span className="text-slate-400">Coordenadas:</span>
+            <span className="text-cyan-400 font-bold">{lat.toFixed(5)}, {lng.toFixed(5)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Destinatário Autorizado:
-            </span>
-            <span className="text-emerald-400 font-bold">{targetPhone}</span>
+            <span className="text-slate-400">Área Estimada:</span>
+            <span className="text-amber-400 font-bold">~{areaSqKm.toFixed(2)} km² ({areaHa} ha)</span>
           </div>
         </div>
 
-        {/* Visualização e Edição do Texto Formatado */}
         <div>
-          <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-            Mensagem Formatada Pronta para Envio:
+          <label className="text-[10px] text-slate-400 font-bold block mb-1">
+            Texto da Mensagem Operacional:
           </label>
           <textarea
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            rows={8}
-            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono leading-relaxed focus:outline-none focus:border-emerald-500"
+            rows={7}
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono text-[10px] leading-relaxed focus:outline-none focus:border-emerald-500"
           />
         </div>
-
-        {/* Ações */}
-        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={sending}
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            Cancelar
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={sending || sentSuccess}
-            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-950/50 flex items-center gap-2 transition-all"
-          >
-            {sentSuccess ? (
-              <>
-                <Check className="w-4 h-4 text-white" />
-                Alerta Despachado!
-              </>
-            ) : sending ? (
-              <>
-                <Send className="w-4 h-4 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Confirmar e Abrir no WhatsApp ({targetPhone})
-              </>
-            )}
-          </button>
-        </div>
       </div>
-    </div>
+
+      {/* Rodapé */}
+      <div className="px-4 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between flex-shrink-0">
+        <button
+          onClick={onClose}
+          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10.5px] transition"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleSend}
+          disabled={sending}
+          className="px-3.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10.5px] flex items-center gap-1.5 transition shadow disabled:opacity-50"
+        >
+          {sentSuccess ? (
+            <>
+              <Check size={13} className="text-white" />
+              <span>Despachado com Sucesso!</span>
+            </>
+          ) : (
+            <>
+              <Send size={12} />
+              <span>{sending ? 'Disparando...' : 'Enviar Alerta WhatsApp'}</span>
+            </>
+          )}
+        </button>
+      </div>
+    </Rnd>
   );
 };

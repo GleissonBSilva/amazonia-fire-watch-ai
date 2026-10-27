@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MainMap } from './components/MainMap';
 import { FloatingWindow } from './components/FloatingWindow';
 import { VideoStreamWindow } from './components/VideoStreamWindow';
@@ -8,17 +8,24 @@ import { AIAssistantPanel } from './components/AIAssistantPanel';
 import { SearchBar } from './components/SearchBar';
 import { FiresDrawer } from './components/FiresDrawer';
 import { WhatsAppConfirmModal } from './components/WhatsAppConfirmModal';
+import L from 'leaflet';
 import { BottomDock } from './components/BottomDock';
+import { AreaInspectionModal } from './components/AreaInspectionModal';
+import { ReportsModal } from './components/ReportsModal';
+import { SettingsModal, DEFAULT_CONFIG, SystemConfigState } from './components/SettingsModal';
+import { Settings, Compass } from 'lucide-react';
 import { LayerNavigationBar } from './components/LayerNavigationBar';
 import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LAYERS, ActiveOverlaysState } from './types';
 import { fetchNationalFires, fetchHeatmapData, fetchTimelineData, fetchOsintAlerts } from './services/api';
 import { sendWhatsAppFireAlert } from './services/alertService';
+import { goes16Manager } from './services/goes16PollingService';
 import { Flame, ShieldAlert, Radio, Satellite, Globe, MessageSquare, Clock, Calendar, BarChart2, Layers, Truck, Droplets, Zap, CheckCircle2, Wind } from 'lucide-react';
 import { findNearestInfrastructure } from './data/emergencyInfrastructure';
 import { calculateAirQuality } from './data/airQuality';
 import { GoogleEarth3DWindow } from './components/GoogleEarth3DWindow';
 import { StreetViewWindow } from './components/StreetViewWindow';
 import { NewFireAlertBanner } from './components/NewFireAlertBanner';
+import { TacticalEvidenceWindow } from './components/TacticalEvidenceWindow';
 import { FloorPlanModal } from './components/FloorPlanModal';
 import { AutoEmergencyCountdown } from './components/AutoEmergencyCountdown';
 import { INDUSTRIAL_FACILITIES, Facility } from './data/facilityFloorPlans';
@@ -38,13 +45,33 @@ const TacticalClock: React.FC = () => {
 };
 
 export const App: React.FC = () => {
-  const [fireSpots, setFireSpots] = useState<FireSpot[]>([]);
+  const [fireSpots, setFireSpots] = useState<FireSpot[]>(() => {
+    try {
+      const local = localStorage.getItem('amazonia_fire_spots_cache');
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [heatmapSpots, setHeatmapSpots] = useState<any[]>([]);
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [osintAlerts, setOsintAlerts] = useState<OSINTAlert[]>([]);
   
   const [selectedArea, setSelectedArea] = useState<DelimitedArea | null>(null);
   const [temporalMode, setTemporalMode] = useState<TemporalMode>('24h');
+  const [isAreaInspectionOpen, setIsAreaInspectionOpen] = useState<boolean>(false);
+  const [isReportsOpen, setIsReportsOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [systemConfig, setSystemConfig] = useState<SystemConfigState>(() => {
+    try {
+      const saved = localStorage.getItem('amazonia_fire_watch_config');
+      return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
+    } catch {
+      return DEFAULT_CONFIG;
+    }
+  });
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [currentLayer, setCurrentLayer] = useState<MapLayerType>('google_hybrid');
   const [showHeatmapOverlay, setShowHeatmapOverlay] = useState<boolean>(false);
@@ -55,7 +82,9 @@ export const App: React.FC = () => {
     goes16: false,
     smokePlume: false,
     thermalMask: false,
+    rainRadar: false,
     heatmap: false,
+    carCadastre: false,
   });
   const [onlyNewOutbreaks, setOnlyNewOutbreaks] = useState<boolean>(false);
 
@@ -131,7 +160,7 @@ export const App: React.FC = () => {
 
   const [isSimulation, setIsSimulation] = useState<boolean>(() => {
     const saved = localStorage.getItem('isSimulation');
-    return saved !== null ? saved === 'true' : true;
+    return saved !== null ? saved === 'true' : false; // Padrão: DADOS REAIS DE SATÉLITE
   });
 
   const toggleSimulationMode = () => {
@@ -141,13 +170,14 @@ export const App: React.FC = () => {
     if (!nextVal) {
       // Switching to REAL: clear simulated items
       setHoveredSpot(null);
-      setAlertBannerSpot(null);
+      setSelectedSpot(null);
       setOpenWindows(prev => ({ ...prev, videoStream: false }));
     }
   };
 
-  const [activeSpotDetail, setActiveSpotDetail] = useState<FireSpot | null>(null);
-  const [alertBannerSpot, setAlertBannerSpot] = useState<FireSpot | null>(null);
+  // Unified Single Source of Truth for Selected Fire Hotspot across all components
+  const [selectedSpot, setSelectedSpot] = useState<FireSpot | null>(null);
+  const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
   const [streetViewLocation, setStreetViewLocation] = useState<{ lat: number; lng: number; label: string; address?: string } | null>(null);
 
   const handleOpenStreetView = (loc: { lat: number; lng: number; label: string; address?: string }) => {
@@ -157,22 +187,106 @@ export const App: React.FC = () => {
     bringToFront('streetView');
   };
 
+  // Trava de concorrência para evitar chamadas de rede simultâneas duplicadas
+  const isFetchingRef = useRef<boolean>(false);
+
+  // Hidratação instantânea (0ms): se o estado inicial estiver vazio, carrega imediatamente o cache local da NASA
   useEffect(() => {
-    // Load nationwide fires based on simulation mode
-    fetchNationalFires(isSimulation).then(spots => {
-      setFireSpots(spots);
-      const recent = spots.find(s => s.is_new_outbreak);
-      if (recent && isSimulation) {
-        setAlertBannerSpot(recent);
-      } else if (!isSimulation) {
-        // Em Dados Reais, exibe banner apenas se houver foco real do satélite (<3h)
-        const realRecent = spots.find(s => s.is_new_outbreak && !s.is_simulated);
-        setAlertBannerSpot(realRecent || null);
+    if (fireSpots.length === 0) {
+      fetch('/real_firms_cache.json')
+        .then(res => (res.ok ? res.json() : []))
+        .then((cachedSpots: FireSpot[]) => {
+          if (cachedSpots && Array.isArray(cachedSpots) && cachedSpots.length > 0) {
+            setFireSpots(prev => (prev.length === 0 ? cachedSpots : prev));
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    // Carregamento coordenado dos dados de satélite e OSINT
+    const loadData = async (isInitial = false) => {
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
+
+      try {
+        const [spots, heatmap, osint] = await Promise.all([
+          fetchNationalFires(isSimulation),
+          fetchHeatmapData(isSimulation),
+          fetchOsintAlerts(25, isSimulation),
+        ]);
+
+        if (isCancelled) return;
+
+        if (spots && spots.length > 0) {
+          // Reconcilia focos do GOES-16 (geoestacionário) com passagens de alta resolução do VIIRS/MODIS
+          goes16Manager.reconcileWithPolarFires(spots);
+          const goesSpots = goes16Manager.getActiveGoesSpots();
+          const combined = [...goesSpots, ...spots];
+          const seen = new Set();
+          const uniqueSpots = combined.filter(s => {
+            if (seen.has(s.id)) return false;
+            seen.add(s.id);
+            return true;
+          });
+          setFireSpots(uniqueSpots);
+          try {
+            localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(uniqueSpots));
+          } catch {}
+        }
+        setHeatmapSpots(heatmap && heatmap.length > 0 ? heatmap : spots.map(s => [s.latitude, s.longitude, Math.min(1.0, (s.frp_mw || 20) / 100)]));
+        setOsintAlerts(osint);
+
+        // Atualiza foco selecionado inicial ou se nenhum estiver ativo
+        setSelectedSpot(prev => {
+          if (prev && spots.some(s => s.id === prev.id)) {
+            // Mantém o foco ativo sincronizado com a telemetria mais recente
+            return spots.find(s => s.id === prev.id) || prev;
+          }
+          if (isInitial || !prev) {
+            if (isSimulation) {
+              const recent = spots.find(s => s.is_new_outbreak);
+              if (recent) {
+                setIsBannerVisible(true);
+                return recent;
+              }
+            } else {
+              const realRecent = spots.find(s => s.is_new_outbreak && !s.is_simulated) || (spots.length > 0 ? spots[0] : null);
+              if (realRecent) {
+                setIsBannerVisible(true);
+                return realRecent;
+              }
+            }
+          }
+          return prev;
+        });
+      } catch (err) {
+        console.warn('Erro ao atualizar telemetria de focos:', err);
+      } finally {
+        isFetchingRef.current = false;
       }
+    };
+
+    // Disparo inicial imediato na montagem ou na alternância de modo
+    loadData(true);
+
+    // Linha do tempo histórica (2020-2026) carregada apenas uma vez
+    fetchTimelineData().then(timeline => {
+      if (!isCancelled) setTimelineData(timeline);
     });
-    fetchHeatmapData(isSimulation).then(setHeatmapSpots);
-    fetchTimelineData().then(setTimelineData);
-    fetchOsintAlerts(25, isSimulation).then(setOsintAlerts);
+
+    // Polling seguro configurado para 45 segundos (evita rajadas e vazamentos de memória)
+    const pollTimer = setInterval(() => {
+      loadData(false);
+    }, 45000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(pollTimer);
+    };
   }, [isSimulation]);
 
   const bringToFront = (id: string) => {
@@ -183,11 +297,16 @@ export const App: React.FC = () => {
 
   const toggleWindow = (id: string) => {
     if (id === 'whatsappAlert') {
-      if (!activeSpotDetail && fireSpots.length > 0) {
-        setActiveSpotDetail(fireSpots[0]);
+      if (!selectedSpot && fireSpots.length > 0) {
+        setSelectedSpot(fireSpots[0]);
       }
       setIsWhatsAppModalOpen(true);
       return;
+    }
+    if (id === 'spotDetail') {
+      if (!selectedSpot && fireSpots.length > 0) {
+        setSelectedSpot(fireSpots[0]);
+      }
     }
 
     if (!openWindows[id]) {
@@ -214,8 +333,8 @@ export const App: React.FC = () => {
     setFireSpots(prev =>
       prev.map(s => (s.id === spotId ? { ...s, status: newStatus, dispatched_at: dispatchedAt } : s))
     );
-    if (activeSpotDetail && activeSpotDetail.id === spotId) {
-      setActiveSpotDetail(prev => (prev ? { ...prev, status: newStatus, dispatched_at: dispatchedAt } : null));
+    if (selectedSpot && selectedSpot.id === spotId) {
+      setSelectedSpot(prev => (prev ? { ...prev, status: newStatus, dispatched_at: dispatchedAt } : null));
     }
   };
   const handleNewFireDetected = (spot: FireSpot) => {
@@ -229,7 +348,8 @@ export const App: React.FC = () => {
       return [spot, ...prev];
     });
     setHoveredSpot(spot);
-    setAlertBannerSpot(spot);
+    setSelectedSpot(spot);
+    setIsBannerVisible(true);
     setHoverPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 - 100 });
     setTargetMapLocation({
       center: [spot.latitude, spot.longitude],
@@ -240,12 +360,35 @@ export const App: React.FC = () => {
 
   const handleAreaSelected = (data: DelimitedArea) => {
     setSelectedArea(data);
-    setIsWhatsAppModalOpen(true);
+    setIsAreaInspectionOpen(true);
+  };
+
+  const handleInspectMapPoint = (lat: number, lng: number) => {
+    const delta = 0.08;
+    const ne = L.latLng(lat + delta, lng + delta);
+    const sw = L.latLng(lat - delta, lng - delta);
+    const center = L.latLng(lat, lng);
+    const latDiff = delta * 2 * 111;
+    const lngDiff = delta * 2 * 111 * Math.cos((lat * Math.PI) / 180);
+    const areaSqKm = parseFloat((latDiff * lngDiff).toFixed(2));
+    const areaHa = parseFloat((areaSqKm * 100).toFixed(1));
+    const areaM2 = Math.round(areaSqKm * 1000000);
+
+    const inspectedArea: DelimitedArea = {
+      northEast: ne,
+      southWest: sw,
+      center,
+      areaSqKm,
+      areaHa,
+      areaM2,
+    };
+    setSelectedArea(inspectedArea);
+    setIsAreaInspectionOpen(true);
   };
 
   const handleSpotClick = (spot: FireSpot) => {
-    setActiveSpotDetail(spot);
-    setAlertBannerSpot(spot);
+    setSelectedSpot(spot);
+    setIsBannerVisible(true);
     setOpenWindows(prev => ({ ...prev, spotDetail: true }));
     setMinimizedWindows(prev => ({ ...prev, spotDetail: false }));
     bringToFront('spotDetail');
@@ -296,8 +439,11 @@ export const App: React.FC = () => {
   };
 
   const handleSelectSpotFromDrawer = (spot: FireSpot) => {
-    setActiveSpotDetail(spot);
-    setAlertBannerSpot(spot);
+    setSelectedSpot(spot);
+    setIsBannerVisible(true);
+    setOpenWindows(prev => ({ ...prev, spotDetail: true }));
+    setMinimizedWindows(prev => ({ ...prev, spotDetail: false }));
+    bringToFront('spotDetail');
     setTargetMapLocation({
       center: [spot.latitude, spot.longitude],
       zoom: 16,
@@ -355,6 +501,7 @@ export const App: React.FC = () => {
         return (
           <MainMap
             onAreaSelected={handleAreaSelected}
+            onInspectMapPoint={handleInspectMapPoint}
             fireSpots={displayFireSpots}
             activeGeofence={activeGeofence}
             onClearGeofence={handleClearGeofence}
@@ -387,11 +534,11 @@ export const App: React.FC = () => {
       })()}
 
       {/* Alerta Tático de Alta Nitidez de Novo Foco (<3h) ou Selecionado */}
-      {alertBannerSpot && (
+      {selectedSpot && isBannerVisible && (
         <NewFireAlertBanner
-          spot={alertBannerSpot}
+          spot={selectedSpot}
           isSimulation={isSimulation}
-          onClose={() => setAlertBannerSpot(null)}
+          onClose={() => setIsBannerVisible(false)}
           onFlyTo={(lat, lng) => {
             setTargetMapLocation({
               center: [lat, lng],
@@ -449,6 +596,9 @@ export const App: React.FC = () => {
             onSelectBaseLayer={setCurrentLayer}
             activeOverlays={activeOverlays}
             onToggleOverlay={handleToggleOverlay}
+            onSelectGlobalSector={(center, zoom) => {
+              setTargetMapLocation({ center, zoom, trigger: Date.now() });
+            }}
           />
 
           {/* Filtro Rápido de Novos Surgimentos (< 3h) */}
@@ -545,6 +695,26 @@ export const App: React.FC = () => {
             )}
           </div>
 
+          {/* Botão de Relatórios */}
+          <button
+            onClick={() => setIsReportsOpen(true)}
+            className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-700/80 transition-all shadow-sm cursor-pointer"
+            title="Abrir Centro de Relatórios e Estatísticas de Queimadas"
+          >
+            <BarChart2 size={12} className="text-purple-400" />
+            <span>Relatórios</span>
+          </button>
+
+          {/* Botão de Configurações */}
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 transition-all shadow-sm cursor-pointer"
+            title="Abrir Centro de Configurações do Sistema"
+          >
+            <Settings size={12} className="text-slate-400" />
+            <span>Config</span>
+          </button>
+
           <div className="hidden sm:flex items-center space-x-1 text-slate-300 bg-slate-950/80 px-2 py-1 rounded border border-slate-800 text-[11px]">
             <Clock size={11} className="text-amber-300" />
             <TacticalClock />
@@ -605,7 +775,7 @@ export const App: React.FC = () => {
       <FiresDrawer
         fireSpots={fireSpots}
         onSelectSpot={handleSelectSpotFromDrawer}
-        selectedSpotId={activeSpotDetail?.id}
+        selectedSpotId={selectedSpot?.id}
       />
 
       {/* 5. Banner Flutuante de Área Delimitada */}
@@ -620,13 +790,22 @@ export const App: React.FC = () => {
             <div>Metros²: <span className="text-cyan-400 font-bold">{selectedArea.areaM2.toLocaleString('pt-BR')} m²</span></div>
             <div className="truncate">Centro: {selectedArea.center.lat.toFixed(5)}, {selectedArea.center.lng.toFixed(5)}</div>
           </div>
-          <button
-            onClick={() => setIsWhatsAppModalOpen(true)}
-            className="w-full py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-          >
-            <MessageSquare size={14} />
-            <span>DISPARAR WHATSAPP (+55 92 99374-6740)</span>
-          </button>
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={() => setIsAreaInspectionOpen(true)}
+              className="w-full py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs"
+            >
+              <Compass size={13} />
+              <span>VER TODAS AS INFORMAÇÕES DA ÁREA</span>
+            </button>
+            <button
+              onClick={() => setIsWhatsAppModalOpen(true)}
+              className="w-full py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs"
+            >
+              <MessageSquare size={13} />
+              <span>DISPARAR WHATSAPP (+55 92 99374-6740)</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -695,169 +874,19 @@ export const App: React.FC = () => {
         />
       </FloatingWindow>
 
-      {/* C. Detalhes de Foco com Vídeo Selecionado (FLIR HUD Compacto Ancorado no Canto Inferior) */}
-      {activeSpotDetail && (() => {
-        const infra = findNearestInfrastructure(activeSpotDetail.latitude, activeSpotDetail.longitude);
-        const status = activeSpotDetail.status || 'PENDENTE';
-        const airQuality = calculateAirQuality(activeSpotDetail.frp_mw, 0.8);
-        return (
-          <FloatingWindow
-            id="spotDetail"
-            title={`Evidência Tática • ${activeSpotDetail.municipality} (${activeSpotDetail.state})`}
-            isOpen={openWindows.spotDetail}
-            isMinimized={minimizedWindows.spotDetail}
-            zIndex={windowZ.spotDetail}
-            onFocus={bringToFront}
-            onClose={closeWindow}
-            onMinimize={minimizeWindow}
-            defaultPosition={{ x: 24, y: Math.max(70, window.innerHeight - 500) }}
-            defaultSize={{ width: 380, height: 430 }}
-          >
-            <div className="flex flex-col h-full bg-slate-950 p-2.5 text-white font-mono text-xs space-y-2 select-none">
-              {/* Barra de Status Operacional Colorida */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                <div className="truncate max-w-[210px]">
-                  <div className="text-xs font-bold text-red-400 truncate">{activeSpotDetail.address}</div>
-                  <div className="text-[10px] text-slate-400">
-                    {activeSpotDetail.municipality} • {activeSpotDetail.satellite}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {activeSpotDetail.is_new_outbreak && (
-                    <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-yellow-950 text-yellow-300 border border-yellow-500 animate-pulse">
-                      NOVO &lt;3H
-                    </span>
-                  )}
-                  <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-bold border ${
-                    status === 'ACIONADO_SIMULACAO'
-                      ? 'bg-emerald-950 text-emerald-300 border-emerald-500'
-                      : status === 'EQUIPE_DESIGNADA'
-                      ? 'bg-purple-950 text-purple-300 border-purple-500'
-                      : status === 'COMBATE_ATIVO'
-                      ? 'bg-red-950 text-red-300 border-red-500'
-                      : 'bg-amber-950 text-amber-300 border-amber-600'
-                  }`}>
-                    {status === 'ACIONADO_SIMULACAO' ? 'ACIONADO (TESTE)' : status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Sensor Térmico FLIR ou Telemetria Orbital Real */}
-              <div className="relative h-36 bg-black rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center flex-shrink-0">
-                {isSimulation && activeSpotDetail.has_video ? (
-                  <>
-                    <img
-                      src={activeSpotDetail.video_url || 'http://localhost:8000/api/stream/live.mjpg'}
-                      alt="Feed ao Vivo em Memória"
-                      className="w-full h-full object-cover block"
-                    />
-                    <div className="absolute top-1.5 left-2 bg-amber-600/90 px-1.5 py-0.2 rounded text-[8.5px] font-bold">
-                      SIMULAÇÃO YOLO (RAM)
-                    </div>
-                  </>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-slate-950 font-mono">
-                    <Satellite className="text-cyan-400 mb-1" size={24} />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Detecção Orbital Real (NASA / INPE)</span>
-                    <span className="text-[8.5px] text-slate-400 mt-0.5">Sensor VIIRS / MODIS (375m) • Radiometria Espectral</span>
-                    <span className="text-[8px] text-emerald-400 mt-1 font-semibold">Sem câmera de vídeo terrestre associada</span>
-                  </div>
-                )}
-                <div className="absolute top-1.5 right-2 bg-slate-900/90 text-cyan-300 px-1.5 py-0.2 rounded text-[8.5px] border border-cyan-800">
-                  {activeSpotDetail.latitude.toFixed(4)}°, {activeSpotDetail.longitude.toFixed(4)}°
-                </div>
-              </div>
-
-              {/* Telemetria Compacta */}
-              <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
-                <div className="bg-slate-900 p-1 rounded border border-slate-800">
-                  <div className="text-slate-400 text-[9px]">FRP</div>
-                  <div className="text-amber-400 font-bold text-xs">{activeSpotDetail.frp_mw} MW</div>
-                </div>
-                <div className="bg-slate-900 p-1 rounded border border-slate-800">
-                  <div className="text-slate-400 text-[9px]">TEMP</div>
-                  <div className="text-red-400 font-bold text-xs">{activeSpotDetail.bright_ti4_k} K</div>
-                </div>
-                <div className="bg-slate-900 p-1 rounded border border-slate-800">
-                  <div className="text-slate-400 text-[9px]">CONF</div>
-                  <div className="text-emerald-400 font-bold text-xs">{(activeSpotDetail.confidence * 100).toFixed(0)}%</div>
-                </div>
-              </div>
-
-              {/* Telemetria de Qualidade do Ar & Particulado PM2.5 */}
-              <div className="bg-slate-900/95 p-1.5 rounded-lg border border-slate-800 text-[10px] space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-slate-300 font-bold">
-                    <Wind size={11} className="text-sky-400" />
-                    <span>Poluição do Ar (AQI)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[8px] bg-slate-800 px-1 py-0.2 rounded text-slate-400 font-bold">
-                      CAT {airQuality.categoryNumber}/6
-                    </span>
-                    <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase border ${airQuality.badgeBg} ${airQuality.badgeText} ${airQuality.badgeBorder}`}>
-                      AQI {airQuality.aqi} • {airQuality.level}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-[9px] text-slate-400 pt-0.5 border-t border-slate-800/80">
-                  <span>Partículas: <strong className="text-amber-300">PM2.5 {airQuality.pm25} µg/m³</strong></span>
-                  <span>Gás: <strong className="text-cyan-300">CO {airQuality.co_ppm} ppm</strong></span>
-                </div>
-                {airQuality.alertTriggered && (
-                  <div className="text-[8.5px] text-amber-300 font-bold bg-amber-950/60 border border-amber-600/60 rounded px-1.5 py-0.5 flex items-center gap-1 animate-pulse">
-                    <span>⚠️ ALERTA CONAMA: Nível crítico acima de 50</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Radar Buffer: Infraestrutura de Resposta Mais Próxima */}
-              <div className="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800 text-[9.5px] space-y-1">
-                <div className="flex items-center gap-1.5 text-slate-300 truncate">
-                  <Truck size={11} className="text-red-400 flex-shrink-0" />
-                  <span className="truncate">
-                    🚒 <strong className="text-white">{infra.nearestStation.name}</strong> • {infra.nearestStation.distanceKm} km (~{infra.nearestStation.estimatedMinutes} min)
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-300 truncate">
-                  <Droplets size={11} className="text-cyan-400 flex-shrink-0" />
-                  <span className="truncate">
-                    💧 <strong className="text-white">{infra.nearestWater.name}</strong> • {infra.nearestWater.distanceKm} km
-                  </span>
-                </div>
-              </div>
-
-              {/* Botão de Despacho com Atualização Instantânea de Status */}
-              <button
-                onClick={async () => {
-                  const nowStr = new Date().toLocaleTimeString('pt-BR');
-                  try {
-                    await sendWhatsAppFireAlert({
-                      lat: activeSpotDetail.latitude,
-                      lng: activeSpotDetail.longitude,
-                      areaSqKm: 1.45,
-                      criticidade: 'CRÍTICA',
-                      airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: airQuality.pm25 },
-                      isSimulation
-                    });
-                    handleSpotStatusChange(activeSpotDetail.id, 'ACIONADO_SIMULACAO', nowStr);
-                  } catch (e) {
-                    handleSpotStatusChange(activeSpotDetail.id, 'ACIONADO_SIMULACAO', nowStr);
-                  }
-                }}
-                className="w-full py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold rounded shadow flex items-center justify-center gap-1 text-[10.5px] cursor-pointer"
-              >
-                <Zap size={12} />
-                <span>
-                  {status === 'ACIONADO_SIMULACAO'
-                    ? `ACIONADO (${activeSpotDetail.dispatched_at || 'TESTE'})`
-                    : 'ACIONAR DESPACHO WHATSAPP (+55 92 99374-6740)'}
-                </span>
-              </button>
-            </div>
-          </FloatingWindow>
-        );
-      })()}
+      {/* C. Detalhes de Foco Selecionado - Evidência Tática Dinâmica (Zero Mock) */}
+      <TacticalEvidenceWindow
+        key={selectedSpot?.id || 'none'}
+        spot={selectedSpot}
+        isOpen={openWindows.spotDetail}
+        isMinimized={minimizedWindows.spotDetail}
+        zIndex={windowZ.spotDetail}
+        onFocus={bringToFront}
+        onClose={closeWindow}
+        onMinimize={minimizeWindow}
+        onStatusChange={handleSpotStatusChange}
+        isSimulation={isSimulation}
+      />
 
       {/* D. NASA FIRMS VIIRS (Via Backend Proxy Anti-403) */}
       <FloatingWindow
@@ -901,7 +930,7 @@ export const App: React.FC = () => {
       <FloatingWindow
         id="bdqueimadas"
         title="INPE • Portal BDQueimadas (Bioma Amazônia)"
-        url="http://localhost:8000/api/proxy?url=https%3A%2F%2Fterrabrasilis.dpi.inpe.br%2Fqueimadas%2Fbdqueimadas%2F"
+        url="https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/"
         isOpen={openWindows.bdqueimadas}
         isMinimized={minimizedWindows.bdqueimadas}
         zIndex={windowZ.bdqueimadas}
@@ -940,7 +969,7 @@ export const App: React.FC = () => {
         isOpen={isWhatsAppModalOpen}
         onClose={() => setIsWhatsAppModalOpen(false)}
         selectedArea={selectedArea}
-        selectedSpot={activeSpotDetail}
+        selectedSpot={selectedSpot}
       />
 
       {/* 10. Bottom Taskbar Dock */}
@@ -950,6 +979,14 @@ export const App: React.FC = () => {
         onToggleWindow={(id) => {
           if (id === 'floorPlan') {
             setIsFloorPlanOpen(true);
+            return;
+          }
+          if (id === 'reports') {
+            setIsReportsOpen(true);
+            return;
+          }
+          if (id === 'settings') {
+            setIsSettingsOpen(true);
             return;
           }
           if (id === 'geofence') {
@@ -989,6 +1026,61 @@ export const App: React.FC = () => {
         facility={emergencyFacility || INDUSTRIAL_FACILITIES[0]}
         incident={(emergencyFacility || INDUSTRIAL_FACILITIES[0]).activeIncident}
         defaultCountdownSeconds={30}
+      />
+
+      {/* 13. Modal de Informações Detalhadas da Área Clicada / Delimitada */}
+      {selectedArea && (
+        <AreaInspectionModal
+          isOpen={isAreaInspectionOpen}
+          onClose={() => setIsAreaInspectionOpen(false)}
+          area={selectedArea}
+          allFires={fireSpots}
+          onOpenReport={() => {
+            setIsReportsOpen(true);
+          }}
+          onDispatchWhatsApp={(area) => {
+            setIsWhatsAppModalOpen(true);
+          }}
+          onActivateGeofence={(area) => {
+            handleActivateGeofence({
+              id: 'geofence-custom-area',
+              name: `Área Delimitada (~${area.areaSqKm} km²)`,
+              lat: area.center.lat,
+              lng: area.center.lng,
+              areaKm2: area.areaSqKm,
+              description: 'Área delimitada pelo operador para isolamento e vigilância de IA',
+              bounds: [
+                [area.northEast.lat, area.northEast.lng],
+                [area.southWest.lat, area.southWest.lng],
+              ],
+            } as any);
+          }}
+        />
+      )}
+
+      {/* 14. Centro de Relatórios e Estatísticas */}
+      <ReportsModal
+        isOpen={isReportsOpen}
+        onClose={() => setIsReportsOpen(false)}
+        fireSpots={fireSpots}
+        selectedArea={selectedArea}
+        onSelectLocation={(lat, lng) => {
+          setTargetMapLocation({ center: [lat, lng], zoom: 13, trigger: Date.now() });
+        }}
+      />
+
+      {/* 15. Centro de Configurações do Sistema */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        config={systemConfig}
+        onSaveConfig={(newCfg) => {
+          setSystemConfig(newCfg);
+          localStorage.setItem('amazonia_fire_watch_config', JSON.stringify(newCfg));
+          if (newCfg.defaultBaseLayer) {
+            setCurrentLayer(newCfg.defaultBaseLayer);
+          }
+        }}
       />
     </div>
   );

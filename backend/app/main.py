@@ -9,6 +9,8 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import httpx
+import re
+from urllib.parse import urlparse
 
 from .database import init_db
 from .api.alerts import router as alerts_router
@@ -63,7 +65,8 @@ async def proxy_external_url(url: str = Query(..., description="URL externa para
     """
     Remove os headers X-Frame-Options e Content-Security-Policy para permitir
     que links como NASA FIRMS e BDQueimadas abram na janela flutuante sem tela branca ou 403.
-    Injeta <base href="..."> para resolver assets e dependências relativas (ol.js, css, imagens) sem 404s.
+    Injeta <base href="..."> no topo do <head> para que scripts, estilos e fontes relativas
+    sejam resolvidas diretamente no domínio remoto de origem sem gerar erros 404 locais.
     """
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -74,36 +77,79 @@ async def proxy_external_url(url: str = Query(..., description="URL externa para
             res = await client.get(url, headers=headers)
             
             content_type = res.headers.get("content-type", "")
-            content = res.content
+            raw_content = res.content
             
-            # Injeta <base href="..."> para resolver links relativos no iframe
+            # Injeta <base href="..."> logo na abertura de <head> para resolver assets remotos
             if "text/html" in content_type:
-                base_url = str(res.url)
-                base_tag = f'<base href="{base_url}">'
+                base_href = str(res.url)
+                if not base_href.endswith("/"):
+                    if any(base_href.endswith(ext) for ext in [".html", ".htm", ".php", ".asp", ".aspx"]):
+                        base_href = base_href.rsplit("/", 1)[0] + "/"
+                    else:
+                        base_href = base_href + "/"
+                
+                base_tag = f'<base href="{base_href}">'
                 try:
                     html_text = res.text
-                    if "</head>" in html_text:
-                        html_text = html_text.replace("</head>", f"{base_tag}</head>", 1)
-                    elif "<head>" in html_text:
-                        html_text = html_text.replace("<head>", f"<head>{base_tag}", 1)
-                    content = html_text.encode("utf-8")
-                except Exception:
-                    pass
+                    # Remove tags <base> anteriores para evitar duplicidade
+                    html_text = re.sub(r'<base\s+[^>]*>', '', html_text, flags=re.IGNORECASE)
+                    
+                    # Injeta no início de <head> para garantir prioridade sobre todos os elementos filhos
+                    if re.search(r'<head[^>]*>', html_text, flags=re.IGNORECASE):
+                        html_text = re.sub(
+                            r'(<head[^>]*>)',
+                            r'\1\n    ' + base_tag,
+                            html_text,
+                            count=1,
+                            flags=re.IGNORECASE
+                        )
+                    elif re.search(r'<html[^>]*>', html_text, flags=re.IGNORECASE):
+                        html_text = re.sub(
+                            r'(<html[^>]*>)',
+                            r'\1\n<head>' + base_tag + '</head>',
+                            html_text,
+                            count=1,
+                            flags=re.IGNORECASE
+                        )
+                    else:
+                        html_text = base_tag + "\n" + html_text
+                    
+                    raw_content = html_text.encode("utf-8")
+                except Exception as ex:
+                    print("Aviso ao injetar base tag no proxy:", ex)
 
             # Limpa cabeçalhos que bloqueiam o iframe
-            response_headers = dict(res.headers)
-            response_headers.pop("x-frame-options", None)
-            response_headers.pop("content-security-policy", None)
-            response_headers.pop("X-Frame-Options", None)
-            response_headers.pop("Content-Security-Policy", None)
+            response_headers = {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+            }
 
             return Response(
-                content=content,
+                content=raw_content,
                 status_code=res.status_code,
-                media_type=content_type
+                media_type=content_type,
+                headers=response_headers
             )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Erro ao acessar rota via proxy: {str(e)}")
+
+# Fallback automático para assets estáticos do BDQueimadas requisitados na raiz local
+@app.get("/externals/{path:path}")
+@app.get("/api/externals/{path:path}")
+async def proxy_inpe_externals_fallback(path: str):
+    """Proxy fallback de segurança para assets que tentem carregar de localhost"""
+    remote_url = f"https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/externals/{path}"
+    try:
+        async with httpx.AsyncClient(verify=False, timeout=12.0) as client:
+            resp = await client.get(remote_url)
+            return Response(
+                content=resp.content,
+                status_code=resp.status_code,
+                media_type=resp.headers.get("content-type")
+            )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Asset não encontrado")
 
 # ==========================================
 # 1.2 ROTA DE ANÁLISE DE VÍDEO/STREAMING EM MEMÓRIA (Zero-Disk)
