@@ -21,9 +21,9 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 export async function fetchNationalFires(simulation: boolean = true): Promise<FireSpot[]> {
-  // 1. Tenta consulta ao backend FastAPI com timeout estrito de 2.5s
+  // 1. Tenta consulta ao backend FastAPI com timeout estrito de 2.0s
   try {
-    if (!API_BASE_URL) throw new Error('Produção: usando feed estático');
+    if (!API_BASE_URL) throw new Error('Produção: usando feed sincronizado estático');
     const res = await fetchWithTimeout(`${API_BASE_URL}/fires/national?simulation=${simulation}`, {}, 2000);
     if (res.ok) {
       const data = await res.json();
@@ -35,37 +35,34 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
       }
     }
   } catch (err) {
-    // Backend offline ou com latência - segue imediatamente para o cache estático
+    // Backend offline ou rodando em produção (Vercel)
   }
   
-  // 2. Em Modo Operacional Real (ou contingência): consome imediatamente o cache estático local de satélite da NASA (servido em <5ms)
-  if (!simulation) {
-    try {
-      const cacheRes = await fetchWithTimeout('/real_firms_cache.json', {}, 2000);
-      if (cacheRes.ok) {
-        const cachedSpots: FireSpot[] = await cacheRes.json();
-        if (Array.isArray(cachedSpots) && cachedSpots.length > 0) {
-          try {
-            localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(cachedSpots));
-          } catch {}
-          return cachedSpots;
-        }
+  // 2. Fallback sincronizado idêntico entre Local e Vercel (servido em <5ms)
+  const targetFile = simulation ? '/simulation_fires.json' : '/real_firms_cache.json';
+  try {
+    const cacheRes = await fetchWithTimeout(targetFile, {}, 2500);
+    if (cacheRes.ok) {
+      const cachedSpots: FireSpot[] = await cacheRes.json();
+      if (Array.isArray(cachedSpots) && cachedSpots.length > 0) {
+        try {
+          localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(cachedSpots));
+        } catch {}
+        return cachedSpots;
       }
-    } catch (cacheErr) {}
+    }
+  } catch (cacheErr) {}
 
-    // Fallback de contingência pelo localStorage
-    try {
-      const local = localStorage.getItem('amazonia_fire_spots_cache');
-      if (local) {
-        const parsed = JSON.parse(local);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
+  // 3. Fallback de contingência pelo localStorage
+  try {
+    const local = localStorage.getItem('amazonia_fire_spots_cache');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
 
-    return [];
-  }
-
-  // Resilient fallback covering key Brazilian biomes (exclusivo para Modo Simulação)
+  // Resilient fallback mínimo emergencial se offline sem cache
   return [
     {
       id: "VIIRS-24H-FALLBACK-1",
@@ -104,42 +101,42 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
       is_arson_cluster: true,
       is_recurrent: true,
       video_url: "http://localhost:8000/api/stream/live.mjpg"
-    },
-    {
-      id: "VIIRS-24H-FALLBACK-3",
-      latitude: -19.00940,
-      longitude: -57.65330,
-      biome: "Pantanal",
-      state: "MS",
-      municipality: "Corumbá",
-      address: "Parque Nacional do Pantanal - Corumbá/MS",
-      satellite: "Aqua (MODIS)",
-      frp_mw: 64.0,
-      bright_ti4_k: 362.4,
-      confidence: 0.95,
-      detected_at: new Date().toLocaleTimeString('pt-BR'),
-      detected_iso: new Date().toISOString(),
-      has_video: true,
-      is_arson_cluster: false,
-      is_recurrent: true,
-      video_url: "http://localhost:8000/api/stream/live.mjpg"
     }
   ];
 }
 
 export async function fetchHeatmapData(simulation: boolean = true): Promise<any[]> {
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/fires/heatmap?simulation=${simulation}`, {}, 2000);
-    if (res.ok) return await res.json();
+    if (API_BASE_URL) {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/fires/heatmap?simulation=${simulation}`, {}, 2000);
+      if (res.ok) return await res.json();
+    }
   } catch (err) {}
+
+  // Fallback estático sincronizado para Vercel e offline
+  try {
+    const file = simulation ? '/heatmap_simulation.json' : '/heatmap_real.json';
+    const res = await fetchWithTimeout(file, {}, 2000);
+    if (res.ok) return await res.json();
+  } catch {}
+
   return [];
 }
 
 export async function fetchTimelineData(): Promise<any[]> {
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/fires/timeline`, {}, 2500);
-    if (res.ok) return await res.json();
+    if (API_BASE_URL) {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/fires/timeline`, {}, 2500);
+      if (res.ok) return await res.json();
+    }
   } catch (err) {}
+
+  // Fallback estático sincronizado para Vercel e offline
+  try {
+    const res = await fetchWithTimeout('/timeline.json', {}, 2000);
+    if (res.ok) return await res.json();
+  } catch {}
+
   return [];
 }
 

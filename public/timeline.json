@@ -1,0 +1,51 @@
+[
+  {
+    "year": 2020,
+    "total_fires": 31329,
+    "critical_biome": "Amazônia (52%)",
+    "pantanal_pct": "18%",
+    "cerrado_pct": "22%"
+  },
+  {
+    "year": 2021,
+    "total_fires": 42766,
+    "critical_biome": "Amazônia (52%)",
+    "pantanal_pct": "18%",
+    "cerrado_pct": "22%"
+  },
+  {
+    "year": 2022,
+    "total_fires": 43594,
+    "critical_biome": "Amazônia (52%)",
+    "pantanal_pct": "18%",
+    "cerrado_pct": "22%"
+  },
+  {
+    "year": 2023,
+    "total_fires": 31915,
+    "critical_biome": "Amazônia (52%)",
+    "pantanal_pct": "18%",
+    "cerrado_pct": "22%"
+  },
+  {
+    "year": 2024,
+    "total_fires": 35928,
+    "critical_biome": "Amazônia (52%)",
+    "pantanal_pct": "18%",
+    "cerrado_pct": "22%"
+  },
+  {
+    "year": 2025,
+    "total_fires": 26067,
+    "critical_biome": "Amazônia (52%)",
+    "pantanal_pct": "18%",
+    "cerrado_pct": "22%"
+  },
+  {
+    "year": 2026,
+    "total_fires": 14200,
+    "critical_biome": "Amazônia (52%)",
+    "pantanal_pct": "18%",
+    "cerrado_pct": "22%"
+  }
+]

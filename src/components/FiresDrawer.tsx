@@ -63,8 +63,8 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
       if (scopeFilter === 'brasil') return s.is_brazil !== false;
       if (scopeFilter === 'north_america') return s.continent === 'América do Norte' || s.country_name === 'Estados Unidos' || s.country_name === 'Canadá';
       if (scopeFilter === 'europe') return s.continent === 'Europa';
-      if (scopeFilter === 'africa') return s.continent === 'África';
-      if (scopeFilter === 'asia') return s.continent === 'Ásia';
+      if (scopeFilter === 'africa') return s.continent === 'África' || s.continent === 'Africa' || s.country_name === 'República Democrática do Congo' || s.country_name === 'África';
+      if (scopeFilter === 'asia') return s.continent === 'Ásia' || s.continent === 'Asia' || s.country_name === 'Indonésia';
       if (scopeFilter === 'oceania') return s.continent === 'Oceania' || s.country_name === 'Austrália';
       return true; // 'all'
     });
@@ -94,7 +94,7 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
       if (frpFilter === 'low' && spot.frp_mw >= 20) return false;
 
       // Recency Filter (Tempo decorrido da órbita do satélite)
-      const mins = spot.minutes_ago ?? 999;
+      const mins = spot.minutes_ago ?? (spot.is_new_outbreak ? 60 : 999);
       if (recencyFilter === '3h' && mins > 180) return false;
       if (recencyFilter === '6h' && mins > 360) return false;
       if (recencyFilter === '12h' && mins > 720) return false;
@@ -115,7 +115,7 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
         spot.satellite.toLowerCase().includes(term)
       );
     });
-  }, [baseSpots, filterText, categoryFilter, frpFilter, recencyFilter, biomeFilter]);
+  }, [baseSpots, filterText, categoryFilter, frpFilter, recencyFilter, biomeFilter, onlyRealVegetation, smokeColorFilter]);
 
   const counts = useMemo(() => {
     const realTotal = fireSpots.filter(s => !s.is_simulated).length;
@@ -130,7 +130,7 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
       africa: fireSpots.filter(s => s.continent === 'África').length,
       asia: fireSpots.filter(s => s.continent === 'Ásia').length,
       oceania: fireSpots.filter(s => s.continent === 'Oceania').length,
-      recent3h: fireSpots.filter(s => (s.minutes_ago ?? 999) <= 180).length,
+      recent3h: fireSpots.filter(s => (s.minutes_ago ?? (s.is_new_outbreak ? 60 : 999)) <= 180).length,
       currentFiltered: baseSpots.length,
     };
   }, [fireSpots, baseSpots]);

@@ -1,0 +1,2102 @@
+[
+  {
+    "latitude": -3.78672,
+    "longitude": -51.94829,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.78731,
+    "longitude": -51.95227,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.78245,
+    "longitude": -51.94893,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.78304,
+    "longitude": -51.95289,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.78288,
+    "longitude": -47.61028,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.93509,
+    "longitude": -45.16328,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -1.23979,
+    "longitude": -54.13272,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.06035,
+    "longitude": -53.37016,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.54693,
+    "longitude": -51.72711,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -27.16998,
+    "longitude": -60.90869,
+    "intensity": 1.0,
+    "biome": "Internacional (País Vizinho)",
+    "state": "PY"
+  },
+  {
+    "latitude": -2.24394,
+    "longitude": -56.78893,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -2.50671,
+    "longitude": -49.13349,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.86404,
+    "longitude": -53.87947,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.86464,
+    "longitude": -53.88345,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.86109,
+    "longitude": -53.88399,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -8.51278,
+    "longitude": -45.99744,
+    "intensity": 1.0,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -1.05007,
+    "longitude": -53.37168,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.04665,
+    "longitude": -53.37225,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.75375,
+    "longitude": -49.48333,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.09038,
+    "longitude": -50.25039,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.57322,
+    "longitude": -49.29431,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.56814,
+    "longitude": -47.72592,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.86556,
+    "longitude": -53.01777,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -5.61165,
+    "longitude": -40.93986,
+    "intensity": 1.0,
+    "biome": "Caatinga",
+    "state": "PI"
+  },
+  {
+    "latitude": -4.93445,
+    "longitude": -45.15944,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -3.00356,
+    "longitude": -54.90264,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -8.51461,
+    "longitude": -44.13835,
+    "intensity": 1.0,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -2.98671,
+    "longitude": -53.7388,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.98732,
+    "longitude": -53.74276,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.98317,
+    "longitude": -53.73933,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.98378,
+    "longitude": -53.74329,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.66769,
+    "longitude": -54.27532,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.66275,
+    "longitude": -54.27598,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.66355,
+    "longitude": -54.28156,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.02777,
+    "longitude": -53.74979,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.02836,
+    "longitude": -53.75375,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 2.33964,
+    "longitude": -51.65057,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -8.51422,
+    "longitude": -44.13788,
+    "intensity": 1.0,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -3.01034,
+    "longitude": -51.38119,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.27066,
+    "longitude": -44.31365,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -1.2351,
+    "longitude": -54.13393,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.23586,
+    "longitude": -54.13886,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.23038,
+    "longitude": -54.13504,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.23112,
+    "longitude": -54.1398,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.97842,
+    "longitude": -53.73196,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.97903,
+    "longitude": -53.73591,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -27.16846,
+    "longitude": -60.90195,
+    "intensity": 1.0,
+    "biome": "Internacional (País Vizinho)",
+    "state": "PY"
+  },
+  {
+    "latitude": -27.16922,
+    "longitude": -60.90533,
+    "intensity": 1.0,
+    "biome": "Internacional (País Vizinho)",
+    "state": "PY"
+  },
+  {
+    "latitude": -2.72802,
+    "longitude": -49.6445,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 3.3673,
+    "longitude": -55.42201,
+    "intensity": 1.0,
+    "biome": "Internacional (País Vizinho)",
+    "state": "SR"
+  },
+  {
+    "latitude": -9.84983,
+    "longitude": -65.04726,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -9.84579,
+    "longitude": -65.04794,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -4.07314,
+    "longitude": -49.10284,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.10571,
+    "longitude": -49.52616,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.99049,
+    "longitude": -53.74266,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.05979,
+    "longitude": -53.36648,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.3428,
+    "longitude": -55.24024,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.50749,
+    "longitude": -54.29284,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.50687,
+    "longitude": -54.28879,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.52237,
+    "longitude": -54.29753,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.52314,
+    "longitude": -54.30267,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.51016,
+    "longitude": -49.13297,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.16535,
+    "longitude": -50.47587,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -5.28232,
+    "longitude": -42.76192,
+    "intensity": 1.0,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -5.28323,
+    "longitude": -42.76725,
+    "intensity": 1.0,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -3.03839,
+    "longitude": -53.74809,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.03898,
+    "longitude": -53.75205,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.03544,
+    "longitude": -53.75262,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.03485,
+    "longitude": -53.74865,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.77489,
+    "longitude": -54.20961,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.77078,
+    "longitude": -54.21595,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.35819,
+    "longitude": -54.88428,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.35865,
+    "longitude": -54.88738,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.97361,
+    "longitude": -59.80514,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -3.97459,
+    "longitude": -59.81193,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -4.24456,
+    "longitude": -44.13201,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -28.83834,
+    "longitude": -60.9134,
+    "intensity": 1.0,
+    "biome": "Internacional (País Vizinho)",
+    "state": "AR"
+  },
+  {
+    "latitude": 5.27392,
+    "longitude": -57.7547,
+    "intensity": 1.0,
+    "biome": "Internacional (País Vizinho)",
+    "state": "GY"
+  },
+  {
+    "latitude": -6.42402,
+    "longitude": -38.48732,
+    "intensity": 1.0,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -3.00313,
+    "longitude": -54.89966,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.00269,
+    "longitude": -54.89668,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -5.61348,
+    "longitude": -40.93767,
+    "intensity": 1.0,
+    "biome": "Caatinga",
+    "state": "PI"
+  },
+  {
+    "latitude": -5.6095,
+    "longitude": -40.93827,
+    "intensity": 1.0,
+    "biome": "Caatinga",
+    "state": "PI"
+  },
+  {
+    "latitude": -4.02759,
+    "longitude": -46.98979,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.49332,
+    "longitude": -55.42597,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.76616,
+    "longitude": -39.94155,
+    "intensity": 1.0,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -0.5919,
+    "longitude": -51.71697,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -8.10961,
+    "longitude": -39.76914,
+    "intensity": 1.0,
+    "biome": "Cerrado",
+    "state": "BR"
+  },
+  {
+    "latitude": -8.10899,
+    "longitude": -39.7654,
+    "intensity": 1.0,
+    "biome": "Cerrado",
+    "state": "BR"
+  },
+  {
+    "latitude": -2.76807,
+    "longitude": -54.20545,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.76897,
+    "longitude": -54.21132,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.76402,
+    "longitude": -54.21186,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.03425,
+    "longitude": -53.74469,
+    "intensity": 1.0,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.55955,
+    "longitude": -49.51171,
+    "intensity": 0.993,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.55551,
+    "longitude": -49.50847,
+    "intensity": 0.993,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.55609,
+    "longitude": -49.51223,
+    "intensity": 0.993,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -8.52422,
+    "longitude": -40.28402,
+    "intensity": 0.992,
+    "biome": "Caatinga",
+    "state": "BA"
+  },
+  {
+    "latitude": -5.09746,
+    "longitude": -36.86603,
+    "intensity": 0.9590000000000001,
+    "biome": "Cerrado",
+    "state": "BR"
+  },
+  {
+    "latitude": -12.45596,
+    "longitude": -43.75779,
+    "intensity": 0.956,
+    "biome": "Cerrado",
+    "state": "BA"
+  },
+  {
+    "latitude": -3.27354,
+    "longitude": -50.19958,
+    "intensity": 0.955,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.73068,
+    "longitude": -49.64046,
+    "intensity": 0.9279999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 5.4984,
+    "longitude": -61.90004,
+    "intensity": 0.9279999999999999,
+    "biome": "Internacional (País Vizinho)",
+    "state": "VE"
+  },
+  {
+    "latitude": -1.06127,
+    "longitude": -53.36932,
+    "intensity": 0.9259999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.05672,
+    "longitude": -53.3698,
+    "intensity": 0.9259999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.32245,
+    "longitude": -51.99984,
+    "intensity": 0.912,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.28852,
+    "longitude": -53.97534,
+    "intensity": 0.9059999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.28492,
+    "longitude": -53.97589,
+    "intensity": 0.9059999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.28553,
+    "longitude": -53.97993,
+    "intensity": 0.9059999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.50469,
+    "longitude": -53.10711,
+    "intensity": 0.895,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.50524,
+    "longitude": -53.11078,
+    "intensity": 0.895,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.45831,
+    "longitude": -38.561,
+    "intensity": 0.892,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -2.58918,
+    "longitude": -48.00419,
+    "intensity": 0.88,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.22577,
+    "longitude": -51.464,
+    "intensity": 0.8759999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.22185,
+    "longitude": -51.46459,
+    "intensity": 0.8759999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -0.2226,
+    "longitude": -51.46954,
+    "intensity": 0.8759999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.28368,
+    "longitude": -54.68082,
+    "intensity": 0.858,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.48923,
+    "longitude": -49.71458,
+    "intensity": 0.851,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.48979,
+    "longitude": -49.71818,
+    "intensity": 0.851,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.81831,
+    "longitude": -54.1633,
+    "intensity": 0.8420000000000001,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.07933,
+    "longitude": -51.03103,
+    "intensity": 0.812,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.33813,
+    "longitude": -49.80342,
+    "intensity": 0.812,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.34044,
+    "longitude": -53.84256,
+    "intensity": 0.807,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.64501,
+    "longitude": -54.03911,
+    "intensity": 0.8059999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.61936,
+    "longitude": -55.104,
+    "intensity": 0.795,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.62003,
+    "longitude": -55.10843,
+    "intensity": 0.795,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 1.27466,
+    "longitude": -50.92921,
+    "intensity": 0.794,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.12873,
+    "longitude": -51.18355,
+    "intensity": 0.789,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.721,
+    "longitude": -55.39014,
+    "intensity": 0.7859999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.66158,
+    "longitude": -54.27846,
+    "intensity": 0.785,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.39662,
+    "longitude": -50.37912,
+    "intensity": 0.774,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -28.4529,
+    "longitude": -56.09076,
+    "intensity": 0.763,
+    "biome": "Internacional (País Vizinho)",
+    "state": "AR"
+  },
+  {
+    "latitude": -2.29701,
+    "longitude": -49.62795,
+    "intensity": 0.7609999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.29338,
+    "longitude": -49.62849,
+    "intensity": 0.7609999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.61022,
+    "longitude": -51.80145,
+    "intensity": 0.755,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.70371,
+    "longitude": -45.07129,
+    "intensity": 0.754,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -3.5202,
+    "longitude": -53.70295,
+    "intensity": 0.754,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 2.71792,
+    "longitude": -60.33259,
+    "intensity": 0.7509999999999999,
+    "biome": "Amazônia",
+    "state": "RR"
+  },
+  {
+    "latitude": 2.71701,
+    "longitude": -60.33817,
+    "intensity": 0.7509999999999999,
+    "biome": "Amazônia",
+    "state": "RR"
+  },
+  {
+    "latitude": -3.28679,
+    "longitude": -54.16148,
+    "intensity": 0.748,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.28742,
+    "longitude": -54.1657,
+    "intensity": 0.748,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -28.83769,
+    "longitude": -60.90966,
+    "intensity": 0.742,
+    "biome": "Internacional (País Vizinho)",
+    "state": "AR"
+  },
+  {
+    "latitude": -28.8391,
+    "longitude": -60.91595,
+    "intensity": 0.742,
+    "biome": "Internacional (País Vizinho)",
+    "state": "AR"
+  },
+  {
+    "latitude": -2.61394,
+    "longitude": -49.12822,
+    "intensity": 0.738,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -5.6108,
+    "longitude": -40.93454,
+    "intensity": 0.7290000000000001,
+    "biome": "Caatinga",
+    "state": "PI"
+  },
+  {
+    "latitude": -3.31702,
+    "longitude": -54.75973,
+    "intensity": 0.728,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -7.59191,
+    "longitude": -40.3098,
+    "intensity": 0.728,
+    "biome": "Caatinga",
+    "state": "PI"
+  },
+  {
+    "latitude": -4.06524,
+    "longitude": -54.06807,
+    "intensity": 0.721,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.10279,
+    "longitude": -51.09507,
+    "intensity": 0.718,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.2769,
+    "longitude": -54.74745,
+    "intensity": 0.716,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -7.5803,
+    "longitude": -37.88734,
+    "intensity": 0.713,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -1.5366,
+    "longitude": -51.46998,
+    "intensity": 0.7070000000000001,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.40104,
+    "longitude": -54.09896,
+    "intensity": 0.7040000000000001,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.42063,
+    "longitude": -56.32391,
+    "intensity": 0.703,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": 4.6137,
+    "longitude": -59.50596,
+    "intensity": 0.701,
+    "biome": "Internacional (País Vizinho)",
+    "state": "VE"
+  },
+  {
+    "latitude": 4.61992,
+    "longitude": -59.50693,
+    "intensity": 0.701,
+    "biome": "Internacional (País Vizinho)",
+    "state": "VE"
+  },
+  {
+    "latitude": -4.41918,
+    "longitude": -50.29876,
+    "intensity": 0.7,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.41531,
+    "longitude": -50.29933,
+    "intensity": 0.7,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.19112,
+    "longitude": -51.3103,
+    "intensity": 0.7,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -17.72418,
+    "longitude": -61.35816,
+    "intensity": 0.693,
+    "biome": "Internacional (País Vizinho)",
+    "state": "BO"
+  },
+  {
+    "latitude": -17.72519,
+    "longitude": -61.36286,
+    "intensity": 0.693,
+    "biome": "Internacional (País Vizinho)",
+    "state": "BO"
+  },
+  {
+    "latitude": -7.94929,
+    "longitude": -40.93483,
+    "intensity": 0.6920000000000001,
+    "biome": "Caatinga",
+    "state": "PI"
+  },
+  {
+    "latitude": -8.11065,
+    "longitude": -39.76447,
+    "intensity": 0.691,
+    "biome": "Cerrado",
+    "state": "BR"
+  },
+  {
+    "latitude": -8.10651,
+    "longitude": -39.76509,
+    "intensity": 0.691,
+    "biome": "Cerrado",
+    "state": "BR"
+  },
+  {
+    "latitude": -8.10715,
+    "longitude": -39.76882,
+    "intensity": 0.691,
+    "biome": "Cerrado",
+    "state": "BR"
+  },
+  {
+    "latitude": -2.42165,
+    "longitude": -49.68799,
+    "intensity": 0.688,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.62668,
+    "longitude": -45.82794,
+    "intensity": 0.687,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -6.7881,
+    "longitude": -47.03823,
+    "intensity": 0.682,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -6.78876,
+    "longitude": -47.04238,
+    "intensity": 0.682,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.66569,
+    "longitude": -54.27227,
+    "intensity": 0.682,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.66652,
+    "longitude": -54.27777,
+    "intensity": 0.682,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.40535,
+    "longitude": -54.10084,
+    "intensity": 0.6759999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.40042,
+    "longitude": -54.10159,
+    "intensity": 0.6759999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.40124,
+    "longitude": -54.10702,
+    "intensity": 0.6759999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -7.58112,
+    "longitude": -37.88879,
+    "intensity": 0.6709999999999999,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -4.42272,
+    "longitude": -44.16321,
+    "intensity": 0.669,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -28.20387,
+    "longitude": -55.90733,
+    "intensity": 0.669,
+    "biome": "Internacional (País Vizinho)",
+    "state": "AR"
+  },
+  {
+    "latitude": -1.58386,
+    "longitude": -55.17493,
+    "intensity": 0.6679999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.76502,
+    "longitude": -54.21085,
+    "intensity": 0.664,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.41801,
+    "longitude": -49.68854,
+    "intensity": 0.659,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -9.62208,
+    "longitude": -43.30952,
+    "intensity": 0.6579999999999999,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -2.61197,
+    "longitude": -49.12894,
+    "intensity": 0.6559999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.33903,
+    "longitude": -49.14176,
+    "intensity": 0.655,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.3396,
+    "longitude": -49.14547,
+    "intensity": 0.655,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.26481,
+    "longitude": -53.62432,
+    "intensity": 0.655,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.26005,
+    "longitude": -53.62503,
+    "intensity": 0.655,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.26078,
+    "longitude": -53.63005,
+    "intensity": 0.655,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.52501,
+    "longitude": -53.7023,
+    "intensity": 0.65,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.727,
+    "longitude": -40.10452,
+    "intensity": 0.649,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -4.7227,
+    "longitude": -40.10498,
+    "intensity": 0.649,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -3.31026,
+    "longitude": -54.24502,
+    "intensity": 0.648,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.57489,
+    "longitude": -49.29113,
+    "intensity": 0.647,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.57131,
+    "longitude": -49.29168,
+    "intensity": 0.647,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -7.32247,
+    "longitude": -37.42524,
+    "intensity": 0.645,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -3.27855,
+    "longitude": -53.66833,
+    "intensity": 0.643,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.7275,
+    "longitude": -40.05481,
+    "intensity": 0.643,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -4.85405,
+    "longitude": -56.21896,
+    "intensity": 0.643,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -1.21196,
+    "longitude": -54.04715,
+    "intensity": 0.643,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.21276,
+    "longitude": -54.05236,
+    "intensity": 0.643,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.01261,
+    "longitude": -51.0164,
+    "intensity": 0.638,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.00856,
+    "longitude": -51.01689,
+    "intensity": 0.638,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.89143,
+    "longitude": -67.86044,
+    "intensity": 0.638,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -3.28855,
+    "longitude": -50.50318,
+    "intensity": 0.632,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.97556,
+    "longitude": -59.81876,
+    "intensity": 0.622,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -2.39672,
+    "longitude": -48.10934,
+    "intensity": 0.621,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.39245,
+    "longitude": -48.10575,
+    "intensity": 0.621,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.1657,
+    "longitude": -54.09459,
+    "intensity": 0.621,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.16639,
+    "longitude": -54.09911,
+    "intensity": 0.621,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.85463,
+    "longitude": -56.22298,
+    "intensity": 0.618,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -24.3896,
+    "longitude": -59.24953,
+    "intensity": 0.615,
+    "biome": "Internacional (País Vizinho)",
+    "state": "PY"
+  },
+  {
+    "latitude": -24.39061,
+    "longitude": -59.25443,
+    "intensity": 0.615,
+    "biome": "Internacional (País Vizinho)",
+    "state": "PY"
+  },
+  {
+    "latitude": -1.58218,
+    "longitude": -47.83969,
+    "intensity": 0.613,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -5.37582,
+    "longitude": -47.23462,
+    "intensity": 0.612,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.37479,
+    "longitude": -49.07273,
+    "intensity": 0.611,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.98107,
+    "longitude": -47.90269,
+    "intensity": 0.604,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.92122,
+    "longitude": -54.01477,
+    "intensity": 0.602,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.25932,
+    "longitude": -53.62005,
+    "intensity": 0.602,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.98136,
+    "longitude": -53.72749,
+    "intensity": 0.599,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.41991,
+    "longitude": -50.30363,
+    "intensity": 0.599,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.41603,
+    "longitude": -50.30417,
+    "intensity": 0.599,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -5.69091,
+    "longitude": -49.90013,
+    "intensity": 0.596,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.88181,
+    "longitude": -45.10579,
+    "intensity": 0.596,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -23.65537,
+    "longitude": -58.52828,
+    "intensity": 0.596,
+    "biome": "Internacional (País Vizinho)",
+    "state": "PY"
+  },
+  {
+    "latitude": 2.36203,
+    "longitude": -59.5061,
+    "intensity": 0.5920000000000001,
+    "biome": "Internacional (País Vizinho)",
+    "state": "VE"
+  },
+  {
+    "latitude": -3.28084,
+    "longitude": -53.82717,
+    "intensity": 0.591,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.99791,
+    "longitude": -54.22267,
+    "intensity": 0.591,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.40674,
+    "longitude": -54.10358,
+    "intensity": 0.58,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.85757,
+    "longitude": -47.53355,
+    "intensity": 0.578,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.85391,
+    "longitude": -47.53413,
+    "intensity": 0.578,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.02913,
+    "longitude": -51.22679,
+    "intensity": 0.578,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.89212,
+    "longitude": -67.86233,
+    "intensity": 0.574,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -3.11292,
+    "longitude": -54.66047,
+    "intensity": 0.57,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.1092,
+    "longitude": -54.66102,
+    "intensity": 0.57,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.51047,
+    "longitude": -54.28838,
+    "intensity": 0.5670000000000001,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.51107,
+    "longitude": -54.29237,
+    "intensity": 0.5670000000000001,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.09808,
+    "longitude": -54.22234,
+    "intensity": 0.565,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -12.5372,
+    "longitude": -43.10043,
+    "intensity": 0.564,
+    "biome": "Cerrado",
+    "state": "BA"
+  },
+  {
+    "latitude": -12.53776,
+    "longitude": -43.10399,
+    "intensity": 0.564,
+    "biome": "Cerrado",
+    "state": "BA"
+  },
+  {
+    "latitude": -3.0615,
+    "longitude": -45.15553,
+    "intensity": 0.563,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -3.14682,
+    "longitude": -54.1418,
+    "intensity": 0.563,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.14764,
+    "longitude": -54.14732,
+    "intensity": 0.563,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -7.31893,
+    "longitude": -37.42404,
+    "intensity": 0.562,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -2.98932,
+    "longitude": -53.73476,
+    "intensity": 0.561,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -11.12953,
+    "longitude": -43.53522,
+    "intensity": 0.5589999999999999,
+    "biome": "Cerrado",
+    "state": "BA"
+  },
+  {
+    "latitude": -3.19563,
+    "longitude": -46.42496,
+    "intensity": 0.557,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 0.20261,
+    "longitude": -50.06625,
+    "intensity": 0.557,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 1.48138,
+    "longitude": -56.03287,
+    "intensity": 0.555,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 1.48068,
+    "longitude": -56.03745,
+    "intensity": 0.555,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 1.48517,
+    "longitude": -56.03345,
+    "intensity": 0.555,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.52533,
+    "longitude": -66.31274,
+    "intensity": 0.5489999999999999,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -4.08124,
+    "longitude": -48.91337,
+    "intensity": 0.5479999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.50208,
+    "longitude": -44.14093,
+    "intensity": 0.546,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -2.58775,
+    "longitude": -49.1576,
+    "intensity": 0.545,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.79806,
+    "longitude": -50.28713,
+    "intensity": 0.544,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.5039,
+    "longitude": -49.71972,
+    "intensity": 0.544,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.34329,
+    "longitude": -55.24351,
+    "intensity": 0.5429999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.33812,
+    "longitude": -55.24421,
+    "intensity": 0.5429999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.33859,
+    "longitude": -55.24736,
+    "intensity": 0.5429999999999999,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -28.45222,
+    "longitude": -56.09219,
+    "intensity": 0.542,
+    "biome": "Internacional (País Vizinho)",
+    "state": "AR"
+  },
+  {
+    "latitude": -1.56479,
+    "longitude": -47.72642,
+    "intensity": 0.542,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -4.76163,
+    "longitude": -39.95604,
+    "intensity": 0.537,
+    "biome": "Caatinga",
+    "state": "CE"
+  },
+  {
+    "latitude": -1.70923,
+    "longitude": -53.85487,
+    "intensity": 0.535,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.70451,
+    "longitude": -53.85562,
+    "intensity": 0.535,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.70527,
+    "longitude": -53.86057,
+    "intensity": 0.535,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 2.30533,
+    "longitude": -50.80891,
+    "intensity": 0.534,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 2.30965,
+    "longitude": -50.80523,
+    "intensity": 0.534,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -13.37191,
+    "longitude": -43.15312,
+    "intensity": 0.5329999999999999,
+    "biome": "Cerrado",
+    "state": "BA"
+  },
+  {
+    "latitude": -25.5942,
+    "longitude": -62.68253,
+    "intensity": 0.53,
+    "biome": "Internacional (País Vizinho)",
+    "state": "PY"
+  },
+  {
+    "latitude": 2.3581,
+    "longitude": -59.50042,
+    "intensity": 0.519,
+    "biome": "Internacional (País Vizinho)",
+    "state": "VE"
+  },
+  {
+    "latitude": 2.3628,
+    "longitude": -59.50118,
+    "intensity": 0.519,
+    "biome": "Internacional (País Vizinho)",
+    "state": "VE"
+  },
+  {
+    "latitude": -3.8229,
+    "longitude": -56.93785,
+    "intensity": 0.518,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -3.29891,
+    "longitude": -54.16822,
+    "intensity": 0.518,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.29954,
+    "longitude": -54.17245,
+    "intensity": 0.518,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": 3.36537,
+    "longitude": -55.42445,
+    "intensity": 0.518,
+    "biome": "Internacional (País Vizinho)",
+    "state": "SR"
+  },
+  {
+    "latitude": 3.3702,
+    "longitude": -55.4253,
+    "intensity": 0.518,
+    "biome": "Internacional (País Vizinho)",
+    "state": "SR"
+  },
+  {
+    "latitude": -20.55673,
+    "longitude": -45.72076,
+    "intensity": 0.516,
+    "biome": "Cerrado",
+    "state": "MG"
+  },
+  {
+    "latitude": -9.84922,
+    "longitude": -65.04369,
+    "intensity": 0.513,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -9.84518,
+    "longitude": -65.04438,
+    "intensity": 0.513,
+    "biome": "Amazônia",
+    "state": "AM"
+  },
+  {
+    "latitude": -1.41511,
+    "longitude": -54.29485,
+    "intensity": 0.509,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.41599,
+    "longitude": -54.30069,
+    "intensity": 0.509,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.41026,
+    "longitude": -54.29549,
+    "intensity": 0.509,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.26779,
+    "longitude": -50.20601,
+    "intensity": 0.508,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.26877,
+    "longitude": -50.20029,
+    "intensity": 0.508,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.27276,
+    "longitude": -50.20684,
+    "intensity": 0.508,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.27373,
+    "longitude": -50.20118,
+    "intensity": 0.508,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.40525,
+    "longitude": -54.25742,
+    "intensity": 0.506,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.35473,
+    "longitude": -55.17947,
+    "intensity": 0.506,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -1.34958,
+    "longitude": -55.18025,
+    "intensity": 0.506,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.42137,
+    "longitude": -49.68711,
+    "intensity": 0.505,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.41772,
+    "longitude": -49.68765,
+    "intensity": 0.505,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -6.43351,
+    "longitude": -45.05394,
+    "intensity": 0.504,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -4.13934,
+    "longitude": -43.35231,
+    "intensity": 0.504,
+    "biome": "Amazônia",
+    "state": "MA"
+  },
+  {
+    "latitude": -5.10165,
+    "longitude": -43.11014,
+    "intensity": 0.501,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -5.0969,
+    "longitude": -43.11103,
+    "intensity": 0.501,
+    "biome": "Cerrado",
+    "state": "MA"
+  },
+  {
+    "latitude": -12.95661,
+    "longitude": -43.08202,
+    "intensity": 0.5,
+    "biome": "Cerrado",
+    "state": "BA"
+  },
+  {
+    "latitude": -2.71402,
+    "longitude": -49.76792,
+    "intensity": 0.5,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.71064,
+    "longitude": -49.76843,
+    "intensity": 0.5,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -2.71119,
+    "longitude": -49.77201,
+    "intensity": 0.5,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.5339,
+    "longitude": -54.58924,
+    "intensity": 0.499,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.53433,
+    "longitude": -54.59217,
+    "intensity": 0.499,
+    "biome": "Amazônia",
+    "state": "PA"
+  },
+  {
+    "latitude": -3.52877,
+    "longitude": -54.58989,
+    "intensity": 0.499,
+    "biome": "Amazônia",
+    "state": "PA"
+  }
+]
