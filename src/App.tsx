@@ -13,7 +13,9 @@ import { BottomDock } from './components/BottomDock';
 import { AreaInspectionModal } from './components/AreaInspectionModal';
 import { ReportsModal } from './components/ReportsModal';
 import { SettingsModal, DEFAULT_CONFIG, SystemConfigState } from './components/SettingsModal';
-import { Settings, Compass } from 'lucide-react';
+import { Settings, Compass, User as UserIcon, LogOut, UserCheck } from 'lucide-react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthPage } from './components/AuthPage';
 import { LayerNavigationBar } from './components/LayerNavigationBar';
 import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LAYERS, ActiveOverlaysState } from './types';
 import { fetchNationalFires, fetchHeatmapData, fetchTimelineData, fetchOsintAlerts } from './services/api';
@@ -44,7 +46,7 @@ const TacticalClock: React.FC = () => {
   return <span>{time || '--:--:--'}</span>;
 };
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [fireSpots, setFireSpots] = useState<FireSpot[]>(() => {
     try {
       const local = localStorage.getItem('amazonia_fire_spots_cache');
@@ -63,6 +65,8 @@ export const App: React.FC = () => {
   const [temporalMode, setTemporalMode] = useState<TemporalMode>('24h');
   const [isAreaInspectionOpen, setIsAreaInspectionOpen] = useState<boolean>(false);
   const [isReportsOpen, setIsReportsOpen] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { user, profile, signOut } = useAuth();
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [systemConfig, setSystemConfig] = useState<SystemConfigState>(() => {
     try {
@@ -716,6 +720,32 @@ export const App: React.FC = () => {
             <span>Config</span>
           </button>
 
+          {/* Autenticação / Operador C2 */}
+          {user ? (
+            <div className="flex items-center gap-1.5 bg-slate-900/90 border border-emerald-600/70 rounded-md px-2 py-0.5 text-xs font-mono shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-[10px] text-emerald-300 font-bold truncate max-w-[130px]" title={profile?.full_name || user.email || 'Operador'}>
+                {profile?.full_name || user.email?.split('@')[0]}
+              </span>
+              <button
+                onClick={() => signOut()}
+                className="p-1 text-slate-400 hover:text-red-400 rounded transition"
+                title="Encerrar Sessão Tática"
+              >
+                <LogOut size={12} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 text-white shadow-sm cursor-pointer transition border border-orange-500/60"
+              title="Acesso Operacional / Login C2"
+            >
+              <UserIcon size={12} />
+              <span>Entrar / Cadastrar</span>
+            </button>
+          )}
+
           <div className="hidden sm:flex items-center space-x-1 text-slate-300 bg-slate-950/80 px-2 py-1 rounded border border-slate-800 text-[11px]">
             <Clock size={11} className="text-amber-300" />
             <TacticalClock />
@@ -1083,7 +1113,22 @@ export const App: React.FC = () => {
           }
         }}
       />
+      {/* Modal de Autenticação / Cadastro C2 */}
+      {isAuthModalOpen && (
+        <AuthPage
+          onSuccess={() => setIsAuthModalOpen(false)}
+          onCancel={() => setIsAuthModalOpen(false)}
+        />
+      )}
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

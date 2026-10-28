@@ -182,3 +182,43 @@ CREATE POLICY "Leitura Pública de Autos de Infração" ON public.infraction_not
 CREATE POLICY "Inserção de Focos Autorizada" ON public.fire_spots FOR INSERT WITH CHECK (true);
 CREATE POLICY "Atualização de Status de Focos" ON public.fire_spots FOR UPDATE USING (true);
 CREATE POLICY "Inserção de Autos de Infração" ON public.infraction_notices FOR INSERT WITH CHECK (true);
+
+
+-- 9. Tabela de Perfis de Usuários (Vinculada ao auth.users do Supabase Auth)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    phone_whatsapp TEXT,
+    company_name TEXT,
+    role TEXT DEFAULT 'operator', -- 'operator', 'commander', 'auditor'
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar RLS em Perfis
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Usuário acessa seu próprio perfil"
+ON public.profiles FOR ALL
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
+
+-- Trigger para salvar nome, telefone e empresa automaticamente ao cadastrar novo usuário
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, full_name, phone_whatsapp, company_name)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', 'Operador C2'),
+        NEW.raw_user_meta_data->>'phone_whatsapp',
+        NEW.raw_user_meta_data->>'company_name'
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
