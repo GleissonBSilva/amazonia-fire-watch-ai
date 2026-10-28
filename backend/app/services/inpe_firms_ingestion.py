@@ -12,7 +12,7 @@ import csv
 import io
 import httpx
 from typing import List, Dict, Any
-from .spatial_classifier import classify_location
+from .spatial_classifier import classify_location, classify_thermal_anomaly_ai
 
 # Major monitoring hubs and critical fire zones across Brazil
 BRAZIL_REGIONS = [
@@ -369,6 +369,7 @@ class NationalIngestionService:
 
                             loc = classify_location(lat, lng)
                             aq = compute_air_quality(frp)
+                            thermal_ai = classify_thermal_anomaly_ai(lat, lng, frp, bright_ti4, aq["pm25"])
 
                             real_spots.append({
                                 "id": f"FIRMS-REAL-{uid}",
@@ -400,7 +401,11 @@ class NationalIngestionService:
                                 "aqi": aq["aqi"],
                                 "pm25": aq["pm25"],
                                 "air_quality_level": aq["air_quality_level"],
-                                "is_estimated_aqi": True
+                                "is_estimated_aqi": True,
+                                "is_industrial_heat": thermal_ai.get("is_industrial_heat", False),
+                                "fire_nature": thermal_ai.get("nature", "VEGETACAO_CRITICA"),
+                                "ptr": thermal_ai.get("ptr", 1.0),
+                                "ai_verdict": thermal_ai.get("ai_verdict", "")
                             })
                             uid += 1
 

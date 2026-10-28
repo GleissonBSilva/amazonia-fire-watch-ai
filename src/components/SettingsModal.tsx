@@ -90,14 +90,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         width: 620,
         height: 520,
       }}
-      minWidth={360}
-      minHeight={280}
+      minWidth={Math.min(320, window.innerWidth - 10)}
+      minHeight={Math.min(260, window.innerHeight - 20)}
       bounds="window"
       dragHandleClassName="settings-window-handle"
       enableResizing={!isMaximized}
       disableDragging={isMaximized}
-      className={`fixed z-50 flex flex-col bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none ${
-        isMaximized ? '!inset-3 !w-auto !h-auto !transform-none' : ''
+      className={`fixed z-50 flex flex-col bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none max-sm:!inset-1 max-sm:!w-auto max-sm:!h-auto max-sm:!transform-none ${
+        isMaximized ? '!inset-2 !w-auto !h-auto !transform-none' : ''
       }`}
     >
       {/* Header Móvel de Configuração (Draggable Handle) */}

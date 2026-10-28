@@ -119,36 +119,36 @@ Sistema Amazônia Fire-Watch AI`;
         width: Math.min(740, window.innerWidth - 20),
         height: Math.min(680, window.innerHeight - 30),
       }}
-      minWidth={Math.min(380, window.innerWidth - 20)}
-      minHeight={Math.min(320, window.innerHeight - 30)}
+      minWidth={Math.min(320, window.innerWidth - 10)}
+      minHeight={Math.min(280, window.innerHeight - 20)}
       bounds="window"
       dragHandleClassName="infraction-modal-handle"
       enableResizing={!isMaximized}
       disableDragging={isMaximized}
-      className={`fixed z-50 flex flex-col bg-slate-950 border border-red-700/80 rounded-xl shadow-2xl overflow-hidden font-mono select-none backdrop-blur-md ${
+      className={`fixed z-50 flex flex-col bg-slate-950 border border-red-700/80 rounded-xl shadow-2xl overflow-hidden font-mono select-none backdrop-blur-md max-sm:!inset-1 max-sm:!w-auto max-sm:!h-auto max-sm:!transform-none ${
         isMaximized ? '!inset-2 !w-auto !h-auto !transform-none' : ''
       }`}
     >
       {/* Barra de Título Superior (Draggable Handle) */}
-      <div className="infraction-modal-handle px-4 py-2.5 bg-gradient-to-r from-red-950 via-slate-900 to-red-950 border-b border-red-800/80 flex items-center justify-between cursor-move flex-shrink-0 text-white">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-red-900/80 text-red-300 border border-red-600">
+      <div className="infraction-modal-handle px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-red-950 via-slate-900 to-red-950 border-b border-red-800/80 flex items-center justify-between cursor-move flex-shrink-0 text-white gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="p-1.5 rounded-lg bg-red-900/80 text-red-300 border border-red-600 shrink-0">
             <Scale size={16} />
           </div>
-          <div>
-            <h2 className="text-xs font-bold text-white tracking-wider flex items-center gap-2">
-              <span>AUTO DE INFRAÇÃO AMBIENTAL PRELIMINAR</span>
-              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black bg-red-900 text-red-200 border border-red-500 animate-pulse">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xs font-bold text-white tracking-wider flex items-center gap-2 truncate">
+              <span className="truncate">AUTO DE INFRAÇÃO AMBIENTAL PRELIMINAR</span>
+              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black bg-red-900 text-red-200 border border-red-500 animate-pulse shrink-0 hidden xs:inline-block">
                 ALVO IDENTIFICADO
               </span>
             </h2>
-            <p className="text-[9.5px] text-slate-300">
+            <p className="text-[9.5px] text-slate-300 truncate">
               Protocolo: <strong className="text-amber-300 font-mono">{dossier.protocolNumber}</strong> • Embasamento Lei 9.605/98
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-slate-300">
+        <div className="flex items-center gap-1.5 text-slate-300 shrink-0">
           <button
             onClick={() => setIsMaximized(!isMaximized)}
             className="p-1 hover:text-white hover:bg-slate-800 rounded transition"
@@ -201,17 +201,17 @@ Sistema Amazônia Fire-Watch AI`;
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-[10px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
             <div>
               <span className="text-slate-400 block text-[9px]">TITULAR / RESPONSÁVEL LEGAL:</span>
-              <strong className="text-white text-[11px] block">{landRegistry.owner_name}</strong>
+              <strong className="text-white text-[11px] block break-words">{landRegistry.owner_name}</strong>
               <span className="text-slate-400 block mt-0.5">
-                CPF/CNPJ: <strong className="text-amber-300">{landRegistry.owner_document}</strong>
+                CPF/CNPJ: <strong className="text-amber-300 font-mono break-all">{landRegistry.owner_document}</strong>
               </span>
             </div>
             <div>
               <span className="text-slate-400 block text-[9px]">DENOMINAÇÃO DO IMÓVEL:</span>
-              <strong className="text-cyan-300 text-[11px] block">{landRegistry.property_name}</strong>
+              <strong className="text-cyan-300 text-[11px] block break-words">{landRegistry.property_name}</strong>
               <span className="text-slate-400 block mt-0.5">
                 Município/UF: <strong className="text-white">{spot.municipality} - {spot.state}</strong>
               </span>
@@ -219,16 +219,16 @@ Sistema Amazônia Fire-Watch AI`;
           </div>
 
           {/* Recibo CAR com botão de cópia */}
-          <div className="p-2 rounded bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
-            <div className="truncate">
+          <div className="p-2 rounded bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+            <div className="min-w-0 flex-1">
               <span className="text-[8.5px] text-slate-500 block">NÚMERO DO RECIBO CAR (SICAR):</span>
-              <span className="font-mono text-[10.5px] text-amber-400 font-bold truncate block">
+              <span className="font-mono text-[10.5px] text-amber-400 font-bold break-all block">
                 {landRegistry.car_receipt}
               </span>
             </div>
             <button
               onClick={handleCopyReceipt}
-              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 text-[9px] flex-shrink-0 transition"
+              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 text-[9px] shrink-0 transition"
               title="Copiar número do recibo CAR"
             >
               {copiedReceipt ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
@@ -238,7 +238,7 @@ Sistema Amazônia Fire-Watch AI`;
 
           <div className="text-[9px] text-slate-400 bg-slate-950/80 p-2 rounded border border-slate-800/80 leading-relaxed">
             <strong className="text-slate-300">Diagnóstico Cadastral:</strong> {landRegistry.status_reason}
-            <div className="mt-1 flex items-center gap-3 text-slate-500">
+            <div className="mt-1 flex items-center gap-3 text-slate-500 flex-wrap">
               <span>Área Total: {landRegistry.total_area_ha.toLocaleString('pt-BR')} ha</span>
               <span>Reserva Legal (80%): {landRegistry.legal_reserve_ha.toLocaleString('pt-BR')} ha</span>
               <span>APP: {landRegistry.app_area_ha} ha</span>
@@ -258,7 +258,7 @@ Sistema Amazônia Fire-Watch AI`;
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-[10px]">
             <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
               <span className="text-[8.5px] text-slate-500 block">SATÉLITE / SENSOR</span>
               <span className="font-bold text-white text-[9.5px] block truncate">{spot.satellite}</span>

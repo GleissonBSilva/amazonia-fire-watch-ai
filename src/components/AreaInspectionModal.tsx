@@ -126,37 +126,37 @@ export const AreaInspectionModal: React.FC<AreaInspectionModalProps> = ({
           width: 680,
           height: 620,
         }}
-        minWidth={380}
-        minHeight={320}
+        minWidth={320}
+        minHeight={280}
         bounds="window"
         dragHandleClassName="area-inspection-handle"
         enableResizing={!isMaximized}
         disableDragging={isMaximized}
-        className={`fixed z-50 flex flex-col bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none ${
-          isMaximized ? '!inset-3 !w-auto !h-auto !transform-none' : ''
+        className={`fixed z-50 flex flex-col bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none max-sm:!inset-1 max-sm:!w-auto max-sm:!h-auto max-sm:!transform-none ${
+          isMaximized ? '!inset-2 !w-auto !h-auto !transform-none' : ''
         }`}
       >
         {/* Header Tático Móvel (Draggable Handle) */}
-        <div className="area-inspection-handle px-4 py-2.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between cursor-move select-none flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-red-950 text-red-400 border border-red-700/60">
+        <div className="area-inspection-handle px-3 sm:px-4 py-2.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between cursor-move select-none flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="p-1.5 rounded-lg bg-red-950 text-red-400 border border-red-700/60 shrink-0">
               <Compass size={16} />
             </div>
-            <div>
-              <h2 className="text-xs font-bold text-white tracking-wide flex items-center gap-1.5">
-                <span>INTELIGÊNCIA GEOGRÁFICA & FUNDIÁRIA DA ÁREA</span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-bold text-white tracking-wide flex items-center gap-1.5 truncate">
+                <span className="truncate">INTELIGÊNCIA GEOGRÁFICA & FUNDIÁRIA</span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 shrink-0 hidden xs:inline-block">
                   TEMPO REAL
                 </span>
               </h2>
-              <p className="text-[9.5px] text-slate-400">
+              <p className="text-[9.5px] text-slate-400 truncate">
                 Centro: {area.center.lat.toFixed(5)}, {area.center.lng.toFixed(5)} • Perímetro Selecionado
               </p>
             </div>
           </div>
 
           {/* Controles de Janela Flutuante (Mover / Maximizar / Fechar) */}
-          <div className="flex items-center gap-1 text-slate-400">
+          <div className="flex items-center gap-1 text-slate-400 shrink-0">
             <button
               onClick={() => setIsMaximized(!isMaximized)}
               className="p-1 hover:text-white hover:bg-slate-800 rounded transition"
@@ -175,9 +175,9 @@ export const AreaInspectionModal: React.FC<AreaInspectionModalProps> = ({
         </div>
 
         {/* Conteúdo com Scroll */}
-        <div className="p-4 space-y-3.5 overflow-y-auto flex-1 text-xs text-slate-200">
+        <div className="p-3 sm:p-4 space-y-3.5 overflow-y-auto flex-1 text-xs text-slate-200">
           {/* 1. Métricas Espaciais da Área */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800">
               <span className="text-[9.5px] text-slate-400 block mb-0.5">ÁREA TOTAL</span>
               <span className="text-base font-bold text-cyan-400">{area.areaSqKm.toLocaleString('pt-BR')} km²</span>
@@ -307,7 +307,7 @@ export const AreaInspectionModal: React.FC<AreaInspectionModalProps> = ({
               </div>
             ) : weather ? (
               <div className="space-y-2">
-                <div className="grid grid-cols-4 gap-1.5 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center">
                   <div className="p-1.5 rounded bg-slate-900 border border-slate-800">
                     <span className="text-[8.5px] text-slate-400 block">TEMP DO AR</span>
                     <span className="text-xs font-bold text-orange-300">{weather.temperature_c}°C</span>
@@ -393,7 +393,7 @@ export const AreaInspectionModal: React.FC<AreaInspectionModalProps> = ({
         </div>
 
         {/* Rodapé com Ações Táticas */}
-        <div className="px-4 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="px-3 sm:px-4 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-1.5">
             {onOpenReport && (
               <button

@@ -151,11 +151,11 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
   return (
     <div
       className={`fixed top-16 left-0 z-30 transition-all duration-300 font-sans select-none flex ${
-        isOpen ? 'translate-x-0' : '-translate-x-[380px]'
+        isOpen ? 'translate-x-0' : '-translate-x-[calc(100%-1.5rem)]'
       }`}
     >
       {/* Corpo do Drawer Lateral */}
-      <div className="w-[380px] h-[calc(100vh-80px)] bg-slate-900/95 backdrop-blur-md border-r border-slate-700/80 shadow-2xl flex flex-col text-white">
+      <div className="w-[calc(100vw-3rem)] max-w-[380px] sm:w-[380px] h-[calc(100dvh-4.5rem)] bg-slate-900/95 backdrop-blur-md border-r border-slate-700/80 shadow-2xl flex flex-col text-white">
         {/* Header do Drawer */}
         <div className="p-3 border-b border-slate-800 bg-slate-950/80">
           <div className="flex items-center justify-between mb-2">
@@ -646,13 +646,26 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
                   {/* Classificação Antifalso Positivo e Nuvem de Fumaça por Cores */}
                   {(() => {
                     const auth = classifyFireAuthenticity(spot);
+                    const isIndustrial = auth.fireType === 'CALOR_INDUSTRIAL';
+                    const isStructural = auth.fireType === 'INCENDIO_ESTRUTURAL_FABRIL';
+
                     return (
                       <div className="mb-1 flex items-center justify-between text-[8.5px]">
-                        <span className={`font-bold flex items-center gap-1 ${auth.isRealVegetationFire ? 'text-red-400' : 'text-slate-400'}`}>
-                          <span>{auth.isRealVegetationFire ? '🔥' : '⚠️'}</span>
-                          <span>{auth.isRealVegetationFire ? 'Fogo em Vegetação' : 'Anomalia/Ruído'}</span>
+                        <span className={`font-bold flex items-center gap-1 ${
+                          auth.isRealVegetationFire
+                            ? 'text-red-400'
+                            : isIndustrial
+                            ? 'text-amber-400'
+                            : isStructural
+                            ? 'text-orange-400'
+                            : 'text-slate-400'
+                        }`}>
+                          <span>{auth.isRealVegetationFire ? '🔥' : isIndustrial ? '🏭' : isStructural ? '🚨' : '⚠️'}</span>
+                          <span className="truncate max-w-[170px]">
+                            {auth.isRealVegetationFire ? 'Fogo em Vegetação' : isIndustrial ? 'Calor Industrial (Fabril)' : isStructural ? 'Incêndio Estrutural' : 'Anomalia/Ruído'}
+                          </span>
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 shrink-0">
                           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: auth.smokeColor }}></span>
                           <span style={{ color: auth.smokeColor }} className="font-bold">Fumaça {auth.smokeLevel}</span>
                         </span>

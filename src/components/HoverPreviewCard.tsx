@@ -4,6 +4,7 @@ import { FireSpot } from '../types';
 import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
 import { calculateAirQuality } from '../data/airQuality';
 import { sendWhatsAppFireAlert } from '../services/alertService';
+import { classifyFireAuthenticity } from '../services/fireClassificationService';
 
 interface HoverPreviewCardProps {
   spot: FireSpot;
@@ -41,6 +42,7 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
   // Emergency Infrastructure proximity calculation
   const infra = findNearestInfrastructure(spot.latitude, spot.longitude);
   const airQuality = calculateAirQuality(spot.frp_mw, 0.8);
+  const aiClassification = React.useMemo(() => classifyFireAuthenticity(spot), [spot]);
 
   const handleQuickDispatch = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -98,6 +100,13 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
               : 'bg-emerald-950 text-emerald-300 border-emerald-500'
           }`}>
             {isSimulation ? 'SIMULAÇÃO' : 'REAL ORBITAL'}
+          </span>
+          <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold border ${
+            aiClassification.isIndustrialHeat
+              ? 'bg-cyan-950 text-cyan-300 border-cyan-500'
+              : 'bg-red-950 text-red-300 border-red-500'
+          }`}>
+            {aiClassification.isIndustrialHeat ? '🏭 CALOR INDUSTRIAL' : '🔥 QUEIMADA REAL'}
           </span>
           {isNew && (
             <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-yellow-950 text-yellow-300 border border-yellow-500 animate-pulse">
@@ -209,6 +218,14 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
             <span className="text-slate-500 text-[9px]">Potência FRP:</span>
             <div className="text-red-400 font-semibold text-[10px]">{spot.frp_mw} MW</div>
           </div>
+        </div>
+
+        {/* Razão Particulado/FRP (PTR) e Parecer IA */}
+        <div className="pt-1 mt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px]">
+          <span className="text-slate-400">Classificação IA:</span>
+          <span className={`font-bold ${aiClassification.isIndustrialHeat ? 'text-cyan-300' : 'text-red-400'}`}>
+            {aiClassification.classificationLabel} (PTR {aiClassification.particulateThermalRatio})
+          </span>
         </div>
 
         {/* Poluição do Ar e Material Particulado PM2.5 */}

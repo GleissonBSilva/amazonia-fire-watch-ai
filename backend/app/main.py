@@ -20,6 +20,7 @@ from .api.ingestion import router as ingestion_router
 from .api.spatial import router as spatial_router
 from .api.copilot import router as copilot_router
 from .api.air_quality import router as air_quality_router
+from .api.tts import router as tts_router
 
 # AMARRAÇÃO DE SEGURANÇA: Modo Simulação estrito (apenas para seu contato de homologação)
 DEV_PHONE_NUMBER = "5592993746740" 
@@ -56,6 +57,7 @@ app.include_router(ingestion_router, prefix="/api")
 app.include_router(spatial_router, prefix="/api")
 app.include_router(copilot_router, prefix="/api")
 app.include_router(air_quality_router, prefix="/api")
+app.include_router(tts_router, prefix="/api")
 
 # ==========================================
 # 1. ROTA DE PROXY ANTI-403 (Resolve X-Frame-Options / CSP)

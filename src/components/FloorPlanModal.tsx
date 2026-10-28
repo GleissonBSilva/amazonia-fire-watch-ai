@@ -108,13 +108,13 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
         width: 980,
         height: 680,
       }}
-      minWidth={440}
-      minHeight={340}
+      minWidth={Math.min(320, window.innerWidth - 10)}
+      minHeight={Math.min(280, window.innerHeight - 20)}
       bounds="window"
       dragHandleClassName="floorplan-window-handle"
       enableResizing={!isMaximized}
       disableDragging={isMaximized}
-      className={`fixed z-50 flex flex-col bg-slate-950 border border-cyan-500/50 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-sans select-none ${
+      className={`fixed z-50 flex flex-col bg-slate-950 border border-cyan-500/50 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-sans select-none max-sm:!inset-1 max-sm:!w-auto max-sm:!h-auto max-sm:!transform-none ${
         isMaximized ? '!inset-2 !w-auto !h-auto !transform-none' : ''
       }`}
     >
@@ -152,8 +152,8 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
           </div>
 
           {/* FACILITY SELECTOR BUTTONS */}
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800 overflow-x-auto max-w-[170px] sm:max-w-none">
               {INDUSTRIAL_FACILITIES.map((facility, idx) => (
                 <button
                   key={facility.id}
@@ -162,7 +162,7 @@ export const FloorPlanModal: React.FC<FloorPlanModalProps> = ({
                     setSelectedSector(null);
                     setSelectedEquipment(null);
                   }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-mono transition-all shrink-0 ${
                     activeFacilityIndex === idx
                       ? 'bg-cyan-600 text-white font-bold shadow'
                       : 'text-slate-400 hover:text-white hover:bg-slate-900'

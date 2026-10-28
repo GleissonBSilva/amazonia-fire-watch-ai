@@ -6,3 +6,4 @@ ultralytics>=8.2.0
 httpx>=0.27.0
 pydantic>=2.8.0
 python-multipart>=0.0.9
+gTTS>=2.5.4

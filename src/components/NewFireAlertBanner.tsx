@@ -15,12 +15,18 @@ import {
   Radio,
   ExternalLink,
   Globe,
+  Volume2,
+  VolumeX,
+  Volume1,
+  Factory
 } from 'lucide-react';
 import { FireSpot } from '../types';
 import { calculateAirQuality } from '../data/airQuality';
 import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
 import { sendWhatsAppFireAlert } from '../services/alertService';
 import { queryLandRegistry } from '../services/landRegistryService';
+import { announceFireDetection, isVoiceAlertsEnabled, setVoiceAlertsEnabled, speakTacticalAlert } from '../services/voiceAlertService';
+import { classifyFireAuthenticity } from '../services/fireClassificationService';
 
 export interface NewFireAlertBannerProps {
   spot: FireSpot;
@@ -43,11 +49,29 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
   const [isDispatching, setIsDispatching] = useState(false);
   const [localStatus, setLocalStatus] = useState<string>(spot.status || 'PENDENTE');
   const [dispatchedTime, setDispatchedTime] = useState<string | null>(spot.dispatched_at || null);
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => isVoiceAlertsEnabled());
+
+  const auth = classifyFireAuthenticity(spot);
 
   useEffect(() => {
     setLocalStatus(spot.status || 'PENDENTE');
     setDispatchedTime(spot.dispatched_at || null);
+    
+    // Anúncio por voz tática com síntese em português (gTTS / Web Speech)
+    if (voiceEnabled) {
+      announceFireDetection(spot);
+    }
   }, [spot.id, spot.status, spot.dispatched_at]);
+
+  const toggleVoice = () => {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    setVoiceAlertsEnabled(next);
+  };
+
+  const handleReplayVoice = () => {
+    announceFireDetection(spot);
+  };
 
   const isBrazil = spot.is_brazil !== false;
   const landRegistry = spot.land_registry || queryLandRegistry(spot.latitude, spot.longitude, spot.municipality, spot.state);
@@ -112,33 +136,52 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
   return (
     <aside
       aria-label="Alerta de Novo Foco Detectado"
-      className="fixed top-14 right-4 z-50 w-[420px] max-w-[calc(100vw-2rem)] bg-slate-950/98 border-2 border-yellow-500/90 shadow-[0_0_35px_rgba(234,179,8,0.35),0_15px_40px_rgba(0,0,0,0.95)] rounded-xl p-3.5 font-mono text-white select-none animate-slide-in backdrop-blur-xl"
+      className="fixed top-14 right-2 sm:right-4 z-50 w-[calc(100vw-1rem)] sm:w-[420px] max-w-[420px] bg-slate-950/98 border-2 border-yellow-500/90 shadow-[0_0_35px_rgba(234,179,8,0.35),0_15px_40px_rgba(0,0,0,0.95)] rounded-xl p-3 sm:p-3.5 font-mono text-white select-none animate-slide-in backdrop-blur-xl"
     >
       {/* 1. TOPO: ALERTA TÁTICO PISCANTE DE NOVO SURGIMENTO */}
       <div className="flex items-center justify-between border-b border-yellow-500/40 pb-2 mb-2.5">
-        <div className="flex items-center space-x-2">
-          <span className="relative flex h-3 w-3">
+        <div className="flex items-center space-x-2 min-w-0">
+          <span className="relative flex h-3 w-3 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
           </span>
-          <div className="flex items-center gap-1.5">
-            <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase border ${
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase border shrink-0 ${
               isSimulation
                 ? 'bg-amber-950 text-amber-300 border-amber-600'
                 : 'bg-emerald-950 text-emerald-300 border-emerald-500'
             }`}>
               {isSimulation ? 'SIMULAÇÃO' : 'REAL NASA/INPE'}
             </span>
-            <span className="text-[11.5px] font-black tracking-wider text-yellow-300 uppercase truncate max-w-[200px]">
+            <span className="text-[11px] sm:text-[11.5px] font-black tracking-wider text-yellow-300 uppercase truncate max-w-[160px] sm:max-w-[200px]">
               {spot.is_new_outbreak ? '🚨 NOVO FOCO (<3H)' : '🔥 FOCO SELECIONADO'}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-1.5">
-          <span className="text-[9px] bg-slate-900 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded font-bold">
+        <div className="flex items-center space-x-1 shrink-0">
+          <span className="text-[9px] bg-slate-900 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded font-bold hidden xs:inline-block">
             {spot.satellite || 'VIIRS 375m'}
           </span>
+          
+          {/* Botão de Repetir Áudio / Voz */}
+          <button
+            onClick={handleReplayVoice}
+            className="p-1 hover:bg-slate-800 text-amber-400 hover:text-amber-300 rounded transition"
+            title="Ouvir alerta por voz em português (gTTS / TTS)"
+          >
+            <Volume1 size={15} />
+          </button>
+
+          {/* Botão de Mudo / Ativar Voz */}
+          <button
+            onClick={toggleVoice}
+            className={`p-1 rounded transition ${voiceEnabled ? 'text-emerald-400 hover:bg-emerald-950/60' : 'text-slate-500 hover:bg-slate-800'}`}
+            title={voiceEnabled ? 'Desativar alertas automáticos por voz' : 'Ativar alertas automáticos por voz'}
+          >
+            {voiceEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          </button>
+
           <button
             onClick={onClose}
             className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded transition"
@@ -172,6 +215,27 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
         </div>
       )}
 
+      {/* CLASSIFICAÇÃO TÉRMICA IA (CALOR INDUSTRIAL vs FOCO VEGETAL) */}
+      <div className={`rounded px-2 py-1 text-[9px] flex items-center justify-between mb-2 border ${
+        auth.isRealVegetationFire
+          ? 'bg-red-950/80 border-red-600/80 text-red-200'
+          : auth.fireType === 'CALOR_INDUSTRIAL'
+          ? 'bg-amber-950/80 border-amber-600/80 text-amber-200'
+          : 'bg-orange-950/80 border-orange-600/80 text-orange-200'
+      }`}>
+        <div className="flex items-center gap-1.5 font-bold truncate">
+          {auth.isRealVegetationFire ? (
+            <Flame size={12} className="text-red-400 shrink-0" />
+          ) : (
+            <Factory size={12} className="text-amber-400 shrink-0" />
+          )}
+          <span className="truncate">IA: {auth.classificationLabel}</span>
+        </div>
+        <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-slate-900 border border-slate-700 shrink-0 ml-1">
+          PTR {auth.particulateThermalRatio}
+        </span>
+      </div>
+
       {/* Alerta de Soberania / Limite Geográfico se Foco Internacional */}
       {!isBrazil && (
         <div className="bg-amber-950/80 border border-amber-500/80 rounded px-2 py-1 text-[9px] text-amber-200 flex items-center gap-1.5 mb-2">
@@ -184,20 +248,20 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
 
       {/* 2. LOCALIZAÇÃO E COORDENADAS NÍTIDAS */}
       <div className="bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 mb-2.5">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="text-[13px] font-black text-white uppercase tracking-wide">
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-black text-white uppercase tracking-wide truncate">
               {isBrazil ? `${spot.municipality} - ${spot.state}` : `${spot.municipality}`}
             </div>
-            <div className="text-[11px] font-medium text-slate-300 leading-tight mt-0.5">
+            <div className="text-[11px] font-medium text-slate-300 leading-tight mt-0.5 break-words">
               {spot.address || 'Perímetro sob Monitoramento'}
             </div>
             {landRegistry && (
-              <div className="mt-1 flex items-center gap-1.5 text-[9px] text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800">
+              <div className="mt-1 flex items-center gap-1.5 text-[9px] text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 flex-wrap sm:flex-nowrap">
                 <span className="font-bold">CAR:</span>
-                <span className="font-mono truncate max-w-[150px]">{landRegistry.car_receipt}</span>
+                <span className="font-mono truncate max-w-[130px]">{landRegistry.car_receipt}</span>
                 <span className="text-slate-400">•</span>
-                <span className="truncate max-w-[120px]">{landRegistry.property_name}</span>
+                <span className="truncate max-w-[110px]">{landRegistry.property_name}</span>
                 <span className={`px-1 rounded text-[7.5px] font-bold ${
                   landRegistry.car_status === 'ATIVO' ? 'bg-emerald-950 text-emerald-300' : 'bg-red-950 text-red-300'
                 }`}>

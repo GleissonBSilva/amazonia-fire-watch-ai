@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional
 from .inpe_firms_ingestion import national_ingestion
 from .spatial_intelligence import spatial_engine
 from .osint_service import osint_service
+import os
 
 SYSTEM_INSTRUCTION = """
 Você é o COPILOTO TÁTICO IA do "Amazônia Fire Watch AI" (CBMAM / CIOPS / DEMA).
@@ -130,6 +131,23 @@ class AICopilotService:
         
         now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-4)))
         hora = now.strftime("%H:%M:%S")
+
+        # 0. TENTATIVA COM GEMINI 2.5 FLASH + GOOGLE SEARCH GROUNDING
+        gemini_result = call_gemini_with_google_search(user_prompt, summary, SYSTEM_INSTRUCTION)
+        if gemini_result and gemini_result.get("text"):
+            response_text = gemini_result["text"]
+            if gemini_result.get("search_sources"):
+                response_text += "\n\n🌐 **Fontes Web Validadas em Tempo Real:**\n"
+                for s in gemini_result["search_sources"][:4]:
+                    response_text += f"• [{s['title']}]({s['url']})\n"
+            
+            return {
+                "query": user_prompt,
+                "response": response_text,
+                "summary_data": summary,
+                "timestamp": summary["timestamp"],
+                "gemini_grounded": True
+            }
 
         # 1. RESPOSTAS TÉCNICAS SOBRE A INTERFACE, BOTÕES E RECURSOS
         if any(w in prompt_lower for w in ["para que serve", "como funciona", "o que faz", "o que e", "o que é", "explica", "funcao", "função", "botao", "botão", "botoes", "botões", "painel", "interface"]):
@@ -313,3 +331,78 @@ class AICopilotService:
         }
 
 ai_copilot = AICopilotService()
+
+# =========================================================================
+# INTEGRAÇÃO GEMINI 2.5 FLASH COM GOOGLE SEARCH GROUNDING
+# =========================================================================
+def call_gemini_with_google_search(prompt: str, context_summary: Dict[str, Any], system_instruction: str) -> Optional[Dict[str, Any]]:
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        # Tenta carregar do .env caso nao esteja em os.environ
+        env_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env")
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as ef:
+                for line in ef:
+                    line = line.strip()
+                    if line.startswith("GEMINI_API_KEY=") or line.startswith("GOOGLE_API_KEY="):
+                        api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        break
+
+    if not api_key:
+        return None
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+        
+        grounded_prompt = f"""[CONTEXTO DO DASHBOARD EM TEMPO REAL - AMAZÔNIA FIRE-WATCH AI]
+Horário da Central: {context_summary.get('timestamp')}
+Total de Focos Ativos (24h): {context_summary.get('total_focos_brasil')}
+Clusters Críticos de Reincidência (500m): {context_summary.get('reincidencia_critica')}
+Alta Suspeita de Ação Criminosa: {context_summary.get('alta_suspeita_crime')}
+Distribuição por Biomas: {context_summary.get('distribuicao_biomas')}
+Principais Rotas de Risco Ativas: {', '.join(context_summary.get('principais_rotas_risco', []))}
+
+[DIRETRIZ DE OPERAÇÃO]
+Você é o Copiloto Tático IA Sênior do Amazônia Fire-Watch AI.
+Analise a pergunta do operador cruzando com os dados do dashboard acima.
+UTILIZE A FERRAMENTA GOOGLE SEARCH para pesquisar na web em tempo real (notícias locais recentes, boletins do CBMAM/Defesa Civil, condições meteorológicas atuais e dados do INPE) validando rigorosamente as informações antes de responder ao usuário. Elimine falsos boatos e diferencie com precisão focos industriais (flares/PIM) de incêndios florestais reais.
+
+[PERGUNTA DO OPERADOR]
+{prompt}
+"""
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=grounded_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.2,
+            )
+        )
+
+        search_sources = []
+        try:
+            if response.candidates and response.candidates[0].grounding_metadata:
+                gm = response.candidates[0].grounding_metadata
+                if gm.grounding_chunks:
+                    for chunk in gm.grounding_chunks:
+                        if chunk.web and chunk.web.uri:
+                            search_sources.append({
+                                "title": chunk.web.title or "Fonte Web",
+                                "url": chunk.web.uri
+                            })
+        except Exception:
+            pass
+
+        return {
+            "text": response.text,
+            "search_sources": search_sources,
+            "is_grounded_web": len(search_sources) > 0
+        }
+    except Exception as e:
+        print("Aviso: Falha ao chamar Gemini com Google Search:", e)
+        return None

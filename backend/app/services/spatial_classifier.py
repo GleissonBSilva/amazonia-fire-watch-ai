@@ -229,3 +229,176 @@ def classify_location(lat: float, lng: float) -> dict:
             "municipality": f"{country_name} (América do Sul)",
             "address": f"Detecção Orbital NASA FIRMS • {country_name} (Foco Transfronteiriço / Internacional)"
         }
+
+
+# =========================================================================
+# MOTOR IA DE DIFERENCIAÇÃO: CALOR INDUSTRIAL vs INCÊNDIO FLORESTAL REAL
+# Análise Termodinâmica Multivariada (FRP + Temperatura + PM2.5 + PTR)
+# =========================================================================
+
+KNOWN_INDUSTRIAL_SITES = [
+    {
+        "id": "reman-petrobras",
+        "name": "Refinaria Isaac Sabbá (REMAN / Petrobras)",
+        "type": "REFINARIA_FLARE",
+        "lat": -3.1465,
+        "lng": -59.9482,
+        "radius_km": 2.5,
+        "desc": "Flares de tocha contínua de gases residuais e refino de petróleo."
+    },
+    {
+        "id": "pim-distrito-1",
+        "name": "Polo Industrial de Manaus (Distrito Industrial I)",
+        "type": "POLO_FABRIL_PIM",
+        "lat": -3.1250,
+        "lng": -59.9750,
+        "radius_km": 5.0,
+        "desc": "Parque fabril de eletroeletrônicos, caldeiras e metalurgia."
+    },
+    {
+        "id": "pim-distrito-2",
+        "name": "Polo Industrial de Manaus (Distrito Industrial II)",
+        "type": "POLO_FABRIL_PIM",
+        "lat": -3.0780,
+        "lng": -59.9050,
+        "radius_km": 6.0,
+        "desc": "Polo químico, usinas térmicas e indústrias pesadas."
+    },
+    {
+        "id": "termo-maua",
+        "name": "Complexo Termelétrico Mauá / Aparecida",
+        "type": "TERMOELETRICA",
+        "lat": -3.1360,
+        "lng": -59.9650,
+        "radius_km": 2.0,
+        "desc": "Geração termelétrica a gás natural com turbinas e exaustores."
+    },
+    {
+        "id": "petro-urucu",
+        "name": "Polo Petrolífero de Urucu (Petrobras)",
+        "type": "PETROQUIMICA_GAS",
+        "lat": -4.8850,
+        "lng": -65.2900,
+        "radius_km": 12.0,
+        "desc": "Flares industriais de gás natural em bacia de extração petrolífera."
+    },
+    {
+        "id": "polo-barcarena",
+        "name": "Complexo Industrial de Barcarena (Albras / Alunorte)",
+        "type": "SIDERURGICA",
+        "lat": -1.5100,
+        "lng": -48.7500,
+        "radius_km": 7.0,
+        "desc": "Metalurgia pesada de bauxita/alumina e fornos contínuos."
+    },
+    {
+        "id": "siderurgia-maraba",
+        "name": "Distrito Metalúrgico de Marabá (Carajás)",
+        "type": "SIDERURGICA",
+        "lat": -5.3400,
+        "lng": -49.0900,
+        "radius_km": 6.0,
+        "desc": "Siderurgia de ferro-gusa e fornos metalúrgicos."
+    }
+]
+
+def classify_thermal_anomaly_ai(lat: float, lng: float, frp_mw: float, bright_ti4_k: float, pm25: float = 15.0) -> dict:
+    safe_frp = max(float(frp_mw or 0), 3.0)
+    safe_pm25 = float(pm25 or 15.0)
+    safe_temp_k = float(bright_ti4_k or 300.0)
+    temp_c = round(safe_temp_k - 273.15, 1)
+
+    ptr = round(safe_pm25 / safe_frp, 2)
+
+    matched_site = None
+    for site in KNOWN_INDUSTRIAL_SITES:
+        d_km = (((lat - site["lat"]) ** 2 + ((lng - site["lng"]) * 0.95) ** 2) ** 0.5) * 111.0
+        if d_km <= site["radius_km"]:
+            matched_site = site
+            break
+
+    is_industrial_zone = matched_site is not None
+
+    industrial_score = 10
+    wildfire_score = 90
+
+    if is_industrial_zone:
+        industrial_score += 45
+        wildfire_score -= 40
+
+    if safe_temp_k >= 355:
+        if ptr < 1.8:
+            industrial_score += 30
+            wildfire_score -= 25
+        else:
+            wildfire_score += 15
+
+    if ptr < 1.2 and safe_frp >= 15:
+        industrial_score += 25
+        wildfire_score -= 25
+    elif ptr >= 2.5 and safe_pm25 >= 35:
+        wildfire_score += 30
+        industrial_score -= 30
+
+    industrial_score = min(100, max(0, industrial_score))
+    wildfire_score = min(100, max(0, wildfire_score))
+
+    if is_industrial_zone and (safe_pm25 >= 120 or (safe_frp >= 45 and safe_pm25 >= 75)):
+        return {
+            "nature": "INCENDIO_ESTRUTURAL_FABRIL",
+            "is_wildfire": False,
+            "is_industrial_heat": True,
+            "is_emergency": True,
+            "label": "Incêndio Estrutural Fabril (Emergência)",
+            "ptr": ptr,
+            "matched_facility": matched_site["name"] if matched_site else "Complexo Industrial",
+            "ai_verdict": f"Alerta Crítico em Polo Fabril: FRP {safe_frp} MW com particulado massivo ({safe_pm25} µg/m³). Sugere combustão estrutural ativa em instalação industrial."
+        }
+
+    if industrial_score >= 60 or (is_industrial_zone and ptr < 1.8 and safe_pm25 < 75):
+        facility_name = matched_site["name"] if matched_site else "Polo Industrial"
+        return {
+            "nature": "CALOR_INDUSTRIAL",
+            "is_wildfire": False,
+            "is_industrial_heat": True,
+            "is_emergency": False,
+            "label": "Calor Industrial / Flare Antrópico",
+            "ptr": ptr,
+            "matched_facility": facility_name,
+            "ai_verdict": f"Falso Positivo Florestal: Foco pontual de alta temperatura ({temp_c}°C / {safe_temp_k}K) e FRP {safe_frp} MW, com baixa emissão difusa de particulado de biomassa (PTR {ptr}, PM2.5 {safe_pm25} µg/m³). Coincide com {facility_name}."
+        }
+
+    if safe_frp >= 45 or (safe_frp >= 25 and safe_pm25 >= 50):
+        return {
+            "nature": "VEGETACAO_CRITICA",
+            "is_wildfire": True,
+            "is_industrial_heat": False,
+            "is_emergency": True,
+            "label": "Incêndio Florestal Crítico (Biomassa Densa)",
+            "ptr": ptr,
+            "matched_facility": None,
+            "ai_verdict": f"Incêndio Florestal Confirmado: Potência de {safe_frp} MW correlacionada a alta densidade de fuligem (PM2.5 {safe_pm25} µg/m³). Razão PTR {ptr} atesta queima descontrolada de vegetação nativa."
+        }
+
+    if safe_frp >= 20:
+        return {
+            "nature": "VEGETACAO_MODERADA",
+            "is_wildfire": True,
+            "is_industrial_heat": False,
+            "is_emergency": False,
+            "label": "Queimada Ativa de Vegetação",
+            "ptr": ptr,
+            "matched_facility": None,
+            "ai_verdict": f"Foco de Queimada de Vegetação: FRP {safe_frp} MW e PM2.5 {safe_pm25} µg/m³ (PTR {ptr}). Assinatura térmica compatível com frente de fogo aberta."
+        }
+
+    return {
+        "nature": "RUIDO_TERMICO_SOLAR",
+        "is_wildfire": False,
+        "is_industrial_heat": False,
+        "is_emergency": False,
+        "label": "Ruído Térmico Solar (Falso Positivo)",
+        "ptr": ptr,
+        "matched_facility": None,
+        "ai_verdict": f"Ruído de baixa energia: FRP {safe_frp} MW com atmosfera limpa (PM2.5 {safe_pm25} µg/m³). Compatível com aquecimento de solo exposto ou telhado."
+    }

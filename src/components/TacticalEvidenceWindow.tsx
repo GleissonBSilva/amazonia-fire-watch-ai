@@ -6,6 +6,7 @@ import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
 import { sendWhatsAppFireAlert } from '../services/alertService';
 import { queryLandRegistry } from '../services/landRegistryService';
 import { PreliminaryInfractionModal } from './PreliminaryInfractionModal';
+import { classifyFireAuthenticity } from '../services/fireClassificationService';
 import {
   Satellite,
   Wind,
@@ -58,6 +59,11 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
   const landRegistry: LandRegistryMatch = useMemo(() => {
     if (!spot) return queryLandRegistry(-1.0, -62.0);
     return spot.land_registry || queryLandRegistry(spot.latitude, spot.longitude, spot.municipality, spot.state);
+  }, [spot]);
+
+  const aiClassification = useMemo(() => {
+    if (!spot) return null;
+    return classifyFireAuthenticity(spot);
   }, [spot]);
 
   if (!isOpen || isMinimized || !spot) {
@@ -168,6 +174,52 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
               <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-emerald-900 text-emerald-200 border border-emerald-600">
                 100% REAL • EM ÓRBITA
               </span>
+            </div>
+          )}
+
+          {/* ANÁLISE IA TÁTICA C2: DISCRIMINAÇÃO TÉRMICA & MATERIAL PARTICULADO (CALOR INDUSTRIAL vs QUEIMADA) */}
+          {aiClassification && (
+            <div className={`p-2 rounded-lg border text-[9px] font-mono space-y-1 flex-shrink-0 ${
+              aiClassification.isStructuralIndustrialFire
+                ? 'bg-rose-950/90 border-rose-500 text-rose-200'
+                : aiClassification.isIndustrialHeat
+                ? 'bg-cyan-950/90 border-cyan-500 text-cyan-200'
+                : 'bg-red-950/90 border-red-500 text-red-200'
+            }`}>
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-1">
+                <span className="font-bold flex items-center gap-1.5 text-[9.5px]">
+                  <span>{aiClassification.isIndustrialHeat ? '🏭' : '🔥'}</span>
+                  <span>{aiClassification.classificationLabel}</span>
+                </span>
+                <span className={`px-1.5 py-0.2 rounded text-[7.5px] font-black uppercase border ${
+                  aiClassification.isIndustrialHeat
+                    ? 'bg-cyan-900 text-cyan-200 border-cyan-400'
+                    : 'bg-red-900 text-red-200 border-red-400'
+                }`}>
+                  {aiClassification.isIndustrialHeat ? 'FONTE ANTRÓPICA' : 'COMBUSTÃO REAL'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1 py-0.5 text-center text-[8.5px]">
+                <div className="bg-slate-900/80 p-0.5 rounded border border-slate-800">
+                  <span className="text-slate-400 block text-[7.5px]">POTÊNCIA (FRP)</span>
+                  <span className="font-bold text-amber-300">{spot.frp_mw} MW</span>
+                </div>
+                <div className="bg-slate-900/80 p-0.5 rounded border border-slate-800">
+                  <span className="text-slate-400 block text-[7.5px]">PARTICULADO PM2.5</span>
+                  <span className="font-bold text-cyan-300">{spot.pm25 || airQuality?.pm25 || '15.0'} µg/m³</span>
+                </div>
+                <div className="bg-slate-900/80 p-0.5 rounded border border-slate-800">
+                  <span className="text-slate-400 block text-[7.5px]">RAZÃO PTR (PM/MW)</span>
+                  <span className={`font-bold ${aiClassification.particulateThermalRatio < 1.4 ? 'text-emerald-300' : 'text-red-300'}`}>
+                    {aiClassification.particulateThermalRatio}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[8px] text-slate-300 leading-relaxed pt-0.5 border-t border-slate-800/60">
+                <strong>Diagnóstico IA:</strong> {aiClassification.aiExplanation}
+              </p>
             </div>
           )}
 

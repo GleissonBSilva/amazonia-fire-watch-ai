@@ -249,36 +249,36 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
         width: Math.min(980, window.innerWidth - 20),
         height: Math.min(680, window.innerHeight - 30),
       }}
-      minWidth={Math.min(540, window.innerWidth - 20)}
-      minHeight={Math.min(420, window.innerHeight - 30)}
+      minWidth={Math.min(320, window.innerWidth - 10)}
+      minHeight={Math.min(280, window.innerHeight - 20)}
       bounds="window"
       dragHandleClassName="reports-window-handle"
       enableResizing={!isMaximized}
       disableDragging={isMaximized}
-      className={`fixed z-50 flex flex-col bg-slate-950/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none ${
+      className={`fixed z-50 flex flex-col bg-slate-950/95 border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md font-mono select-none max-sm:!inset-1 max-sm:!w-auto max-sm:!h-auto max-sm:!transform-none ${
         isMaximized ? '!inset-2 !w-auto !h-auto !transform-none' : ''
       }`}
     >
       {/* 1. Header Oficial do Relatório Móvel (Draggable Handle) */}
-      <div className="reports-window-handle px-4 py-2.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between cursor-move select-none flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-red-600/20 text-red-400 border border-red-500/50 shadow-inner">
+      <div className="reports-window-handle px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between cursor-move select-none flex-shrink-0 flex-wrap sm:flex-nowrap gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="p-1.5 rounded-lg bg-red-600/20 text-red-400 border border-red-500/50 shadow-inner shrink-0">
             <Flame size={17} className="animate-pulse" />
           </div>
-          <div>
-            <h2 className="text-xs font-bold text-white tracking-wider flex items-center gap-2">
-              <span>RELATÓRIO TÉCNICO DE QUEIMADAS &amp; ESTIMATIVA DE POLUENTES</span>
-              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-red-950 text-red-300 border border-red-700">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xs font-bold text-white tracking-wider flex items-center gap-2 truncate">
+              <span className="truncate">RELATÓRIO TÉCNICO DE QUEIMADAS & POLUENTES</span>
+              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-red-950 text-red-300 border border-red-700 shrink-0 hidden xs:inline-block">
                 IPCC / GFED4s
               </span>
             </h2>
-            <p className="text-[9px] text-slate-400">
+            <p className="text-[9px] text-slate-400 truncate">
               Identificação Municipal, Emissões de Poluentes Atmosféricos &amp; Rastreabilidade Satelital
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
           <button
             onClick={handlePrint}
             className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-[10px] flex items-center gap-1 transition cursor-pointer"
