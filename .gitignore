@@ -6,6 +6,13 @@ frontend/node_modules/
 dist/
 frontend/dist/
 
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+
 # Python cache & virtualenvs
 __pycache__/
 *.pyc
