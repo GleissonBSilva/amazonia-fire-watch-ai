@@ -147,6 +147,7 @@ export interface ActiveOverlaysState {
   heatmap?: boolean;
   airQuality?: boolean;
   carCadastre?: boolean;
+  clustering?: boolean;
 }
 
 export interface MapLayerOverlay {

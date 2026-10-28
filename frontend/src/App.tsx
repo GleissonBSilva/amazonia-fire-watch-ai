@@ -85,6 +85,7 @@ export const App: React.FC = () => {
     rainRadar: false,
     heatmap: false,
     carCadastre: false,
+    clustering: true,
   });
   const [onlyNewOutbreaks, setOnlyNewOutbreaks] = useState<boolean>(false);
 

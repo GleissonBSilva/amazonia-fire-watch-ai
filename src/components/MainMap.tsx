@@ -8,6 +8,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import 'leaflet-draw';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import 'leaflet.markercluster';
 import { Crosshair, ExternalLink, Wind, Thermometer } from 'lucide-react';
 import {
   DelimitedArea,
@@ -225,6 +228,194 @@ const STATIC_WMS_CONFIG = {
   },
 };
 
+// =========================================================================
+// CAMADA TÁTICA DE CLUSTERING PLANETÁRIO C2 (Alta Performance 60FPS)
+// Agrupa dezenas de milhares de focos globais em clusters radiométricos com FRP
+// =========================================================================
+interface TacticalClusterGroupProps {
+  spots: FireSpot[];
+  getRealisticFlameIcon: (spot: FireSpot) => L.DivIcon;
+  onSpotClick: (spot: FireSpot) => void;
+  onHoverSpot: (spot: FireSpot, pos: { x: number; y: number }) => void;
+  onLeaveSpot: () => void;
+  isSimulation?: boolean;
+}
+
+const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
+  spots,
+  getRealisticFlameIcon,
+  onSpotClick,
+  onHoverSpot,
+  onLeaveSpot,
+  isSimulation,
+}) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Criar grupo tático de agrupamento
+    const clusterGroup = (L as any).markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: (zoom: number) => (zoom <= 4 ? 65 : zoom <= 8 ? 50 : 35),
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      disableClusteringAtZoom: 14,
+      animate: true,
+      iconCreateFunction: (cluster: any) => {
+        const markers = cluster.getAllChildMarkers();
+        const count = cluster.getChildCount();
+
+        let maxFrp = 0;
+        let hasArson = false;
+        let hasNewOutbreak = false;
+        let hasGeostationary = false;
+
+        for (let i = 0; i < markers.length; i++) {
+          const s = (markers[i] as any).__spotData as FireSpot | undefined;
+          if (s) {
+            const frp = s.frp_mw || 0;
+            if (frp > maxFrp) maxFrp = frp;
+            if (s.is_arson_cluster) hasArson = true;
+            if (s.is_new_outbreak) hasNewOutbreak = true;
+            if (s.is_geostationary_preliminary) hasGeostationary = true;
+          }
+        }
+
+        // Estilos táticos C2 baseados em severidade
+        let borderClass = 'border-amber-400/90 shadow-[0_0_15px_rgba(251,191,36,0.6)]';
+        let bgGradient = 'from-amber-950/90 via-slate-950/95 to-amber-900/90 text-amber-200';
+        let pulseGlow = '';
+        let dotBadge = 'bg-amber-400';
+
+        if (hasArson || maxFrp >= 200 || count >= 50) {
+          borderClass = 'border-red-500 shadow-[0_0_22px_rgba(239,68,68,0.85)]';
+          bgGradient = 'from-red-950 via-slate-950 to-red-900 text-red-200';
+          pulseGlow = 'animate-ping opacity-60';
+          dotBadge = 'bg-red-500';
+        } else if (hasNewOutbreak || maxFrp >= 80 || count >= 15) {
+          borderClass = 'border-orange-500 shadow-[0_0_16px_rgba(249,115,22,0.7)]';
+          bgGradient = 'from-orange-950/95 via-slate-950 to-orange-900/95 text-orange-200';
+          pulseGlow = 'animate-pulse opacity-40';
+          dotBadge = 'bg-orange-400';
+        } else if (hasGeostationary) {
+          borderClass = 'border-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.7)]';
+          bgGradient = 'from-cyan-950/95 via-slate-950 to-cyan-900/95 text-cyan-200';
+          dotBadge = 'bg-cyan-400';
+        }
+
+        const size = count >= 100 ? 56 : count >= 20 ? 48 : 40;
+        const displayCount = count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count;
+
+        return L.divIcon({
+          html: `
+            <div class="relative flex items-center justify-center font-mono select-none" style="width: ${size}px; height: ${size}px; transform: translate(-50%, -50%);">
+              <div class="absolute inset-0 rounded-full ${dotBadge} ${pulseGlow}"></div>
+              <div class="relative flex flex-col items-center justify-center w-full h-full rounded-full border-2 ${borderClass} bg-gradient-to-br ${bgGradient} backdrop-blur-md transition-transform hover:scale-110">
+                <div class="text-[12px] font-black leading-none tracking-tight">${displayCount}</div>
+                <div class="text-[7px] font-bold tracking-wider uppercase opacity-85 leading-none mt-0.5">FOCOS</div>
+                ${maxFrp > 0 ? `<div class="text-[6.5px] text-amber-300 font-mono leading-none mt-0.5">${Math.round(maxFrp)}MW</div>` : ''}
+              </div>
+            </div>
+          `,
+          className: 'tactical-cluster-divicon',
+          iconSize: [0, 0],
+        });
+      },
+    });
+
+    // Povoar marcadores
+    spots.forEach((spot) => {
+      const icon = getRealisticFlameIcon(spot);
+      const marker = L.marker([spot.latitude, spot.longitude], {
+        icon,
+        title: spot.address || `${spot.municipality} - ${spot.state}`,
+      });
+
+      (marker as any).__spotData = spot;
+
+      marker.on('click', () => {
+        onSpotClick(spot);
+      });
+
+      marker.on('mouseover', (e: any) => {
+        if (map) {
+          const mapPoint = map.latLngToContainerPoint(e.latlng);
+          onHoverSpot(spot, { x: mapPoint.x, y: mapPoint.y });
+        }
+      });
+
+      marker.on('mouseout', () => {
+        onLeaveSpot();
+      });
+
+      // Template de Popup Cockpit C2
+      const tempC = Math.round((spot.bright_ti4_k || 320) - 273.15);
+      const isNew = spot.is_new_outbreak;
+      const isArson = spot.is_arson_cluster;
+      const tagText = isArson ? 'ARSON // CRIME' : isNew ? 'NOVO FOCO (<3H)' : 'FOCO REAL NASA';
+      const tagClass = isArson
+        ? 'bg-purple-950 text-purple-300 border-purple-500'
+        : isNew
+        ? 'bg-amber-950 text-amber-300 border-amber-500'
+        : 'bg-red-950 text-red-300 border-red-500';
+      const liveBadge =
+        isSimulation && spot.has_video
+          ? '<span class="text-emerald-400 font-bold text-[8.5px]">LIVE FEED // RAM</span>'
+          : '<span class="text-cyan-400 font-bold text-[8.5px]">NASA FIRMS // REAL</span>';
+
+      const popupHtml = `
+        <div class="font-mono text-xs text-white max-w-[280px] bg-slate-950 p-2.5 rounded-lg border border-slate-700 shadow-2xl">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+            <span class="px-1.5 py-0.2 rounded text-[9px] font-bold border ${tagClass}">${tagText}</span>
+            ${liveBadge}
+          </div>
+          <div class="relative w-full h-24 rounded border border-slate-800 overflow-hidden mb-2 flex items-center justify-center" style="background: radial-gradient(circle at 50% 50%, #ffffff 0%, #ffff55 15%, #ff5500 35%, #150022 80%, #030712 100%);">
+            <div class="absolute inset-0 flex items-center justify-center opacity-60">
+              <div class="w-16 h-12 border border-dashed border-cyan-400"></div>
+              <div class="absolute w-4 h-4 border border-cyan-300 rounded-full"></div>
+            </div>
+            <div class="absolute top-1 left-1 text-[7.5px] text-cyan-300 bg-black/70 px-1 rounded">LAT: ${spot.latitude.toFixed(4)}°</div>
+            <div class="absolute bottom-1 right-1 text-[7.5px] text-amber-300 bg-black/70 px-1 rounded font-bold">FRP: ${spot.frp_mw || 0} MW</div>
+          </div>
+          <div class="text-[10px] text-slate-300 truncate mb-1 font-bold">${spot.address || `${spot.municipality} - ${spot.state}`}</div>
+          <div class="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-1">
+            <div>Sensor: <span class="text-white">${spot.satellite}</span></div>
+            <div>Confiança: <span class="text-emerald-400 font-bold">${Math.round((spot.confidence || 0.8) * 100)}%</span></div>
+          </div>
+          <div class="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-2 pt-1 border-t border-slate-800">
+            <div>Temp: <span class="text-amber-300 font-bold">${tempC}°C</span></div>
+            <div>FRP: <span class="text-red-400 font-bold">${spot.frp_mw || 0} MW</span></div>
+          </div>
+          <button id="btn-expand-${spot.id}" class="w-full py-1.5 bg-gradient-to-r from-cyan-950 via-slate-900 to-cyan-950 hover:from-cyan-900 hover:to-cyan-800 text-cyan-300 hover:text-white border border-cyan-600/70 rounded text-[9px] font-bold tracking-wider uppercase flex items-center justify-center gap-1 transition-all">
+            EXPANDIR FEED // JANELA FLUTUANTE
+          </button>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml, { maxWidth: 300 });
+
+      marker.on('popupopen', () => {
+        const btn = document.getElementById(`btn-expand-${spot.id}`);
+        if (btn) {
+          btn.onclick = () => onSpotClick(spot);
+        }
+      });
+
+      clusterGroup.addLayer(marker);
+    });
+
+    map.addLayer(clusterGroup);
+
+    return () => {
+      map.removeLayer(clusterGroup);
+    };
+  }, [map, spots, getRealisticFlameIcon, onSpotClick, onHoverSpot, onLeaveSpot, isSimulation]);
+
+  return null;
+};
+
 export const MainMap: React.FC<MainMapProps> = React.memo(({
   onAreaSelected,
   fireSpots,
@@ -304,6 +495,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
     smokePlume: false,
     thermalMask: false,
     heatmap: showHeatmapOverlay || false,
+    clustering: true,
   };
 
   // ========================================================
@@ -749,8 +941,18 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
             );
           })}
 
-        {(temporalMode === '24h' || temporalMode === 'historical') &&
-          filteredDisplaySpots.map((spot) => (
+        {(temporalMode === '24h' || temporalMode === 'historical') && (
+          overlays.clustering !== false ? (
+            <TacticalClusterGroup
+              spots={filteredDisplaySpots}
+              getRealisticFlameIcon={getRealisticFlameIcon}
+              onSpotClick={onSpotClick}
+              onHoverSpot={onHoverSpot}
+              onLeaveSpot={onLeaveSpot}
+              isSimulation={isSimulation}
+            />
+          ) : (
+            filteredDisplaySpots.map((spot) => (
             <Marker
               key={spot.id}
               position={[spot.latitude, spot.longitude]}
@@ -835,7 +1037,9 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
                 </div>
               </Popup>
             </Marker>
-          ))}
+          ))
+        )
+      )}
 
         {/* Marcadores de Relatos OSINT (Redes Sociais / Cidadão) */}
         {osintAlerts.map((alert) => (

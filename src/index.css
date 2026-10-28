@@ -91,3 +91,12 @@ html, body, #root {
 .animate-pulse-smoke {
   animation: pulse-smoke 4s ease-in-out infinite;
 }
+
+/* Tactical MarkerCluster HUD */
+.tactical-cluster-divicon {
+  background: transparent !important;
+  border: none !important;
+}
+.tactical-cluster-divicon:hover {
+  z-index: 10000 !important;
+}

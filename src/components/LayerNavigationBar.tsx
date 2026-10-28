@@ -158,6 +158,19 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
 
       {/* SELETOR 2: OVERLAYS DE SATÉLITE EM TEMPO REAL (Pílulas Toggle Multi-seleção) */}
       <div className="flex items-center space-x-1">
+        {/* OVERLAY: Agrupamento Tático / Clustering de Focos */}
+        <button
+          onClick={() => onToggleOverlay('clustering')}
+          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
+            activeOverlays.clustering !== false
+              ? 'bg-emerald-600/90 text-white border-emerald-400 font-bold shadow-sm shadow-emerald-950'
+              : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
+          }`}
+          title="Agrupamento Tático de Focos Planetários para visualização fluida e síntese de FRP"
+        >
+          <Layers size={12} className={activeOverlays.clustering !== false ? 'text-emerald-200 animate-pulse' : 'text-slate-400'} />
+          <span>Cluster {activeOverlays.clustering !== false ? 'ON' : 'OFF'}</span>
+        </button>
         {/* OVERLAY: NASA FIRMS (VIIRS 375m) */}
         <button
           onClick={() => onToggleOverlay('nasaFirms')}
