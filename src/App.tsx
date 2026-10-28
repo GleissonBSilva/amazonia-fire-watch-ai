@@ -16,6 +16,8 @@ import { SettingsModal, DEFAULT_CONFIG, SystemConfigState } from './components/S
 import { Settings, Compass, User as UserIcon, LogOut, UserCheck } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthPage } from './components/AuthPage';
+import { LandingPage } from './components/LandingPage';
+import { Globe2 } from 'lucide-react';
 import { LayerNavigationBar } from './components/LayerNavigationBar';
 import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LAYERS, ActiveOverlaysState } from './types';
 import { fetchNationalFires, fetchHeatmapData, fetchTimelineData, fetchOsintAlerts } from './services/api';
@@ -66,6 +68,14 @@ const AppContent: React.FC = () => {
   const [isAreaInspectionOpen, setIsAreaInspectionOpen] = useState<boolean>(false);
   const [isReportsOpen, setIsReportsOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'landing'>(() => {
+    return (localStorage.getItem('afw_current_view') as any) || 'dashboard';
+  });
+
+  const handleSwitchView = (view: 'dashboard' | 'landing') => {
+    setCurrentView(view);
+    localStorage.setItem('afw_current_view', view);
+  };
   const { user, profile, signOut } = useAuth();
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [systemConfig, setSystemConfig] = useState<SystemConfigState>(() => {
@@ -456,6 +466,10 @@ const AppContent: React.FC = () => {
     });
   };
 
+  if (currentView === 'landing') {
+    return <LandingPage onEnterDashboard={() => handleSwitchView('dashboard')} />;
+  }
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none">
       {/* 1. Telão Master Fullscreen GIS (Cobertura Nacional Brasil) */}
@@ -708,6 +722,16 @@ const AppContent: React.FC = () => {
           >
             <BarChart2 size={12} className="text-purple-400" />
             <span>Relatórios</span>
+          </button>
+
+          {/* Botão de Portal SaaS / Demonstração Comercial */}
+          <button
+            onClick={() => handleSwitchView('landing')}
+            className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-zinc-900/90 hover:bg-zinc-800 text-amber-300 border border-amber-600/70 transition-all shadow-sm cursor-pointer"
+            title="Abrir Portal Comercial SaaS, Simulador e Planos"
+          >
+            <Globe2 size={12} className="text-amber-400" />
+            <span>Portal SaaS</span>
           </button>
 
           {/* Botão de Configurações */}
