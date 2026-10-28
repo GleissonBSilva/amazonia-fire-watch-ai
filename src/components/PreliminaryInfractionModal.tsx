@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { FireSpot, LandRegistryMatch, InfractionDossier } from '../types';
 import { generateInfractionDossier } from '../services/landRegistryService';
+import { dispatchInfractionWhatsApp } from '../services/alertService';
 import {
   X,
   FileCheck2,
@@ -40,6 +41,12 @@ export const PreliminaryInfractionModal: React.FC<PreliminaryInfractionModalProp
   const [copiedReceipt, setCopiedReceipt] = useState(false);
   const [copiedMemo, setCopiedMemo] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [showDispatchPanel, setShowDispatchPanel] = useState(false);
+  const [targetType, setTargetType] = useState<'CBMAM' | 'DEMA' | 'OWNER' | 'CUSTOM' | 'OPEN'>('CBMAM');
+  const [customPhone, setCustomPhone] = useState('');
+  const [saveToSupabase, setSaveToSupabase] = useState(true);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -81,6 +88,27 @@ Sistema Amazônia Fire-Watch AI`;
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExecuteDispatch = async () => {
+    setIsDispatching(true);
+    try {
+      const res = await dispatchInfractionWhatsApp({
+        dossier,
+        targetType,
+        customPhone,
+        saveToSupabase,
+      });
+      setDispatchSuccessMsg(`Notificação despachada com sucesso para ${res.recipient}!`);
+      setTimeout(() => setDispatchSuccessMsg(null), 4000);
+      if (onDispatchWhatsApp) {
+        onDispatchWhatsApp(dossier);
+      }
+    } catch (err) {
+      console.error('Falha no despacho:', err);
+    } finally {
+      setIsDispatching(false);
+    }
   };
 
   return (
@@ -308,6 +336,118 @@ Sistema Amazônia Fire-Watch AI`;
         </div>
       </div>
 
+      
+      {/* Subpainel de Despacho Tático WhatsApp */}
+      {showDispatchPanel && (
+        <div className="p-3 bg-slate-900 border-t border-emerald-600/80 text-xs font-mono text-slate-200 space-y-2.5 animate-fadeIn">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+            <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px]">
+              <Send size={13} />
+              <span>CENTRAL DE DESPACHO OPERACIONAL • WHATSAPP</span>
+            </span>
+            <span className="text-[9px] text-slate-400">
+              Protocolo: <strong className="text-white">{dossier.protocolNumber}</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            <button
+              type="button"
+              onClick={() => setTargetType('CBMAM')}
+              className={`p-1.5 rounded border text-left transition ${
+                targetType === 'CBMAM'
+                  ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200 font-bold'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <div className="text-[10px]">🚒 CBMAM / CIOPS</div>
+              <div className="text-[8px] opacity-70">+55 92 99374-6740</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTargetType('DEMA')}
+              className={`p-1.5 rounded border text-left transition ${
+                targetType === 'DEMA'
+                  ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200 font-bold'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <div className="text-[10px]">⚖️ DEMA / Pol. Amb.</div>
+              <div className="text-[8px] opacity-70">+55 92 98401-2020</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTargetType('OWNER')}
+              className={`p-1.5 rounded border text-left transition ${
+                targetType === 'OWNER'
+                  ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200 font-bold'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <div className="text-[10px]">👤 Responsável CAR</div>
+              <div className="text-[8px] opacity-70 truncate">{landRegistry.owner_name}</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTargetType('OPEN')}
+              className={`p-1.5 rounded border text-left transition ${
+                targetType === 'OPEN'
+                  ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200 font-bold'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <div className="text-[10px]">💬 Seletor Livre</div>
+              <div className="text-[8px] opacity-70">Qualquer contato</div>
+            </button>
+          </div>
+
+          {(targetType === 'OWNER' || targetType === 'CUSTOM') && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 whitespace-nowrap">Telefone Destino:</span>
+              <input
+                type="text"
+                value={customPhone}
+                onChange={(e) => setCustomPhone(e.target.value)}
+                placeholder="Ex: 5592999998888 (com DDD)"
+                className="flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-emerald-300 font-mono focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-300">
+              <input
+                type="checkbox"
+                checked={saveToSupabase}
+                onChange={(e) => setSaveToSupabase(e.target.checked)}
+                className="rounded border-slate-700 text-emerald-500 focus:ring-0"
+              />
+              <span>Persistir Auto no Supabase PostGIS (<code className="text-cyan-300">infraction_notices</code>)</span>
+            </label>
+
+            <button
+              type="button"
+              disabled={isDispatching}
+              onClick={handleExecuteDispatch}
+              className="px-4 py-1.5 rounded bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950/60 transition disabled:opacity-50 text-[11px]"
+            >
+              <Send size={13} className={isDispatching ? 'animate-spin' : ''} />
+              <span>{isDispatching ? 'Transmitindo...' : 'TRANSMITIR AUTO VIA WHATSAPP ↗'}</span>
+            </button>
+          </div>
+
+          {dispatchSuccessMsg && (
+            <div className="p-1.5 rounded bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-[10px] font-bold flex items-center gap-1.5">
+              <Check size={12} className="text-emerald-400" />
+              <span>{dispatchSuccessMsg}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Rodapé de Ações do Auto */}
       <div className="px-4 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-2 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -331,16 +471,18 @@ Sistema Amazônia Fire-Watch AI`;
         </div>
 
         <div className="flex items-center gap-2">
-          {onDispatchWhatsApp && (
-            <button
-              onClick={() => onDispatchWhatsApp(dossier)}
-              className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 transition shadow text-[10.5px]"
-              title="Despachar Notificação Imediata para Fiscalização"
-            >
-              <Send size={13} />
-              <span>Despachar WhatsApp</span>
-            </button>
-          )}
+          <button
+            onClick={() => setShowDispatchPanel(!showDispatchPanel)}
+            className={`px-3 py-1.5 rounded font-bold flex items-center gap-1.5 transition shadow text-[10.5px] ${
+              showDispatchPanel
+                ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-400'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+            }`}
+            title="Abrir Central de Despacho Operacional via WhatsApp"
+          >
+            <Send size={13} />
+            <span>{showDispatchPanel ? 'Ocultar Painel' : 'Despachar WhatsApp'}</span>
+          </button>
 
           <button
             onClick={onClose}

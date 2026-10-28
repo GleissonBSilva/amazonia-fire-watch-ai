@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Rnd } from 'react-rnd';
 import { FireSpot, DelimitedArea } from '../types';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 import {
   generateDetailedEmissionsReport,
   calculateFireEmissions,
@@ -1052,6 +1053,26 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
                 </span>
                 <p className="text-slate-400 leading-relaxed text-[9.5px]">
                   Dados meteorológicos em tempo real do <strong>ECMWF (European Centre for Medium-Range Weather Forecasts)</strong> integrados via Open-Meteo, acompanhados de compósitos de radar de chuva em tempo real (RainViewer API) para detecção de precipitação extintora.
+                </p>
+              </div>
+
+              {/* Fonte 5: Supabase PostGIS */}
+              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white flex items-center gap-1.5 text-[11px]">
+                    <Database size={13} className="text-cyan-400" />
+                    <span>Supabase PostGIS • Repositório Cloud &amp; Auditoria Fundiária</span>
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[8.5px] font-bold font-mono ${
+                    isSupabaseConfigured 
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-500' 
+                      : 'bg-amber-950 text-amber-300 border border-amber-600'
+                  }`}>
+                    {isSupabaseConfigured ? '🟢 CONECTADO (REALTIME)' : '🟡 CACHE LOCAL / HYBRID'}
+                  </span>
+                </div>
+                <p className="text-slate-400 leading-relaxed text-[9.5px]">
+                  Camada de persistência relacional e geoespacial com extensão <strong>PostGIS</strong>. Executa consultas espaciais indexadas via R-Tree/GIST (<code>ST_Contains</code>, <code>ST_DWithin</code>) sobre os polígonos do CAR/SICAR e autos lavrados (<code>public.infraction_notices</code>).
                 </p>
               </div>
             </div>

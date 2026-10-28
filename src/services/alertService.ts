@@ -119,3 +119,118 @@ export async function sendSafeFireAlert(payload: {
   });
   return await res.json();
 }
+
+
+import { InfractionDossier } from '../types';
+import { saveInfractionToSupabase } from './supabaseClient';
+
+export interface InfractionDispatchOptions {
+  dossier: InfractionDossier;
+  targetType: 'CBMAM' | 'DEMA' | 'OWNER' | 'CUSTOM' | 'OPEN';
+  customPhone?: string;
+  saveToSupabase?: boolean;
+}
+
+/**
+ * Despacho Tático de Auto de Infração Ambiental Preliminar via WhatsApp
+ * Formata o ofício oficial completo com tipificação da Lei 9.605/98 e Dec 6.514/08,
+ * geolocalização por satélite, dados do CAR e cálculo de multa.
+ */
+export async function dispatchInfractionWhatsApp(options: InfractionDispatchOptions) {
+  const { dossier, targetType, customPhone, saveToSupabase = true } = options;
+  const spot = dossier.spot;
+  const land = dossier.property;
+  const mapsLink = `https://www.google.com/maps?q=${spot.latitude.toFixed(5)},${spot.longitude.toFixed(5)}`;
+  const tempC = Math.round((spot.bright_ti4_k || 320) - 273.15);
+
+  let targetNumber = '';
+  let recipientLabel = 'Plantão Operacional';
+  if (targetType === 'CBMAM') {
+    targetNumber = '5592993746740';
+    recipientLabel = 'CBMAM / CIOPS / Defesa Civil';
+  } else if (targetType === 'DEMA') {
+    targetNumber = '5592984012020';
+    recipientLabel = 'DEMA / Polícia Militar Ambiental';
+  } else if (targetType === 'OWNER') {
+    targetNumber = customPhone ? customPhone.replace(/\D/g, '') : '';
+    recipientLabel = `Proprietário Legal: ${land.owner_name}`;
+  } else if (targetType === 'CUSTOM') {
+    targetNumber = customPhone ? customPhone.replace(/\D/g, '') : '';
+    recipientLabel = `Destinatário Especial (${targetNumber})`;
+  } else {
+    targetNumber = '';
+    recipientLabel = 'Seletor Livre WhatsApp';
+  }
+
+  const officialMessage =
+    `*🚨 NOTIFICAÇÃO OFICIAL • AUTO DE INFRAÇÃO EM FLAGRANTE ORBITAL 🚨*\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `🏛️ *REPÚBLICA FEDERATIVA DO BRASIL*\n` +
+    `📋 *AUTO DE INFRAÇÃO Nº:* ${dossier.protocolNumber}\n` +
+    `🛰️ *SISTEMA C2:* Amazônia Fire-Watch AI\n\n` +
+    `🎯 *ALVO CIVIL/PENAL IDENTIFICADO (BASE CAR / SICAR / SIGEF):*\n` +
+    `👤 *Responsável Legal:* ${land.owner_name}\n` +
+    `🆔 *CPF/CNPJ:* ${land.owner_document}\n` +
+    `🏡 *Imóvel Rural:* ${land.property_name}\n` +
+    `📜 *Recibo CAR:* ${land.car_receipt} (${land.car_status})\n` +
+    `📍 *Localização:* ${spot.municipality} - ${spot.state}\n` +
+    `🌐 *Coordenadas:* ${spot.latitude.toFixed(5)}, ${spot.longitude.toFixed(5)}\n\n` +
+    `🔥 *MATERIALIDADE TÉCNICA ORBITAL:*\n` +
+    `🛰️ *Satélite Detector:* ${spot.satellite}\n` +
+    `⚡ *Potência Radiativa (FRP):* ${spot.frp_mw} MW\n` +
+    `🌡️ *Temperatura do Foco:* ${tempC}°C\n` +
+    `📐 *Área Estimada Atingida:* ${dossier.burntAreaHaEstimate} hectares\n` +
+    `💰 *Estimativa Preliminar de Multa:* R$ ${dossier.estimatedFineBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n` +
+    `⚖️ *TIPIFICAÇÃO JURÍDICA:*\n` +
+    `• Art. 41 da Lei Federal nº 9.605/1998 (Crime Ambiental - Reclusão de 2 a 4 anos)\n` +
+    `• Art. 43 do Decreto Federal nº 6.514/2008 (Multa de R$ 5.000,00 por hectare)\n\n` +
+    `🗺️ *Geolocalização Satélite em Tempo Real:*\n${mapsLink}\n\n` +
+    `🔐 *Protocolo Digital de Auditoria:* ${dossier.officerSignatureProtocol}\n` +
+    `🏛️ *Órgão Competente:* ${dossier.responsibleAuthority}\n` +
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+    `_Notificação pré-processada com fé pública preliminar nos termos do Decreto 6.514/08._`;
+
+  // Persistência no Supabase PostGIS
+  let supabaseSuccess = false;
+  if (saveToSupabase) {
+    try {
+      supabaseSuccess = await saveInfractionToSupabase(dossier);
+    } catch (e) {
+      console.warn('Erro ao salvar no Supabase:', e);
+    }
+  }
+
+  // Notificar backend local se ativo
+  try {
+    await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+        endereco: `${spot.municipality} - ${spot.state} (CAR: ${land.car_receipt})`,
+        reincidente: spot.frp_mw >= 50,
+        frp: spot.frp_mw,
+      }),
+    });
+  } catch (err) {
+    // Backend offline ou modo client-only
+  }
+
+  // Disparo do WhatsApp Web / App
+  const encoded = encodeURIComponent(officialMessage);
+  const whatsappUrl = targetNumber
+    ? `https://api.whatsapp.com/send?phone=${targetNumber}&text=${encoded}`
+    : `https://api.whatsapp.com/send?text=${encoded}`;
+
+  window.open(whatsappUrl, '_blank', 'width=850,height=720');
+
+  return {
+    success: true,
+    protocolNumber: dossier.protocolNumber,
+    recipient: recipientLabel,
+    targetNumber,
+    supabasePersisted: supabaseSuccess,
+    text: officialMessage,
+  };
+}
