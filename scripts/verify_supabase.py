@@ -34,14 +34,12 @@ def main():
 
     # 1. Carregar variáveis de ambiente
     root_env = load_env_file('.env')
-    frontend_env = load_env_file('frontend/.env')
-    combined = {**root_env, **frontend_env, **os.environ}
+    combined = {**root_env, **os.environ}
 
     supabase_url = combined.get('VITE_SUPABASE_URL') or combined.get('SUPABASE_URL') or ''
     supabase_key = combined.get('VITE_SUPABASE_ANON_KEY') or combined.get('SUPABASE_ANON_KEY') or combined.get('SUPABASE_KEY') or ''
 
-    print(f"Arquivo .env raiz: {'Encontrado' if os.path.exists('.env') else 'Nao encontrado'}")
-    print(f"Arquivo frontend/.env: {'Encontrado' if os.path.exists('frontend/.env') else 'Nao encontrado'}")
+    print(f"Arquivo .env: {'Encontrado' if os.path.exists('.env') else 'Nao encontrado'}")
     print(f"VITE_SUPABASE_URL: {supabase_url or '(Nao configurada)'}")
     print(f"VITE_SUPABASE_ANON_KEY: {'[Configurada: ' + supabase_key[:12] + '...]' if supabase_key else '(Nao configurada)'}")
     print("-" * 70)

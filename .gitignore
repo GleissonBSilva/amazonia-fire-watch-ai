@@ -1,17 +1,13 @@
 # Dependencies
 node_modules/
-frontend/node_modules/
 
 # Production builds
 dist/
-frontend/dist/
 
 # Environment Variables & Secrets
 .env
 .env.local
 .env.*.local
-frontend/.env
-frontend/.env.local
 
 # Python cache & virtualenvs
 __pycache__/

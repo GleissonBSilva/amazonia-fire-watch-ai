@@ -10,8 +10,6 @@ echo   FRONTEND REACT + VITE + LEAFLET-DRAW (ANTI-403)
 echo ========================================================
 echo.
 
-cd frontend
-
 if not exist "node_modules\" (
     echo Instalando dependencias do React (npm install --legacy-peer-deps)...
     call npm install --legacy-peer-deps

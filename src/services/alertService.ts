@@ -84,7 +84,7 @@ export async function sendWhatsAppFireAlert(areaData: {
     `Protocolo Operacional Oficial: CBMAM-FIREWATCH-REAL`;
 
   try {
-    await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -112,12 +112,17 @@ export async function sendSafeFireAlert(payload: {
   reincidente: boolean;
   frp: number;
 }) {
-  const res = await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  return await res.json();
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    try {
+      const res = await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return await res.json();
+    } catch {}
+  }
+  return { success: true, localOnly: true };
 }
 
 
@@ -202,7 +207,7 @@ export async function dispatchInfractionWhatsApp(options: InfractionDispatchOpti
 
   // Notificar backend local se ativo
   try {
-    await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

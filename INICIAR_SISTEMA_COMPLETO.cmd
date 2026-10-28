@@ -17,7 +17,7 @@ echo [2/3] Aguardando inicializacao dos servicos...
 timeout /t 2 /nobreak >nul
 
 echo [3/3] Iniciando Frontend React / Vite (Porta 3000)...
-start "AMAZONIA-FRONTEND-3000" cmd /k "cd frontend && npm run dev"
+start "AMAZONIA-FRONTEND-3000" cmd /k "npm run dev"
 
 echo.
 echo ========================================================

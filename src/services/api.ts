@@ -1,6 +1,9 @@
 import { OSINTAlert, VideoDetectionStatus, FireSpot } from '../types';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const isBrowser = typeof window !== 'undefined';
+const isLocalhost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const metaEnv = (import.meta as any).env || {};
+const API_BASE_URL = isLocalhost ? (metaEnv.VITE_API_URL || 'http://localhost:8000/api') : '';
 
 
 // Helper de requisição resiliente com timeout controlado (evita travamento do navegador em caso de backend lento)
@@ -20,7 +23,8 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 export async function fetchNationalFires(simulation: boolean = true): Promise<FireSpot[]> {
   // 1. Tenta consulta ao backend FastAPI com timeout estrito de 2.5s
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/fires/national?simulation=${simulation}`, {}, 2500);
+    if (!API_BASE_URL) throw new Error('Produção: usando feed estático');
+    const res = await fetchWithTimeout(`${API_BASE_URL}/fires/national?simulation=${simulation}`, {}, 2000);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
