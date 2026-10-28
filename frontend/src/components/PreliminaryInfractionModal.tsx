@@ -114,13 +114,13 @@ Sistema Amazônia Fire-Watch AI`;
   return (
     <Rnd
       default={{
-        x: Math.max(20, (window.innerWidth - 720) / 2),
-        y: Math.max(20, (window.innerHeight - 680) / 2),
-        width: 720,
-        height: 680,
+        x: Math.max(10, (window.innerWidth - Math.min(740, window.innerWidth - 20)) / 2),
+        y: Math.max(10, (window.innerHeight - Math.min(680, window.innerHeight - 30)) / 2),
+        width: Math.min(740, window.innerWidth - 20),
+        height: Math.min(680, window.innerHeight - 30),
       }}
-      minWidth={420}
-      minHeight={380}
+      minWidth={Math.min(380, window.innerWidth - 20)}
+      minHeight={Math.min(320, window.innerHeight - 30)}
       bounds="window"
       dragHandleClassName="infraction-modal-handle"
       enableResizing={!isMaximized}

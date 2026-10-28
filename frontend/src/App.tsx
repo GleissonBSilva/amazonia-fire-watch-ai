@@ -471,7 +471,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none">
+    <div className="relative w-full h-full min-h-[100dvh] max-h-screen overflow-hidden bg-slate-950 font-sans select-none">
       {/* 1. Telão Master Fullscreen GIS (Cobertura Nacional Brasil) */}
       {(() => {
         // Filtragem estrita do Ecossistema IA quando a Cerca Virtual está ativa
@@ -582,7 +582,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* 3. Top Header Compacto em Linha Única (Sem Transbordamento Horizontal) */}
-      <header className="absolute top-0 left-0 right-0 z-20 h-11 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none">
+      <header className="absolute top-0 left-0 right-0 z-20 h-11 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none overflow-x-auto scrollbar-none gap-2">
         {/* Logo & Identificação Compacta */}
         <div className="flex items-center space-x-2 flex-shrink-0">
           <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-600/20 border border-red-500/60 shadow-[0_0_8px_rgba(255,30,39,0.3)]">

@@ -91,7 +91,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDashboard }) =>
   };
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-zinc-100 font-sans selection:bg-orange-500 selection:text-white relative overflow-x-hidden">
+    <div className="w-full h-[100dvh] overflow-y-auto overflow-x-hidden bg-[#07090e] text-zinc-100 font-sans selection:bg-orange-500 selection:text-white relative">
       {/* Background Gradients & Tactical Grid */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(#1f293d_1px,transparent_1px)] [background-size:24px_24px] opacity-25" />

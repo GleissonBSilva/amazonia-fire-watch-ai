@@ -38,13 +38,13 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   return (
     <Rnd
       default={{
-        x: defaultPosition.x,
-        y: defaultPosition.y,
-        width: defaultSize.width,
-        height: defaultSize.height,
+        x: Math.max(10, Math.min(defaultPosition.x, window.innerWidth - Math.min(defaultSize.width, window.innerWidth - 30) - 20)),
+        y: Math.max(10, Math.min(defaultPosition.y, window.innerHeight - Math.min(defaultSize.height, window.innerHeight - 40) - 20)),
+        width: Math.min(defaultSize.width, window.innerWidth - 30),
+        height: Math.min(defaultSize.height, window.innerHeight - 40),
       }}
-      minWidth={320}
-      minHeight={200}
+      minWidth={Math.min(320, window.innerWidth - 20)}
+      minHeight={Math.min(200, window.innerHeight - 30)}
       bounds="window"
       dragHandleClassName="window-titlebar"
       enableResizing={!isMaximized}

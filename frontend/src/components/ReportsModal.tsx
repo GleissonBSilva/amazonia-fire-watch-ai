@@ -244,13 +244,13 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
   return (
     <Rnd
       default={{
-        x: Math.max(20, (window.innerWidth - 980) / 2),
-        y: Math.max(20, (window.innerHeight - 680) / 2),
-        width: 980,
-        height: 680,
+        x: Math.max(10, (window.innerWidth - Math.min(980, window.innerWidth - 20)) / 2),
+        y: Math.max(10, (window.innerHeight - Math.min(680, window.innerHeight - 30)) / 2),
+        width: Math.min(980, window.innerWidth - 20),
+        height: Math.min(680, window.innerHeight - 30),
       }}
-      minWidth={540}
-      minHeight={420}
+      minWidth={Math.min(540, window.innerWidth - 20)}
+      minHeight={Math.min(420, window.innerHeight - 30)}
       bounds="window"
       dragHandleClassName="reports-window-handle"
       enableResizing={!isMaximized}

@@ -5,9 +5,9 @@
 html, body, #root {
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
-  overflow: hidden;
   background-color: #050b14;
 }
 
@@ -99,4 +99,13 @@ html, body, #root {
 }
 .tactical-cluster-divicon:hover {
   z-index: 10000 !important;
+}
+
+/* Hide scrollbar for clean aerospace headers while keeping scrollability */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

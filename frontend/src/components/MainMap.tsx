@@ -67,6 +67,31 @@ const BRAZIL_VIEWPORTS = {
 };
 
 // Map Fly-To Helper Component
+// Redimensionamento Dinâmico Conforme o Monitor / Resolução de Tela
+const MapResizeObserver: React.FC = () => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    
+    // Invalida o tamanho no carregamento inicial para telas de diferentes proporções
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+      clearTimeout(timer);
+    };
+  }, [map]);
+  return null;
+};
+
 const MapViewNavigator: React.FC<{
   targetView: { center: [number, number]; zoom: number; trigger?: number } | null;
 }> = ({ targetView }) => {
@@ -620,6 +645,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         className="w-full h-full"
       >
         <MapViewNavigator targetView={externalTargetView || currentView} />
+        <MapResizeObserver />
 
         {/* ========================================================
             1. CAMADA BASE DINÂMICA (Exclusiva, sem reload do mapa)
