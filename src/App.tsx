@@ -599,24 +599,24 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* 3. Top Header Compacto em Linha Única (Sem Transbordamento Horizontal) */}
-      <header className="absolute top-0 left-0 right-0 z-[1150] h-11 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none overflow-x-auto scrollbar-none gap-2">
-        {/* Logo & Identificação Compacta */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
-          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-600/20 border border-red-500/60 shadow-[0_0_8px_rgba(255,30,39,0.3)]">
-            <Flame className="w-3.5 h-3.5 text-red-500" />
+      {/* 3. Top Header Tático Compacto e Totalmente Responsivo (Zero Transbordamento em 100% Zoom) */}
+      <header className="absolute top-0 left-0 right-0 z-[1150] h-11 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-2 sm:px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none gap-1 sm:gap-2 max-w-full overflow-hidden">
+        {/* Lado Esquerdo: Logo & Navegação de Camadas/Filtros */}
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 min-w-0">
+          {/* Logo & Identificação Compacta */}
+          <div className="flex items-center space-x-1.5 flex-shrink-0">
+            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-600/20 border border-red-500/60 shadow-[0_0_8px_rgba(255,30,39,0.3)]">
+              <Flame className="w-3.5 h-3.5 text-red-500" />
+            </div>
+            <div className="flex items-center space-x-1">
+              <span className="font-bold text-[11px] sm:text-xs tracking-wider whitespace-nowrap">FIRE WATCH AI</span>
+              <span className="hidden md:inline px-1 py-0.2 text-[8px] font-mono font-semibold bg-red-950 text-red-400 border border-red-800 rounded">
+                BRASIL
+              </span>
+            </div>
           </div>
-          <div className="flex items-center space-x-1.5">
-            <span className="font-bold text-xs tracking-wider">FIRE WATCH AI</span>
-            <span className="px-1 py-0.2 text-[8.5px] font-mono font-semibold bg-red-950 text-red-400 border border-red-800 rounded">
-              BRASIL
-            </span>
-          </div>
-        </div>
 
-
-        {/* Seletor Compacto de Camadas e Overlays */}
-        <div className="flex items-center space-x-1.5 flex-shrink-0">
+          {/* Seletor Compacto de Camadas e Overlays */}
           <LayerNavigationBar
             currentLayer={currentLayer}
             onSelectBaseLayer={setCurrentLayer}
@@ -630,7 +630,7 @@ const AppContent: React.FC = () => {
           {/* Filtro Rápido de Novos Surgimentos (< 3h) */}
           <button
             onClick={() => setOnlyNewOutbreaks(!onlyNewOutbreaks)}
-            className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition-all flex items-center gap-1 border ${
+            className={`h-7 px-1.5 sm:px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium transition-all flex items-center gap-1 border shrink-0 cursor-pointer ${
               onlyNewOutbreaks
                 ? 'bg-yellow-500/20 text-yellow-300 border-yellow-400 font-bold shadow-sm shadow-yellow-950 animate-pulse'
                 : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white'
@@ -638,14 +638,14 @@ const AppContent: React.FC = () => {
             title="Filtrar apenas focos detectados há menos de 180 minutos"
           >
             <span>🚨</span>
-            <span className="whitespace-nowrap">Novos (&lt;3h)</span>
+            <span className="whitespace-nowrap hidden sm:inline">Novos &lt;3h</span>
           </button>
 
           {/* Filtro Temporal Compacto */}
-          <div className="flex items-center space-x-1 bg-slate-950/80 border border-slate-800 rounded-md p-0.5 text-xs font-mono">
+          <div className="hidden sm:flex items-center space-x-0.5 bg-slate-950/80 border border-slate-800 rounded-md p-0.5 text-xs font-mono shrink-0">
             <button
               onClick={() => setTemporalMode('24h')}
-              className={`h-7 px-2 py-0.5 rounded text-[11px] transition-all flex items-center gap-1 ${
+              className={`h-7 px-1.5 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
                 temporalMode === '24h'
                   ? 'bg-red-950 text-red-300 border border-red-700 font-bold shadow'
                   : 'text-slate-400 hover:text-white'
@@ -656,7 +656,7 @@ const AppContent: React.FC = () => {
             </button>
             <button
               onClick={() => setTemporalMode('month')}
-              className={`h-7 px-2 py-0.5 rounded text-[11px] transition-all flex items-center gap-1 ${
+              className={`h-7 px-1.5 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
                 temporalMode === 'month'
                   ? 'bg-amber-950 text-amber-300 border border-amber-700 font-bold shadow'
                   : 'text-slate-400 hover:text-white'
@@ -666,7 +666,7 @@ const AppContent: React.FC = () => {
             </button>
             <button
               onClick={() => setTemporalMode('historical')}
-              className={`h-7 px-2 py-0.5 rounded text-[11px] transition-all flex items-center gap-1 ${
+              className={`h-7 px-1.5 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
                 temporalMode === 'historical'
                   ? 'bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold shadow'
                   : 'text-slate-400 hover:text-white'
@@ -677,108 +677,89 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Toggle Switch: Modo Simulação vs Operação Real */}
-        <div className="flex items-center space-x-2 text-xs font-mono flex-shrink-0">
-          <div className="flex items-center space-x-1.5">
-            <button
-              onClick={toggleSimulationMode}
-              className={`h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-all shadow-sm border cursor-pointer ${
-                isSimulation
-                  ? 'bg-amber-950/90 text-amber-300 border-amber-500/80 hover:bg-amber-900/90 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
-                  : 'bg-emerald-950/90 text-emerald-300 border-emerald-500/80 hover:bg-emerald-900/90 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+        {/* Lado Direito: Ações Operacionais, Alternância de Modo & Login */}
+        <div className="flex items-center space-x-1 sm:space-x-1.5 text-xs font-mono flex-shrink-0">
+          {/* Toggle Switch: Modo Simulação vs Operação Real */}
+          <button
+            onClick={toggleSimulationMode}
+            className={`h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1.5 transition-all shadow-sm border cursor-pointer shrink-0 ${
+              isSimulation
+                ? 'bg-amber-950/90 text-amber-300 border-amber-500/80 hover:bg-amber-900/90'
+                : 'bg-emerald-950/90 text-emerald-300 border-emerald-500/80 hover:bg-emerald-900/90'
+            }`}
+            title={isSimulation ? 'Modo Simulação Ativo. Clique para mudar para Dados Reais de Satélite' : 'Modo Operação Real Ativo. Clique para alternar para Simulação'}
+          >
+            <span className="text-[10px]">{isSimulation ? '🧪' : '🛰️'}</span>
+            <span className="hidden md:inline">{isSimulation ? 'SIMULAÇÃO' : 'DADOS REAIS'}</span>
+            
+            <div
+              className={`w-6 h-3 rounded-full p-0.5 transition-colors flex items-center ${
+                isSimulation ? 'bg-amber-600 justify-start' : 'bg-emerald-500 justify-end'
               }`}
-              title={isSimulation ? 'Modo Simulação Ativo. Clique para mudar para Dados Reais de Satélite' : 'Modo Operação Real Ativo. Clique para alternar para Simulação'}
             >
-              <span className="text-[11px]">{isSimulation ? '🧪' : '🛰️'}</span>
-              <span>{isSimulation ? 'SIMULAÇÃO' : 'DADOS REAIS'}</span>
-              
-              <div
-                className={`w-7 h-3.5 rounded-full p-0.5 transition-colors flex items-center ${
-                  isSimulation ? 'bg-amber-600 justify-start' : 'bg-emerald-500 justify-end'
-                }`}
-              >
-                <div className="w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform" />
-              </div>
-            </button>
-
-            {isSimulation ? (
-              <button
-                onClick={() => setIsWhatsAppModalOpen(true)}
-                className="hidden 2xl:flex items-center space-x-1.5 text-amber-400 bg-slate-950/80 hover:bg-amber-950/40 px-2 py-1 rounded border border-amber-800/80 transition cursor-pointer text-[10px]"
-                title="Canal de teste de homologação (+55 92 99374-6740)"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                <span>TESTE: +55 92 99374-6740</span>
-              </button>
-            ) : (
-              <div
-                className="hidden 2xl:flex items-center space-x-1.5 text-emerald-400 bg-slate-950/80 px-2 py-1 rounded border border-emerald-800/80 text-[10px] font-bold"
-                title="Consumindo órbitas reais NASA FIRMS e INPE"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>NASA FIRMS &amp; INPE (REAL)</span>
-              </div>
-            )}
-          </div>
+              <div className="w-2 h-2 rounded-full bg-white shadow-sm transition-transform" />
+            </div>
+          </button>
 
           {/* Botão de Relatórios */}
           <button
             onClick={() => setIsReportsOpen(true)}
-            className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-700/80 transition-all shadow-sm cursor-pointer"
+            className="h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-700/80 transition-all shadow-sm cursor-pointer shrink-0"
             title="Abrir Centro de Relatórios e Estatísticas de Queimadas"
           >
-            <BarChart2 size={12} className="text-purple-400" />
-            <span>Relatórios</span>
+            <BarChart2 size={12} className="text-purple-400 shrink-0" />
+            <span className="hidden lg:inline">Relatórios</span>
           </button>
 
           {/* Botão de Portal SaaS / Demonstração Comercial */}
           <button
             onClick={() => handleSwitchView('landing')}
-            className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-zinc-900/90 hover:bg-zinc-800 text-amber-300 border border-amber-600/70 transition-all shadow-sm cursor-pointer"
+            className="h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 bg-zinc-900/90 hover:bg-zinc-800 text-amber-300 border border-amber-600/70 transition-all shadow-sm cursor-pointer shrink-0"
             title="Abrir Portal Comercial SaaS, Simulador e Planos"
           >
-            <Globe2 size={12} className="text-amber-400" />
-            <span>Portal SaaS</span>
+            <Globe2 size={12} className="text-amber-400 shrink-0" />
+            <span className="hidden xl:inline">Portal SaaS</span>
           </button>
 
           {/* Botão de Configurações */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 transition-all shadow-sm cursor-pointer"
+            className="h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 transition-all shadow-sm cursor-pointer shrink-0"
             title="Abrir Centro de Configurações do Sistema"
           >
-            <Settings size={12} className="text-slate-400" />
-            <span>Config</span>
+            <Settings size={12} className="text-slate-400 shrink-0" />
+            <span className="hidden lg:inline">Config</span>
           </button>
 
           {/* Autenticação / Operador C2 */}
           {user ? (
-            <div className="flex items-center gap-1.5 bg-slate-900/90 border border-emerald-600/70 rounded-md px-2 py-0.5 text-xs font-mono shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-[10px] text-emerald-300 font-bold truncate max-w-[130px]" title={profile?.full_name || user.email || 'Operador'}>
+            <div className="flex items-center gap-1 bg-slate-900/90 border border-emerald-600/70 rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-mono shadow-sm shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <span className="text-[10px] text-emerald-300 font-bold truncate max-w-[80px] sm:max-w-[120px]" title={profile?.full_name || user.email || 'Operador'}>
                 {profile?.full_name || user.email?.split('@')[0]}
               </span>
               <button
                 onClick={() => signOut()}
-                className="p-1 text-slate-400 hover:text-red-400 rounded transition"
+                className="p-0.5 text-slate-400 hover:text-red-400 rounded transition cursor-pointer"
                 title="Encerrar Sessão Tática"
               >
-                <LogOut size={12} />
+                <LogOut size={11} />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="h-7 px-2.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 text-white shadow-sm cursor-pointer transition border border-orange-500/60"
+              className="h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-orange-600 text-white shadow-sm cursor-pointer transition border border-orange-500/60 shrink-0"
               title="Acesso Operacional / Login C2"
             >
-              <UserIcon size={12} />
-              <span>Entrar / Cadastrar</span>
+              <UserIcon size={12} className="shrink-0" />
+              <span className="hidden sm:inline">Entrar</span>
             </button>
           )}
 
-          <div className="hidden sm:flex items-center space-x-1 text-slate-300 bg-slate-950/80 px-2 py-1 rounded border border-slate-800 text-[11px]">
-            <Clock size={11} className="text-amber-300" />
+          {/* Relógio Tático */}
+          <div className="hidden xl:flex items-center space-x-1 text-slate-300 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 text-[10.5px] shrink-0 font-mono">
+            <Clock size={11} className="text-amber-300 shrink-0" />
             <TacticalClock />
           </div>
         </div>

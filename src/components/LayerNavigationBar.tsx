@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, ChevronDown, Satellite, Globe, Radio, Wind, Thermometer, CloudRain, Building } from 'lucide-react';
+import { Layers, ChevronDown, Satellite, Globe, Radio, Wind, Thermometer, CloudRain, Building, LucideIcon } from 'lucide-react';
 import { MapLayerType, MAP_LAYERS, ActiveOverlaysState } from '../types';
 
 export interface GlobalSector {
@@ -29,6 +29,100 @@ export interface LayerNavigationBarProps {
   onSelectGlobalSector?: (center: [number, number], zoom: number, label: string) => void;
 }
 
+interface OverlayConfigItem {
+  key: keyof ActiveOverlaysState;
+  label: string;
+  sublabel: string;
+  icon: LucideIcon;
+  activeBg: string;
+  activeText: string;
+  activeBorder: string;
+  iconActiveColor: string;
+}
+
+const OVERLAYS_CONFIG: OverlayConfigItem[] = [
+  {
+    key: 'clustering',
+    label: 'Agrupamento Tático (Cluster)',
+    sublabel: 'FRP Sintetizado e Alta Fluidez',
+    icon: Layers,
+    activeBg: 'bg-emerald-950/90',
+    activeText: 'text-emerald-200',
+    activeBorder: 'border-emerald-500/80',
+    iconActiveColor: 'text-emerald-400',
+  },
+  {
+    key: 'nasaFirms',
+    label: 'NASA FIRMS (VIIRS 375m)',
+    sublabel: 'Órbita Polar NOAA / NASA',
+    icon: Satellite,
+    activeBg: 'bg-amber-950/90',
+    activeText: 'text-amber-200',
+    activeBorder: 'border-amber-500/80',
+    iconActiveColor: 'text-amber-400',
+  },
+  {
+    key: 'goes16',
+    label: 'GOES-16 ABI (~10-15m)',
+    sublabel: 'Tempo Real Geoestacionário',
+    icon: CloudRain,
+    activeBg: 'bg-cyan-950/90',
+    activeText: 'text-cyan-200',
+    activeBorder: 'border-cyan-500/80',
+    iconActiveColor: 'text-cyan-400',
+  },
+  {
+    key: 'inpeBdqueimadas',
+    label: 'INPE BDQueimadas',
+    sublabel: 'Detecção Oficial Nacional',
+    icon: Radio,
+    activeBg: 'bg-red-950/90',
+    activeText: 'text-red-200',
+    activeBorder: 'border-red-500/80',
+    iconActiveColor: 'text-red-400',
+  },
+  {
+    key: 'googleEarth3d',
+    label: 'Google Earth 3D',
+    sublabel: 'Topografia e Terreno 3D',
+    icon: Globe,
+    activeBg: 'bg-blue-950/90',
+    activeText: 'text-blue-200',
+    activeBorder: 'border-blue-500/80',
+    iconActiveColor: 'text-blue-400',
+  },
+  {
+    key: 'carCadastre',
+    label: 'Malha Fundiária (CAR/SICAR)',
+    sublabel: 'Propriedades Rurais e Terras Indígenas',
+    icon: Building,
+    activeBg: 'bg-amber-950/90',
+    activeText: 'text-amber-200',
+    activeBorder: 'border-amber-500/80',
+    iconActiveColor: 'text-amber-400',
+  },
+  {
+    key: 'smokePlume',
+    label: 'Poluição do Ar (AQI / Fumaça)',
+    sublabel: 'Material Particulado PM2.5',
+    icon: Wind,
+    activeBg: 'bg-purple-950/90',
+    activeText: 'text-purple-200',
+    activeBorder: 'border-purple-500/80',
+    iconActiveColor: 'text-purple-400',
+  },
+  {
+    key: 'thermalMask',
+    label: 'Máscara Térmica (LST Day)',
+    sublabel: 'Gradiente de Calor de Superfície',
+    icon: Thermometer,
+    activeBg: 'bg-orange-950/90',
+    activeText: 'text-orange-200',
+    activeBorder: 'border-orange-500/80',
+    iconActiveColor: 'text-orange-400',
+  },
+];
+
 export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
   currentLayer,
   onSelectBaseLayer,
@@ -38,9 +132,12 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
 }) => {
   const [isBaseDropdownOpen, setIsBaseDropdownOpen] = useState(false);
   const [isSectorDropdownOpen, setIsSectorDropdownOpen] = useState(false);
+  const [isOverlaysDropdownOpen, setIsOverlaysDropdownOpen] = useState(false);
   const [currentSector, setCurrentSector] = useState<string>('global');
+
   const sectorRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const overlaysRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -51,6 +148,9 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
       if (sectorRef.current && !sectorRef.current.contains(e.target as Node)) {
         setIsSectorDropdownOpen(false);
       }
+      if (overlaysRef.current && !overlaysRef.current.contains(e.target as Node)) {
+        setIsOverlaysDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -58,20 +158,32 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
 
   const currentLayerName = MAP_LAYERS[currentLayer]?.name || 'Satélite Híbrido';
 
+  // Contagem de overlays ativos
+  const activeOverlaysCount = [
+    activeOverlays.clustering !== false,
+    Boolean(activeOverlays.nasaFirms),
+    Boolean(activeOverlays.goes16),
+    Boolean(activeOverlays.inpeBdqueimadas),
+    Boolean(activeOverlays.googleEarth3d),
+    Boolean(activeOverlays.carCadastre),
+    Boolean(activeOverlays.smokePlume),
+    Boolean(activeOverlays.thermalMask),
+  ].filter(Boolean).length;
+
   return (
-    <div className="flex items-center space-x-1.5 bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-lg p-0.5 text-xs font-mono select-none">
+    <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-lg p-0.5 text-xs font-mono select-none flex-shrink-0">
       {/* SELETOR 0: TEATRO DE OPERAÇÕES GLOBAL (Continentes / Planeta) */}
       <div className="relative" ref={sectorRef}>
         <button
           onClick={() => setIsSectorDropdownOpen(!isSectorDropdownOpen)}
-          className="flex items-center gap-1 px-2 py-1 rounded bg-slate-900 border border-cyan-700/80 hover:bg-slate-800 text-cyan-300 transition-all font-bold h-7 shadow-sm"
+          className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded bg-slate-900 border border-cyan-700/80 hover:bg-slate-800 text-cyan-300 transition-all font-bold h-7 shadow-sm cursor-pointer"
           title="Navegar por Continente / Teatro Operacional Planetário"
         >
-          <Globe size={13} className="text-cyan-400 animate-spin-slow" />
-          <span className="truncate max-w-[125px]">
+          <Globe size={13} className="text-cyan-400 animate-spin-slow shrink-0" />
+          <span className="hidden md:inline truncate max-w-[85px]">
             {GLOBAL_SECTORS.find(s => s.id === currentSector)?.name.split(' (')[0] || 'Mundo'}
           </span>
-          <ChevronDown size={11} className={`text-cyan-400 transition-transform ${isSectorDropdownOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown size={11} className={`text-cyan-400 transition-transform shrink-0 ${isSectorDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {isSectorDropdownOpen && (
@@ -116,12 +228,12 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsBaseDropdownOpen(!isBaseDropdownOpen)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-slate-200 transition-all font-semibold h-7"
+          className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-slate-200 transition-all font-semibold h-7 cursor-pointer"
           title="Selecionar Mapa Base"
         >
-          <Layers size={13} className="text-cyan-400" />
-          <span className="truncate max-w-[130px]">{currentLayerName}</span>
-          <ChevronDown size={12} className={`text-slate-400 transition-transform ${isBaseDropdownOpen ? 'rotate-180' : ''}`} />
+          <Layers size={13} className="text-cyan-400 shrink-0" />
+          <span className="hidden sm:inline truncate max-w-[95px]">{currentLayerName}</span>
+          <ChevronDown size={12} className={`text-slate-400 transition-transform shrink-0 ${isBaseDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {isBaseDropdownOpen && (
@@ -156,122 +268,60 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
 
       <div className="h-4 w-[1px] bg-slate-800" />
 
-      {/* SELETOR 2: OVERLAYS DE SATÉLITE EM TEMPO REAL (Pílulas Toggle Multi-seleção) */}
-      <div className="flex items-center space-x-1">
-        {/* OVERLAY: Agrupamento Tático / Clustering de Focos */}
+      {/* SELETOR 2: OVERLAYS DE SATÉLITE EM TEMPO REAL (Menu Suspenso Compacto Tático) */}
+      <div className="relative" ref={overlaysRef}>
         <button
-          onClick={() => onToggleOverlay('clustering')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
-            activeOverlays.clustering !== false
-              ? 'bg-emerald-600/90 text-white border-emerald-400 font-bold shadow-sm shadow-emerald-950'
-              : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
+          onClick={() => setIsOverlaysDropdownOpen(!isOverlaysDropdownOpen)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded border h-7 transition-all font-semibold shadow-sm cursor-pointer ${
+            activeOverlaysCount > 0
+              ? 'bg-emerald-950/90 text-emerald-300 border-emerald-600/80 hover:bg-emerald-900/90'
+              : 'bg-slate-900 text-slate-300 border-slate-700/80 hover:bg-slate-800'
           }`}
-          title="Agrupamento Tático de Focos Planetários para visualização fluida e síntese de FRP"
+          title="Ativar/Desativar Camadas & Satélites em Tempo Real"
         >
-          <Layers size={12} className={activeOverlays.clustering !== false ? 'text-emerald-200 animate-pulse' : 'text-slate-400'} />
-          <span>Cluster {activeOverlays.clustering !== false ? 'ON' : 'OFF'}</span>
-        </button>
-        {/* OVERLAY: NASA FIRMS (VIIRS 375m) */}
-        <button
-          onClick={() => onToggleOverlay('nasaFirms')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
-            activeOverlays.nasaFirms
-              ? 'bg-amber-600/90 text-white border-amber-400 font-bold shadow-sm shadow-amber-950'
-              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Focos de Calor VIIRS 375m em Tempo Quase-Real (NASA FIRMS / GIBS)"
-        >
-          <Satellite size={12} className={activeOverlays.nasaFirms ? 'text-amber-200 animate-pulse' : 'text-amber-400'} />
-          <span>FIRMS</span>
-        </button>
-
-        {/* OVERLAY: Google Earth 3D */}
-        <button
-          onClick={() => onToggleOverlay('googleEarth3d')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
-            activeOverlays.googleEarth3d
-              ? 'bg-blue-600/90 text-white border-blue-400 font-bold shadow-sm shadow-blue-950'
-              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Auditoria 3D em Alta Resolução (Google Earth / Topografia de Terreno)"
-        >
-          <Globe size={12} className={activeOverlays.googleEarth3d ? 'text-blue-200 animate-pulse' : 'text-blue-400'} />
-          <span>Earth 3D</span>
-        </button>
-
-        {/* OVERLAY: INPE BDQueimadas */}
-        <button
-          onClick={() => onToggleOverlay('inpeBdqueimadas')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
-            activeOverlays.inpeBdqueimadas
-              ? 'bg-red-600/90 text-white border-red-400 font-bold shadow-sm shadow-red-950'
-              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Anomalias térmicas 24h (INPE BDQueimadas)"
-        >
-          <Radio size={12} className={activeOverlays.inpeBdqueimadas ? 'text-red-200 animate-pulse' : 'text-red-400'} />
-          <span>INPE</span>
-        </button>
-
-        {/* OVERLAY: Satélite Meteorológico GOES-16 (Fumaça & Nuvens ao Vivo a cada 10-15m) */}
-        <button
-          onClick={() => onToggleOverlay('goes16')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 border ${
-            activeOverlays.goes16
-              ? 'bg-cyan-600/90 text-white border-cyan-400 font-bold shadow-sm shadow-cyan-950'
-              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Satélite Meteorológico NOAA GOES-16 ABI • Varreduras a cada 10-15 min • Detecção instantânea de calor"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+          <Radio size={13} className={activeOverlaysCount > 0 ? 'text-emerald-400 animate-pulse shrink-0' : 'text-cyan-400 shrink-0'} />
+          <span>Camadas</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/60">
+            {activeOverlaysCount}
           </span>
-          <CloudRain size={12} className={activeOverlays.goes16 ? 'text-cyan-200 animate-pulse' : 'text-cyan-400'} />
-          <span>GOES-16 (~10m)</span>
+          <ChevronDown size={11} className={`text-slate-400 transition-transform shrink-0 ${isOverlaysDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
-        {/* OVERLAY: Malha Fundiária CAR / SICAR / Terras Indígenas / UCs */}
-        <button
-          onClick={() => onToggleOverlay('carCadastre')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
-            activeOverlays.carCadastre
-              ? 'bg-amber-600/90 text-white border-amber-400 font-bold shadow-sm shadow-amber-950'
-              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Malha Fundiária de Imóveis Rurais (CAR / SICAR / Terras Indígenas / UCs)"
-        >
-          <Building size={12} className={activeOverlays.carCadastre ? 'text-amber-200 animate-pulse' : 'text-amber-400'} />
-          <span>CAR/SICAR</span>
-        </button>
+        {isOverlaysDropdownOpen && (
+          <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-1 w-72 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl p-1.5 z-[1200] overflow-hidden backdrop-blur-md space-y-1 animate-fade-in text-[11px]">
+            <div className="px-1.5 py-1 text-[9.5px] text-cyan-400 uppercase tracking-wider font-bold border-b border-slate-800 flex items-center justify-between mb-1">
+              <span>Camadas & Satélites</span>
+              <span className="text-[8.5px] text-slate-400 font-mono">{activeOverlaysCount}/8 Ativas</span>
+            </div>
 
-        {/* OVERLAY: Poluição do Ar & Pluma de Fumaça (Aerossol MODIS/GOES / AQI) */}
-        <button
-          onClick={() => onToggleOverlay('smokePlume')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
-            activeOverlays.smokePlume
-              ? 'bg-purple-600/90 text-white border-purple-400 font-bold shadow-sm shadow-purple-950'
-              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Medição da poluição do ar, dispersão de fumaça e fuligem PM2.5 (Índice Aerossol UV / AQI)"
-        >
-          <Wind size={12} className={activeOverlays.smokePlume ? 'text-purple-200 animate-pulse' : 'text-purple-400'} />
-          <span>Ar/AQI</span>
-        </button>
-
-        {/* OVERLAY: Máscara Térmica (LST Day) */}
-        <button
-          onClick={() => onToggleOverlay('thermalMask')}
-          className={`h-7 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 border ${
-            activeOverlays.thermalMask
-              ? 'bg-orange-600/90 text-white border-orange-400 font-bold shadow-sm shadow-orange-950'
-              : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Gradiente térmico de temperatura da superfície terrestre (LST Day)"
-        >
-          <Thermometer size={12} className={activeOverlays.thermalMask ? 'text-orange-200 animate-pulse' : 'text-orange-400'} />
-          <span>Térmica</span>
-        </button>
+            {/* Lista dos 8 Overlays com Toggle Tático */}
+            {OVERLAYS_CONFIG.map((ov) => {
+              const isActive = ov.key === 'clustering' ? activeOverlays.clustering !== false : Boolean(activeOverlays[ov.key]);
+              const Icon = ov.icon;
+              return (
+                <button
+                  key={ov.key}
+                  onClick={() => onToggleOverlay(ov.key)}
+                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition-colors border cursor-pointer ${
+                    isActive
+                      ? `${ov.activeBg} ${ov.activeText} ${ov.activeBorder} font-bold shadow-sm`
+                      : 'bg-slate-900/60 text-slate-400 border-slate-800/80 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Icon size={12} className={isActive ? ov.iconActiveColor : 'text-slate-500 shrink-0'} />
+                    <span className="truncate text-[10.5px]">{ov.label}</span>
+                  </div>
+                  <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase shrink-0 ${
+                    isActive ? 'bg-white/10 text-white border border-white/20' : 'bg-slate-800 text-slate-500'
+                  }`}>
+                    {isActive ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
