@@ -18,7 +18,11 @@ import {
   Volume2,
   VolumeX,
   Volume1,
-  Factory
+  Factory,
+  Sun,
+  Moon,
+  Clock,
+  History
 } from 'lucide-react';
 import { FireSpot } from '../types';
 import { calculateAirQuality } from '../data/airQuality';
@@ -74,6 +78,20 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
   };
 
   const isBrazil = spot.is_brazil !== false;
+  const NEIGHBOR_COUNTRIES = [
+    'colômbia', 'colombia',
+    'peru',
+    'bolívia', 'bolivia',
+    'venezuela',
+    'guiana', 'guyana',
+    'suriname',
+    'guiana francesa', 'french guiana',
+    'paraguai', 'paraguay',
+    'argentina',
+    'uruguai', 'uruguay'
+  ];
+  const countryNameClean = (spot.country_name || spot.state || '').toLowerCase();
+  const isNeighborCountry = !isBrazil && NEIGHBOR_COUNTRIES.some(c => countryNameClean.includes(c));
   const landRegistry = spot.land_registry || queryLandRegistry(spot.latitude, spot.longitude, spot.municipality, spot.state);
 
   const airQuality = spot.aqi != null
@@ -238,10 +256,22 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
 
       {/* Alerta de Soberania / Limite Geográfico se Foco Internacional */}
       {!isBrazil && (
-        <div className="bg-amber-950/80 border border-amber-500/80 rounded px-2 py-1 text-[9px] text-amber-200 flex items-center gap-1.5 mb-2">
-          <Globe size={12} className="text-amber-400 flex-shrink-0" />
+        <div className={`border rounded px-2 py-1 text-[9px] flex items-center gap-1.5 mb-2 ${
+          isNeighborCountry
+            ? 'bg-amber-950/80 border-amber-500/80 text-amber-200'
+            : 'bg-blue-950/80 border-blue-500/80 text-blue-200'
+        }`}>
+          <Globe size={12} className={isNeighborCountry ? "text-amber-400 shrink-0" : "text-blue-400 shrink-0"} />
           <span>
-            <strong>PAÍS VIZINHO ({spot.country_name || spot.state}):</strong> Foco fora do território brasileiro (IBGE).
+            {isNeighborCountry ? (
+              <>
+                <strong>PAÍS VIZINHO ({spot.country_name || spot.state}):</strong> Foco em faixa de fronteira com o território brasileiro.
+              </>
+            ) : (
+              <>
+                <strong>MONITORAMENTO INTERNACIONAL / GLOBAL ({spot.country_name || spot.continent || 'Global'}):</strong> Detecção orbital fora do território brasileiro.
+              </>
+            )}
           </span>
         </div>
       )}
@@ -279,21 +309,53 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
           </span>
         </div>
 
-        {/* Coordenadas e Detecção */}
-        <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-slate-800/80 text-[10px] text-slate-400">
-          <div className="flex items-center space-x-1 font-mono text-cyan-300 font-bold">
-            <span>{spot.latitude.toFixed(5)}°, {spot.longitude.toFixed(5)}°</span>
-            <button
-              onClick={copyCoords}
-              className="p-0.5 hover:text-white text-cyan-400 transition ml-1"
-              title="Copiar coordenadas"
-            >
-              {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
-            </button>
+        {/* Coordenadas e Detecção (Upsert: Início Congelado vs Última Passagem Fresca) */}
+        <div className="mt-2 pt-1.5 border-t border-slate-800/80 space-y-1 text-[10px]">
+          <div className="flex items-center justify-between text-slate-400">
+            <div className="flex items-center space-x-1 font-mono text-cyan-300 font-bold">
+              <span>{spot.latitude.toFixed(5)}°, {spot.longitude.toFixed(5)}°</span>
+              <button
+                onClick={copyCoords}
+                className="p-0.5 hover:text-white text-cyan-400 transition ml-1"
+                title="Copiar coordenadas"
+              >
+                {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+              </button>
+            </div>
+            
+            {/* Período da Leitura Orbital (Sol / Lua) */}
+            <div className="flex items-center gap-1">
+              <span className="flex items-center gap-0.5 px-1 py-0.2 rounded text-[8px] font-bold bg-slate-950 border border-slate-700 text-amber-300">
+                {spot.reading_period === 'NOTURNO' ? (
+                  <>
+                    <Moon size={9} className="text-indigo-400 shrink-0" />
+                    <span>LUA (NOTURNO)</span>
+                  </>
+                ) : (
+                  <>
+                    <Sun size={9} className="text-amber-400 shrink-0" />
+                    <span>SOL (DIURNO)</span>
+                  </>
+                )}
+              </span>
+              <span className="text-amber-300 font-medium">
+                {spot.detected_at || 'Tempo Real'}
+              </span>
+            </div>
           </div>
-          <div className="text-amber-300 font-medium">
-            {spot.detected_at || 'Tempo Real'}
-          </div>
+
+          {/* Registro Único Consolidado: Início vs Última Leitura */}
+          {Boolean(spot.first_detected_at && spot.first_detected_at !== spot.detected_at) && (
+            <div className="flex items-center justify-between text-[8.5px] bg-slate-950/70 p-1 rounded border border-slate-800 text-slate-400 font-mono">
+              <span className="flex items-center gap-1">
+                <Clock size={10} className="text-amber-400" />
+                <span>Início Registrado: <strong className="text-white">{spot.first_detected_at}</strong></span>
+              </span>
+              <span className="text-cyan-300 font-bold">
+                Leitura #{spot.readings_count || 2} • {spot.fire_trend || 'ATIVO'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

@@ -75,7 +75,7 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
         </button>
 
         {isSectorDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 w-64 bg-slate-950 border border-cyan-800 rounded-lg shadow-2xl py-1 z-50 overflow-hidden backdrop-blur-md">
+          <div className="absolute top-full left-0 mt-1 w-64 bg-slate-950 border border-cyan-800 rounded-lg shadow-2xl py-1 z-[1200] overflow-hidden backdrop-blur-md">
             <div className="px-3 py-1 text-[10px] text-cyan-400 uppercase tracking-wider font-bold border-b border-slate-800 flex items-center justify-between">
               <span>Teatros Globais</span>
               <span className="text-[9px] bg-cyan-950 text-cyan-300 px-1 rounded">PLANETÁRIO</span>
@@ -125,7 +125,7 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
         </button>
 
         {isBaseDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 w-56 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl py-1 z-50 overflow-hidden">
+          <div className="absolute top-full left-0 mt-1 w-56 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl py-1 z-[1200] overflow-hidden">
             <div className="px-3 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800">
               Mapas Base
             </div>

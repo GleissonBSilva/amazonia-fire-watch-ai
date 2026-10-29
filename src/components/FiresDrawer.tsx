@@ -18,7 +18,11 @@ import {
   SlidersHorizontal,
   Clock,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Sun,
+  Moon,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { fetchRealWeather } from '../services/weatherService';
 import { classifyFireAuthenticity, SmokeColorKey } from '../services/fireClassificationService';
@@ -689,10 +693,35 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
                       </span>
                     </div>
 
-                    <div className="text-[8.5px] text-slate-500 font-mono">
-                      {spot.detected_at.includes('às') ? spot.detected_at.split('às')[1] : spot.detected_at}
+                    <div className="flex items-center gap-1 text-[8.5px] font-mono">
+                      <span title={spot.reading_period === 'NOTURNO' ? 'Passagem Noturna' : 'Passagem Diurna'}>
+                        {spot.reading_period === 'NOTURNO' ? (
+                          <Moon size={10} className="text-indigo-400" />
+                        ) : (
+                          <Sun size={10} className="text-amber-400" />
+                        )}
+                      </span>
+                      <span className="text-slate-400">
+                        {spot.detected_at.includes('às') ? spot.detected_at.split('às')[1] : spot.detected_at}
+                      </span>
                     </div>
                   </div>
+
+                  {/* Upsert: Início Congelado e Tendência */}
+                  {Boolean(spot.first_detected_at && spot.first_detected_at !== spot.detected_at) && (
+                    <div className="mt-1 flex items-center justify-between text-[8px] bg-slate-950/60 px-1 py-0.5 rounded border border-slate-800/80 text-slate-400">
+                      <span className="truncate">Início: <strong className="text-slate-300">{spot.first_detected_at}</strong></span>
+                      <span className={`px-1 rounded text-[7.5px] font-bold ${
+                        spot.fire_trend === 'ALASTRAMENTO'
+                          ? 'text-red-400'
+                          : spot.fire_trend === 'DIMINUINDO'
+                          ? 'text-emerald-400'
+                          : 'text-amber-400'
+                      }`}>
+                        #{spot.readings_count || 2} • {spot.fire_trend || 'ATIVO'}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Botão de Consulta de Telemetria Climática Real */}
                   <div className="mt-1.5 pt-1 border-t border-slate-800/40 flex items-center justify-between">

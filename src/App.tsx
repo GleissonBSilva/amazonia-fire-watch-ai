@@ -5,7 +5,6 @@ import { VideoStreamWindow } from './components/VideoStreamWindow';
 import { OsintFeedWindow } from './components/OsintFeedWindow';
 import { HoverPreviewCard } from './components/HoverPreviewCard';
 import { AIAssistantPanel } from './components/AIAssistantPanel';
-import { SearchBar } from './components/SearchBar';
 import { FiresDrawer } from './components/FiresDrawer';
 import { WhatsAppConfirmModal } from './components/WhatsAppConfirmModal';
 import L from 'leaflet';
@@ -23,6 +22,7 @@ import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LA
 import { fetchNationalFires, fetchHeatmapData, fetchTimelineData, fetchOsintAlerts } from './services/api';
 import { sendWhatsAppFireAlert } from './services/alertService';
 import { goes16Manager } from './services/goes16PollingService';
+import { upsertFireSpots } from './services/spotUpsertService';
 import { Flame, ShieldAlert, Radio, Satellite, Globe, MessageSquare, Clock, Calendar, BarChart2, Layers, Truck, Droplets, Zap, CheckCircle2, Wind } from 'lucide-react';
 import { findNearestInfrastructure } from './data/emergencyInfrastructure';
 import { calculateAirQuality } from './data/airQuality';
@@ -212,7 +212,7 @@ const AppContent: React.FC = () => {
         .then(res => (res.ok ? res.json() : []))
         .then((cachedSpots: FireSpot[]) => {
           if (cachedSpots && Array.isArray(cachedSpots) && cachedSpots.length > 0) {
-            setFireSpots(prev => (prev.length === 0 ? cachedSpots : prev));
+            setFireSpots(prev => upsertFireSpots(prev, cachedSpots));
           }
         })
         .catch(() => {});
@@ -241,16 +241,15 @@ const AppContent: React.FC = () => {
           goes16Manager.reconcileWithPolarFires(spots);
           const goesSpots = goes16Manager.getActiveGoesSpots();
           const combined = [...goesSpots, ...spots];
-          const seen = new Set();
-          const uniqueSpots = combined.filter(s => {
-            if (seen.has(s.id)) return false;
-            seen.add(s.id);
-            return true;
+          
+          // Upsert direto no mesmo registro: consolida mesmo raio <= 2.5km, congela início e atualiza voláteis
+          setFireSpots(prevActiveSpots => {
+            const upserted = upsertFireSpots(prevActiveSpots, combined);
+            try {
+              localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(upserted));
+            } catch {}
+            return upserted;
           });
-          setFireSpots(uniqueSpots);
-          try {
-            localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(uniqueSpots));
-          } catch {}
         }
         setHeatmapSpots(heatmap && heatmap.length > 0 ? heatmap : spots.map(s => [s.latitude, s.longitude, Math.min(1.0, (s.frp_mw || 20) / 100)]));
         setOsintAlerts(osint);
@@ -303,6 +302,23 @@ const AppContent: React.FC = () => {
       clearInterval(pollTimer);
     };
   }, [isSimulation]);
+
+  // Mantém o foco ativo inspecionado pelo operador (selectedSpot) atualizado em tempo real com o Upsert
+  useEffect(() => {
+    if (selectedSpot) {
+      const fresh = fireSpots.find(s => s.id === selectedSpot.id);
+      if (
+        fresh &&
+        (fresh.frp_mw !== selectedSpot.frp_mw ||
+          fresh.last_detected_at !== selectedSpot.last_detected_at ||
+          fresh.latitude !== selectedSpot.latitude ||
+          fresh.longitude !== selectedSpot.longitude ||
+          fresh.fire_trend !== selectedSpot.fire_trend)
+      ) {
+        setSelectedSpot(fresh);
+      }
+    }
+  }, [fireSpots]);
 
   const bringToFront = (id: string) => {
     const nextZ = topZ + 1;
@@ -357,11 +373,8 @@ const AppContent: React.FC = () => {
       console.warn('Detecção de vídeo descartada: Modo Operacional Real ativo.');
       return;
     }
-    setFireSpots(prev => {
-      const exists = prev.some(s => s.id === spot.id);
-      if (exists) return prev;
-      return [spot, ...prev];
-    });
+    // Upsert no mesmo registro se estiver no raio de foco existente
+    setFireSpots(prev => upsertFireSpots(prev, [spot]));
     setHoveredSpot(spot);
     setSelectedSpot(spot);
     setIsBannerVisible(true);
@@ -547,7 +560,12 @@ const AppContent: React.FC = () => {
         showHeatmapOverlay={Boolean(activeOverlays.heatmap || showHeatmapOverlay)}
         externalTargetView={targetMapLocation}
         searchMarker={searchMarker}
+        onLocationSelected={handleLocationSelected}
         onOpenStreetView={handleOpenStreetView}
+        onOpenEarth3D={(lat, lng) => {
+          setCurrentLayer('google_earth');
+          setTargetMapLocation({ center: [lat, lng], zoom: 16, trigger: Date.now() });
+        }}
       />
         );
       })()}
@@ -582,7 +600,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* 3. Top Header Compacto em Linha Única (Sem Transbordamento Horizontal) */}
-      <header className="absolute top-0 left-0 right-0 z-20 h-11 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none overflow-x-auto scrollbar-none gap-2">
+      <header className="absolute top-0 left-0 right-0 z-[1150] h-11 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none overflow-x-auto scrollbar-none gap-2">
         {/* Logo & Identificação Compacta */}
         <div className="flex items-center space-x-2 flex-shrink-0">
           <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-600/20 border border-red-500/60 shadow-[0_0_8px_rgba(255,30,39,0.3)]">
@@ -596,17 +614,6 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Campo de Busca Compacto (w-48 ou w-56) */}
-        <div className="hidden lg:block flex-shrink-0">
-          <SearchBar
-            onLocationSelected={handleLocationSelected}
-            onOpenStreetView={handleOpenStreetView}
-            onOpenEarth3D={(lat, lng) => {
-              setCurrentLayer('google_earth');
-              setTargetMapLocation({ center: [lat, lng], zoom: 16, trigger: Date.now() });
-            }}
-          />
-        </div>
 
         {/* Seletor Compacto de Camadas e Overlays */}
         <div className="flex items-center space-x-1.5 flex-shrink-0">
@@ -779,7 +786,7 @@ const AppContent: React.FC = () => {
 
       {/* Faixa Indicadora de Cerca Virtual Ativa (Isolamento Geográfico da IA) */}
       {activeGeofence && (
-        <div className="absolute top-11 left-0 right-0 z-30 bg-cyan-950/95 border-b-2 border-cyan-400 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-cyan-200 pointer-events-auto backdrop-blur-md shadow-2xl">
+        <div className="absolute top-11 left-0 right-0 z-[1140] bg-cyan-950/95 border-b-2 border-cyan-400 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-cyan-200 pointer-events-auto backdrop-blur-md shadow-2xl">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
             <span className="font-bold text-white text-xs">
@@ -816,7 +823,7 @@ const AppContent: React.FC = () => {
 
       {/* Faixa Indicadora de Modo Simulação */}
       {isSimulation && (
-        <div className="absolute top-11 left-0 right-0 z-10 bg-amber-500/10 border-b border-amber-500/30 px-3 py-0.5 flex items-center justify-between text-[10px] font-mono text-amber-300 pointer-events-none backdrop-blur-xs">
+        <div className="absolute top-11 left-0 right-0 z-[1130] bg-amber-500/10 border-b border-amber-500/30 px-3 py-0.5 flex items-center justify-between text-[10px] font-mono text-amber-300 pointer-events-none backdrop-blur-xs">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
             <span className="font-bold">MODO SIMULAÇÃO ATIVO</span>
@@ -835,7 +842,7 @@ const AppContent: React.FC = () => {
 
       {/* 5. Banner Flutuante de Área Delimitada */}
       {selectedArea && (
-        <div className="absolute top-16 left-12 z-20 bg-slate-900/95 backdrop-blur-md border border-red-500/80 rounded-lg p-3 shadow-2xl font-mono text-xs text-white max-w-sm animate-fade-in pointer-events-auto">
+        <div className="absolute top-16 left-12 z-[950] bg-slate-900/95 backdrop-blur-md border border-red-500/80 rounded-lg p-3 shadow-2xl font-mono text-xs text-white max-w-sm animate-fade-in pointer-events-auto">
           <div className="flex items-center justify-between text-red-400 font-bold border-b border-red-900/60 pb-1 mb-2">
             <span>📍 ÁREA DELIMITADA (LEAFLET-DRAW)</span>
             <span className="text-white text-sm font-bold">~{selectedArea.areaSqKm} km²</span>
@@ -866,7 +873,7 @@ const AppContent: React.FC = () => {
 
       {/* 6. Slider Temporal para Modo Histórico */}
       {temporalMode === 'historical' && (
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-20 bg-slate-900/95 backdrop-blur-md border border-cyan-500/60 rounded-xl p-3 shadow-2xl font-mono text-xs text-white flex items-center gap-4 min-w-[420px] pointer-events-auto">
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-[950] bg-slate-900/95 backdrop-blur-md border border-cyan-500/60 rounded-xl p-3 shadow-2xl font-mono text-xs text-white flex items-center gap-4 min-w-[420px] pointer-events-auto">
           <div className="font-bold text-cyan-300">LINHA TEMPORAL HISTÓRICA:</div>
           <input
             type="range"

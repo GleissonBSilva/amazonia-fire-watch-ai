@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crosshair, ExternalLink, Activity, Radio, Eye, ShieldAlert, Truck, Droplets, Zap, CheckCircle2, Wind } from 'lucide-react';
+import { Crosshair, ExternalLink, Activity, Radio, Eye, ShieldAlert, Truck, Droplets, Zap, CheckCircle2, Wind, Sun, Moon, Clock } from 'lucide-react';
 import { FireSpot } from '../types';
 import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
 import { calculateAirQuality } from '../data/airQuality';
@@ -219,6 +219,37 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
             <div className="text-red-400 font-semibold text-[10px]">{spot.frp_mw} MW</div>
           </div>
         </div>
+
+        {/* Upsert: Ciclo de Vida do Registro Consolidado */}
+        <div className="pt-1 mt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px]">
+          <div className="flex items-center gap-1 text-slate-400">
+            {spot.reading_period === 'NOTURNO' ? (
+              <Moon size={11} className="text-indigo-400" />
+            ) : (
+              <Sun size={11} className="text-amber-400" />
+            )}
+            <span>Leitura {spot.reading_period || 'DIURNO'}</span>
+          </div>
+          <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold ${
+            spot.fire_trend === 'ALASTRAMENTO'
+              ? 'bg-red-950 text-red-300 border border-red-500'
+              : spot.fire_trend === 'DIMINUINDO'
+              ? 'bg-emerald-950 text-emerald-300 border border-emerald-500'
+              : 'bg-amber-950 text-amber-300 border border-amber-600'
+          }`}>
+            {spot.fire_trend || 'ATIVO'}
+          </span>
+        </div>
+
+        {Boolean(spot.first_detected_at && spot.first_detected_at !== spot.detected_at) && (
+          <div className="pt-0.5 text-[8.5px] text-slate-400 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Clock size={10} className="text-amber-400" />
+              <span>Início: {spot.first_detected_at}</span>
+            </span>
+            <span className="text-cyan-300 font-bold">Passagem #{spot.readings_count || 2}</span>
+          </div>
+        )}
 
         {/* Razão Particulado/FRP (PTR) e Parecer IA */}
         <div className="pt-1 mt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px]">

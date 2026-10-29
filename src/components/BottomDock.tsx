@@ -30,7 +30,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
   ];
 
   return (
-    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-40 h-10 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg px-2 py-0.5 flex items-center gap-1 shadow-2xl">
+    <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-[1100] max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar h-11 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-2 py-1 flex items-center gap-1 shadow-[0_10px_35px_rgba(0,0,0,0.85)] pointer-events-auto">
       {dockItems.map(item => {
         const isOpen = openWindows[item.id] || (item.id === 'geofence' && isGeofenceActive);
         const isMin = minimizedWindows[item.id];
@@ -40,7 +40,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
           <button
             key={item.id}
             onClick={() => onToggleWindow(item.id)}
-            className={`relative flex items-center justify-center px-2 py-1 rounded-md transition-all gap-1.5 ${
+            className={`relative flex items-center justify-center px-2.5 py-1.5 rounded-lg transition-all gap-1.5 shrink-0 ${
               isOpen && !isMin
                 ? 'bg-slate-800 border border-cyan-500/60 text-white shadow'
                 : 'bg-slate-950/60 border border-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800'

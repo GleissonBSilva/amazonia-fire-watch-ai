@@ -12,6 +12,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
 import { Crosshair, ExternalLink, Wind, Thermometer } from 'lucide-react';
+import { SearchBar } from './SearchBar';
 import {
   DelimitedArea,
   OSINTAlert,
@@ -37,7 +38,9 @@ interface MainMapProps {
   showHeatmapOverlay?: boolean;
   externalTargetView?: { center: [number, number]; zoom: number; trigger?: number } | null;
   searchMarker?: { lat: number; lng: number; label: string; address?: string } | null;
+  onLocationSelected?: (location: { lat: number; lng: number; label: string; address?: string }) => void;
   onOpenStreetView?: (location: { lat: number; lng: number; label: string; address?: string }) => void;
+  onOpenEarth3D?: (lat: number, lng: number) => void;
   activeGeofence?: {
     id: string;
     name: string;
@@ -407,12 +410,20 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
           <div class="text-[10px] text-slate-300 truncate mb-1 font-bold">${spot.address || `${spot.municipality} - ${spot.state}`}</div>
           <div class="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-1">
             <div>Sensor: <span class="text-white">${spot.satellite}</span></div>
-            <div>Confiança: <span class="text-emerald-400 font-bold">${Math.round((spot.confidence || 0.8) * 100)}%</span></div>
+            <div>Período: <span class="text-amber-300 font-bold">${spot.reading_period === 'NOTURNO' ? '🌙 Noturno' : '☀️ Diurno'}</span></div>
           </div>
-          <div class="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-2 pt-1 border-t border-slate-800">
+          <div class="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-1 pt-1 border-t border-slate-800">
             <div>Temp: <span class="text-amber-300 font-bold">${tempC}°C</span></div>
             <div>FRP: <span class="text-red-400 font-bold">${spot.frp_mw || 0} MW</span></div>
           </div>
+          ${Boolean(spot.first_detected_at && spot.first_detected_at !== spot.detected_at) ? `
+            <div class="text-[8px] text-cyan-300 font-mono mb-2 p-1 bg-slate-900 rounded border border-slate-800 flex items-center justify-between">
+              <span>Início: <strong>${spot.first_detected_at}</strong></span>
+              <span class="text-amber-400 font-bold">#${spot.readings_count || 2} • ${spot.fire_trend || 'ATIVO'}</span>
+            </div>
+          ` : `
+            <div class="mb-1"></div>
+          `}
           <button id="btn-expand-${spot.id}" class="w-full py-1.5 bg-gradient-to-r from-cyan-950 via-slate-900 to-cyan-950 hover:from-cyan-900 hover:to-cyan-800 text-cyan-300 hover:text-white border border-cyan-600/70 rounded text-[9px] font-bold tracking-wider uppercase flex items-center justify-center gap-1 transition-all">
             EXPANDIR FEED // JANELA FLUTUANTE
           </button>
@@ -456,7 +467,9 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   showHeatmapOverlay = false,
   externalTargetView = null,
   searchMarker = null,
+  onLocationSelected,
   onOpenStreetView,
+  onOpenEarth3D,
   activeGeofence = null,
   onClearGeofence,
   onOpenFloorPlan,
@@ -1046,12 +1059,18 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-1">
                     <div>Sensor: <span className="text-white">{spot.satellite}</span></div>
-                    <div>Confiança: <span className="text-emerald-400 font-bold">{(spot.confidence * 100).toFixed(0)}%</span></div>
+                    <div>Período: <span className="text-amber-300 font-bold">{spot.reading_period === 'NOTURNO' ? '🌙 Noturno' : '☀️ Diurno'}</span></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-2 pt-1 border-t border-slate-800">
+                  <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-400 mb-1 pt-1 border-t border-slate-800">
                     <div>Qualidade Ar: <span className="text-amber-300 font-bold">{spot.aqi != null ? `AQI ${spot.aqi}` : 'N/A'}</span></div>
                     <div>Particulado: <span className="text-cyan-300 font-bold">{spot.pm25 != null ? `${spot.pm25} µg/m³` : 'N/A'}</span></div>
                   </div>
+                  {Boolean(spot.first_detected_at && spot.first_detected_at !== spot.detected_at) && (
+                    <div className="text-[8px] text-cyan-300 font-mono mb-2 p-1 bg-slate-900 rounded border border-slate-800 flex items-center justify-between">
+                      <span>Início: <strong>{spot.first_detected_at}</strong></span>
+                      <span className="text-amber-400 font-bold">#{spot.readings_count || 2} • {spot.fire_trend || 'ATIVO'}</span>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => onSpotClick(spot)}
@@ -1220,7 +1239,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
 
       {/* HUD: Legenda Dinâmica de Poluição do Ar (AQI & Aerossóis MODIS) */}
       {overlays.smokePlume && (
-        <div className="absolute bottom-14 left-4 z-20 bg-slate-950/95 backdrop-blur-md border border-purple-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">
+        <div className="absolute bottom-14 left-4 z-[800] bg-slate-950/95 backdrop-blur-md border border-purple-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">
           <div className="flex items-center justify-between border-b border-purple-900/50 pb-1 mb-1.5">
             <span className="text-[10.5px] font-bold text-purple-300 flex items-center gap-1.5">
               <Wind size={13} className="text-purple-400" /> POLUIÇÃO DO AR (AQI / PM2.5)
@@ -1256,7 +1275,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
 
       {/* HUD: Legenda Dinâmica de Temperatura da Superfície (LST Day) */}
       {overlays.thermalMask && (
-        <div className="absolute bottom-14 left-4 z-20 bg-slate-950/95 backdrop-blur-md border border-orange-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">
+        <div className="absolute bottom-14 left-4 z-[800] bg-slate-950/95 backdrop-blur-md border border-orange-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">
           <div className="flex items-center justify-between border-b border-orange-900/50 pb-1 mb-1.5">
             <span className="text-[10.5px] font-bold text-orange-300 flex items-center gap-1.5">
               <Thermometer size={13} className="text-orange-400" /> MÁSCARA TÉRMICA (LST DAY)
@@ -1283,8 +1302,8 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         </div>
       )}
 
-      {/* Barra Flutuante de Atalhos Regionais */}
-      <div className="absolute top-16 left-12 z-20 flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1.5 shadow-2xl font-mono text-xs pointer-events-auto">
+      {/* Barra Flutuante de Atalhos Regionais com Barra de Pesquisa Integrada */}
+      <div className="absolute top-16 left-12 z-[800] flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1.5 shadow-2xl font-mono text-xs pointer-events-auto">
         <span className="text-[10px] text-slate-400 px-1 font-bold">REGIONAL:</span>
         <button
           onClick={() => setCurrentView(BRAZIL_VIEWPORTS.brasil)}
@@ -1304,6 +1323,18 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         >
           🏙️ Manaus
         </button>
+
+        {/* Barra de Pesquisa Integrada na Barra Regional */}
+        {onLocationSelected && (
+          <div className="flex-shrink-0 w-48 sm:w-60">
+            <SearchBar
+              onLocationSelected={onLocationSelected}
+              onOpenStreetView={onOpenStreetView}
+              onOpenEarth3D={onOpenEarth3D}
+              className="relative w-full font-sans"
+            />
+          </div>
+        )}
         {/* Seletor Visual Rápido de Filtro por Cor de Fumaça */}
         <div className="flex items-center gap-1 bg-slate-950/90 border border-purple-800/60 rounded px-1.5 py-0.5">
           <span className="text-[9px] text-purple-300 font-bold flex items-center gap-1">

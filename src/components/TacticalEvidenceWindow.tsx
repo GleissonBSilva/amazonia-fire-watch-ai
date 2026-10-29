@@ -25,7 +25,13 @@ import {
   Radio,
   Clock,
   Copy,
-  Check
+  Check,
+  Sun,
+  Moon,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  History
 } from 'lucide-react';
 
 export interface TacticalEvidenceWindowProps {
@@ -79,8 +85,30 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
     : null;
   const frpMw = spot.frp_mw;
 
-  // Verifica se o alerta é preliminar do GOES-16 (geoestacionário)
-  const isGoes16Preliminary = spot.is_geostationary_preliminary || spot.satellite?.includes('GOES');
+  // Sensor e Satélite dinâmico com fallback
+  const satelliteLabel = spot.satellite || 'GOES-16 ABI';
+
+  // Verifica se o alerta é preliminar de sensor geoestacionário (GOES, Meteosat, Himawari)
+  const isGeostationaryPreliminary =
+    spot.is_geostationary_preliminary ||
+    spot.detection_type === 'PRELIMINAR_GEOESTACIONARIO' ||
+    Boolean(spot.satellite?.includes('GOES') || spot.satellite?.includes('Meteosat') || spot.satellite?.includes('ABI') || spot.satellite?.includes('SEVIRI') || spot.satellite?.includes('Himawari'));
+
+  // Países que fazem fronteira direta com o Brasil / Amazônia
+  const NEIGHBOR_COUNTRIES = [
+    'colômbia', 'colombia',
+    'peru',
+    'bolívia', 'bolivia',
+    'venezuela',
+    'guiana', 'guyana',
+    'suriname',
+    'guiana francesa', 'french guiana',
+    'paraguai', 'paraguay',
+    'argentina',
+    'uruguai', 'uruguay'
+  ];
+  const countryNameClean = (spot.country_name || spot.state || '').toLowerCase();
+  const isNeighborCountry = !isBrazil && NEIGHBOR_COUNTRIES.some(c => countryNameClean.includes(c));
 
   // Telemetria de Qualidade do Ar: Dados comprovados da API ou N/A
   const airQuality = spot.aqi != null
@@ -265,38 +293,50 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
             </div>
           </div>
 
-          {/* ALERTA DE DETECÇÃO EM TEMPO REAL: GOES-16 ABI (Substitui Janela de 12h do Polar) */}
-          {isGoes16Preliminary ? (
+          {/* ALERTA DE DETECÇÃO EM TEMPO REAL: SENSOR GEOESTACIONÁRIO (GOES / METEOSAT) */}
+          {isGeostationaryPreliminary ? (
             <div className="bg-gradient-to-r from-amber-950/90 via-orange-950/80 to-amber-950/90 border border-orange-500 rounded p-2 text-[9px] space-y-1 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-amber-300 flex items-center gap-1.5">
-                  <Radio size={12} className="text-orange-400 animate-pulse" />
-                  <span>ALERTA PRELIMINAR GOES-16 (TEMPO REAL ~10-15m)</span>
+                <span className="font-bold text-amber-300 flex items-center gap-1.5 truncate">
+                  <Radio size={12} className="text-orange-400 animate-pulse shrink-0" />
+                  <span className="truncate">ALERTA PRELIMINAR {satelliteLabel.toUpperCase()} (TEMPO REAL ~10-15m)</span>
                 </span>
-                <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-orange-900 text-orange-200 border border-orange-400">
+                <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-orange-900 text-orange-200 border border-orange-400 shrink-0">
                   ALERTA QUENTE
                 </span>
               </div>
               <p className="text-orange-200/90 text-[8.5px] leading-relaxed">
-                Anomalia térmica detectada instantaneamente pela NOAA (GOES-16 ABI). O sistema mantém o alerta ativo e quente até a passagem de confirmação de alta resolução (375m) do VIIRS/Sentinel.
+                Anomalia térmica detectada instantaneamente pelo sensor {satelliteLabel}. O sistema mantém o alerta ativo e quente até a passagem de confirmação de alta resolução (375m) do VIIRS/Sentinel.
               </p>
             </div>
           ) : (
             <div className="bg-slate-900/80 border border-slate-800 rounded px-2 py-1 text-[8.5px] text-slate-400 flex items-center justify-between flex-shrink-0">
               <span className="flex items-center gap-1 text-slate-300">
-                <Satellite size={11} className="text-cyan-400" />
-                <span>Órbita Polar: Confirmação Calibrada VIIRS 375m</span>
+                <Satellite size={11} className="text-cyan-400 shrink-0" />
+                <span>Órbita Polar: Confirmação Calibrada {satelliteLabel}</span>
               </span>
-              <span className="text-cyan-400 font-bold">Alta Precisão</span>
+              <span className="text-cyan-400 font-bold shrink-0">Alta Precisão</span>
             </div>
           )}
 
           {/* Alerta de Soberania / Limite Geográfico se Foco Internacional */}
           {!isBrazil && (
-            <div className="bg-amber-950/80 border border-amber-500/80 rounded px-2 py-1 text-[9px] text-amber-200 flex items-center gap-1.5 flex-shrink-0">
-              <Globe size={12} className="text-amber-400 flex-shrink-0" />
+            <div className={`border rounded px-2 py-1 text-[9px] flex items-center gap-1.5 flex-shrink-0 ${
+              isNeighborCountry
+                ? 'bg-amber-950/80 border-amber-500/80 text-amber-200'
+                : 'bg-blue-950/80 border-blue-500/80 text-blue-200'
+            }`}>
+              <Globe size={12} className={isNeighborCountry ? "text-amber-400 shrink-0" : "text-blue-400 shrink-0"} />
               <span>
-                <strong>PAÍS VIZINHO ({spot.country_name || spot.state}):</strong> Ponto fora da malha do Brasil (IBGE). Monitoramento orbital transfronteiriço ativo.
+                {isNeighborCountry ? (
+                  <>
+                    <strong>PAÍS VIZINHO ({spot.country_name || spot.state}):</strong> Ponto em faixa de fronteira com o Brasil (IBGE). Monitoramento orbital transfronteiriço ativo.
+                  </>
+                ) : (
+                  <>
+                    <strong>MONITORAMENTO INTERNACIONAL / GLOBAL ({spot.country_name || spot.continent || 'Global'}):</strong> Detecção orbital em território internacional.
+                  </>
+                )}
               </span>
             </div>
           )}
@@ -316,9 +356,13 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
               </>
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-slate-950 font-mono">
-                <Satellite className={isGoes16Preliminary ? "text-amber-400 mb-0.5 animate-pulse" : isBrazil ? "text-cyan-400 mb-0.5" : "text-amber-400 mb-0.5"} size={20} />
+                <Satellite className={isGeostationaryPreliminary ? "text-amber-400 mb-0.5 animate-pulse" : isBrazil ? "text-cyan-400 mb-0.5" : "text-amber-400 mb-0.5"} size={20} />
                 <span className="text-[9.5px] font-bold text-white uppercase tracking-wider">
-                  {isGoes16Preliminary ? 'Sensor Geoestacionário GOES-16 ABI' : isBrazil ? 'Sensor Orbital Polar NASA VIIRS (375m)' : `Detecção NASA FIRMS • ${spot.country_name || 'América do Sul'}`}
+                  {isGeostationaryPreliminary
+                    ? `Sensor Geoestacionário ${satelliteLabel}`
+                    : isBrazil
+                    ? `Sensor Orbital Polar ${satelliteLabel}`
+                    : `Detecção Orbital • ${spot.country_name || 'Internacional'}`}
                 </span>
                 <span className="text-[8.5px] text-slate-400 mt-0.5">
                   Banda Espectral Infravermelha • {spot.latitude.toFixed(5)}°, {spot.longitude.toFixed(5)}°
@@ -329,6 +373,79 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
               {spot.latitude != null && spot.longitude != null
                 ? `${spot.latitude.toFixed(4)}°, ${spot.longitude.toFixed(4)}°`
                 : 'N/A'}
+            </div>
+          </div>
+
+          {/* PAINEL DE CONTROLE DE CICLO DE VIDA (UPSERT DIRETO NO MESMO REGISTRO) */}
+          <div className="bg-slate-950/90 rounded-lg p-2 border border-slate-800 space-y-1.5 flex-shrink-0 font-mono">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-1">
+              <span className="text-[9px] font-bold text-slate-300 flex items-center gap-1.5">
+                <History size={11} className="text-cyan-400 shrink-0" />
+                <span>REGISTRO CONSOLIDADO (UPSERT)</span>
+              </span>
+              <span className="px-1.5 py-0.2 rounded text-[7.5px] font-bold bg-slate-900 text-cyan-300 border border-cyan-800/60">
+                {(spot.readings_count && spot.readings_count > 1) ? `PASSAGEM #${spot.readings_count}` : '1ª DETECÇÃO'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 text-[8.5px]">
+              {/* 1. Início Congelado */}
+              <div className="bg-slate-900/90 p-1.5 rounded border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 text-[7.5px] mb-0.5">
+                  <span className="flex items-center gap-1">
+                    <Clock size={10} className="text-amber-400" />
+                    <span>INÍCIO (CONGELADO)</span>
+                  </span>
+                  <span className="text-amber-300/80 font-bold">1ª LEITURA</span>
+                </div>
+                <div className="text-white font-bold text-[9.5px] truncate">
+                  {spot.first_detected_at || spot.detected_at}
+                </div>
+                <div className="text-[7.5px] text-slate-400 mt-0.5">
+                  FRP Inicial: <strong className="text-amber-300">{spot.initial_frp_mw != null ? `${spot.initial_frp_mw} MW` : `${spot.frp_mw} MW`}</strong>
+                </div>
+              </div>
+
+              {/* 2. Estado Atual Fresco */}
+              <div className="bg-slate-900/90 p-1.5 rounded border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 text-[7.5px] mb-0.5">
+                  <span className="flex items-center gap-1">
+                    {(spot.reading_period === 'NOTURNO') ? (
+                      <Moon size={10} className="text-indigo-400" />
+                    ) : (
+                      <Sun size={10} className="text-amber-400" />
+                    )}
+                    <span>ESTADO ATUAL ({spot.reading_period || 'DIURNO'})</span>
+                  </span>
+                  <span className={`px-1 py-0.1 rounded text-[7px] font-black uppercase ${
+                    spot.fire_trend === 'ALASTRAMENTO'
+                      ? 'bg-red-950 text-red-300 border border-red-500'
+                      : spot.fire_trend === 'DIMINUINDO'
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-500'
+                      : spot.fire_trend === 'ESTAVEL'
+                      ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                      : 'bg-slate-800 text-slate-300'
+                  }`}>
+                    {spot.fire_trend || 'ATIVO'}
+                  </span>
+                </div>
+                <div className="text-cyan-300 font-bold text-[9.5px] truncate">
+                  {spot.last_detected_at || spot.detected_at}
+                </div>
+                <div className="text-[7.5px] text-slate-400 mt-0.5 flex items-center justify-between">
+                  <span>FRP Fresco: <strong className="text-red-400">{spot.frp_mw} MW</strong></span>
+                  {spot.prev_frp_mw != null && spot.prev_frp_mw !== spot.frp_mw && (
+                    <span className="text-[7px] text-slate-500">
+                      (ant: {spot.prev_frp_mw}MW)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[7.5px] text-slate-400 flex items-center justify-between pt-0.5 border-t border-slate-900">
+              <span className="truncate">Frente ativa: {spot.latitude.toFixed(4)}°, {spot.longitude.toFixed(4)}°</span>
+              <span className="text-emerald-400 font-medium shrink-0 ml-1">● Sem duplicação de marcadores</span>
             </div>
           </div>
 

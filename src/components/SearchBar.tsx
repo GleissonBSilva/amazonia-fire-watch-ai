@@ -6,6 +6,7 @@ export interface SearchBarProps {
   onLocationSelected: (location: { lat: number; lng: number; label: string; address?: string }) => void;
   onOpenStreetView?: (location: { lat: number; lng: number; label: string; address?: string }) => void;
   onOpenEarth3D?: (lat: number, lng: number) => void;
+  className?: string;
 }
 
 const QUICK_SUGGESTIONS = [
@@ -22,6 +23,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onLocationSelected,
   onOpenStreetView,
   onOpenEarth3D,
+  className,
 }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeocodingResult[]>([]);
@@ -114,7 +116,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="relative w-48 lg:w-60 font-sans">
+    <div ref={containerRef} className={className || "relative w-48 lg:w-60 font-sans"}>
       <form
         onSubmit={handleSubmit}
         className="flex items-center bg-slate-900/90 border border-slate-700/80 rounded-md shadow px-2 py-0.5 backdrop-blur-md focus-within:border-cyan-400 transition-all h-7"
@@ -146,7 +148,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
       {/* Dropdown de Resultados Geocodificados Avançados */}
       {isOpen && (
-        <div className="absolute top-full left-0 w-80 lg:w-96 mt-1.5 bg-slate-950/98 border border-slate-700/90 rounded-lg shadow-2xl backdrop-blur-xl overflow-hidden z-50 animate-fade-in font-mono text-xs">
+        <div className="absolute top-full left-0 w-80 lg:w-96 mt-1.5 bg-slate-950/98 border border-slate-700/90 rounded-lg shadow-2xl backdrop-blur-xl overflow-hidden z-[1200] animate-fade-in font-mono text-xs">
           <div className="px-2.5 py-1 text-[9.5px] uppercase font-bold text-slate-400 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
             <span>Resultados de Localização</span>
             <span className="text-cyan-400 text-[8.5px]">Google Maps / CEP / OpenStreetMap</span>

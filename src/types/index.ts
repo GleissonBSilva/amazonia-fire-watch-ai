@@ -84,6 +84,19 @@ export interface FireSpot {
   awaiting_polar_confirmation?: boolean;
   goes16_detection_time?: string;
   land_registry?: LandRegistryMatch;
+
+  // Lógica de Atualização Direta (Upsert - Registro Único por Foco Ativo)
+  first_detected_at?: string; // Data/hora da 1ª detecção (congelada)
+  first_detected_iso?: string; // ISO da 1ª detecção (congelada)
+  last_detected_at?: string; // Data/hora da última leitura
+  last_detected_iso?: string; // ISO da última leitura
+  initial_frp_mw?: number; // FRP original na primeira detecção
+  prev_frp_mw?: number; // FRP da leitura imediatamente anterior
+  fire_trend?: 'ATIVO' | 'ALASTRAMENTO' | 'DIMINUINDO' | 'ESTAVEL' | 'EXTINTO';
+  reading_period?: 'DIURNO' | 'NOTURNO'; // ☀️ Diurno / 🌙 Noturno
+  readings_count?: number; // Quantidade de leituras/passagens recebidas no foco
+  is_active_fire?: boolean; // Se o foco continua ativo ou encerrou
+  last_seen_at?: string; // Timestamp da última confirmação do satélite
 }
 
 export interface FireWeatherInfo {
