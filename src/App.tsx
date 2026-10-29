@@ -600,7 +600,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* 3. Top Header Tático Compacto e Totalmente Responsivo (Zero Transbordamento em 100% Zoom) */}
-      <header className="absolute top-0 left-0 right-0 z-[1150] h-11 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-2 sm:px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none gap-1 sm:gap-2 max-w-full overflow-hidden">
+      <header className="absolute top-0 left-0 right-0 z-[1250] h-11 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-2 sm:px-3 py-1 flex items-center justify-between text-white pointer-events-auto select-none gap-1 sm:gap-2 max-w-full overflow-visible">
         {/* Lado Esquerdo: Logo & Navegação de Camadas/Filtros */}
         <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 min-w-0">
           {/* Logo & Identificação Compacta */}

@@ -1303,7 +1303,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
       )}
 
       {/* Barra Flutuante de Atalhos Regionais com Barra de Pesquisa Integrada */}
-      <div className="absolute top-16 left-12 z-[800] flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1.5 shadow-2xl font-mono text-xs pointer-events-auto">
+      <div className="absolute top-16 left-12 z-[1050] flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-lg p-1.5 shadow-2xl font-mono text-xs pointer-events-auto">
         <span className="text-[10px] text-slate-400 px-1 font-bold">REGIONAL:</span>
         <button
           onClick={() => setCurrentView(BRAZIL_VIEWPORTS.brasil)}
