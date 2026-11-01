@@ -233,7 +233,7 @@ class NationalIngestionService:
                     "state": reg["state"],
                     "municipality": reg["municipality"],
                     "address": reg["address"],
-                    "satellite": random.choice(["NOAA-20 (VIIRS)", "Suomi-NPP (VIIRS)", "Aqua (MODIS)", "Terra (MODIS)"]),
+                    "satellite": random.choice(["NOAA-20 (VIIRS)", "Suomi-NPP (VIIRS)", "Aqua (MODIS)", "Terra (MODIS)", "GOES-16 (East ABI)", "GOES-18 (West ABI)", "GOES-19 (Next-Gen ABI)"]),
                     "frp_mw": round(random.uniform(15.0, 68.0), 1),
                     "bright_ti4_k": round(random.uniform(320.0, 365.0), 1),
                     "confidence": round(random.uniform(0.75, 0.98), 2),
@@ -378,6 +378,7 @@ class NationalIngestionService:
                                 "is_brazil": loc["is_brazil"],
                                 "country_code": loc["country_code"],
                                 "country_name": loc["country_name"],
+                                "continent": loc.get("continent", "América do Sul"),
                                 "biome": loc["biome"],
                                 "state": loc["state"],
                                 "municipality": loc["municipality"],
@@ -417,7 +418,7 @@ class NationalIngestionService:
                         # Persist to disk cache
                         try:
                             with open(cache_file, "w", encoding="utf-8") as cf:
-                                json.dump(real_spots[:800], cf)
+                                json.dump(real_spots[:2000], cf)
                         except Exception:
                             pass
 

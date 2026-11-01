@@ -4,6 +4,11 @@
  * external webhooks are blocked and logged internally to console and sandbox.
  */
 
+const isBrowser = typeof window !== 'undefined';
+const isLocalhost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const metaEnv = (import.meta as any).env || {};
+const API_BASE_URL = isLocalhost ? (metaEnv.VITE_API_URL || 'http://localhost:8000/api') : '/api';
+
 export async function sendWhatsAppFireAlert(areaData: {
   lat: number;
   lng: number;
@@ -84,7 +89,7 @@ export async function sendWhatsAppFireAlert(areaData: {
     `Protocolo Operacional Oficial: CBMAM-FIREWATCH-REAL`;
 
   try {
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
+    if (API_BASE_URL) await fetch(`${API_BASE_URL}/alerts/dispatch-safe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -112,9 +117,9 @@ export async function sendSafeFireAlert(payload: {
   reincidente: boolean;
   frp: number;
 }) {
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+  if (API_BASE_URL) {
     try {
-      const res = await fetch('http://localhost:8000/api/alerts/dispatch-safe', {
+      const res = await fetch(`${API_BASE_URL}/alerts/dispatch-safe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

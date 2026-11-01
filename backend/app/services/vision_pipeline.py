@@ -73,7 +73,6 @@ class InMemoryVisionPipeline:
         if confidence < self.confidence_threshold:
             del frame
             del annotated
-            gc.collect() # Immediate garbage collection
             
             with self.lock:
                 self.latest_result = {
@@ -97,8 +96,6 @@ class InMemoryVisionPipeline:
             snapshot_b64 = base64.b64encode(memory_buf.getvalue()).decode('utf-8')
             memory_buf.close()
             del encoded_jpg
-        
-        gc.collect()
         
         with self.lock:
             self.latest_result = {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Flame,
   Satellite,
@@ -54,6 +54,7 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
   const [localStatus, setLocalStatus] = useState<string>(spot.status || 'PENDENTE');
   const [dispatchedTime, setDispatchedTime] = useState<string | null>(spot.dispatched_at || null);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => isVoiceAlertsEnabled());
+  const lastAnnouncedSpotIdRef = useRef<string | null>(null);
 
   const auth = classifyFireAuthenticity(spot);
 
@@ -61,11 +62,12 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
     setLocalStatus(spot.status || 'PENDENTE');
     setDispatchedTime(spot.dispatched_at || null);
     
-    // Anúncio por voz tática com síntese em português (gTTS / Web Speech)
-    if (voiceEnabled) {
+    // Anúncio por voz tática exclusivamente na transição de um novo foco selecionado
+    if (voiceEnabled && spot.id && lastAnnouncedSpotIdRef.current !== spot.id) {
+      lastAnnouncedSpotIdRef.current = spot.id;
       announceFireDetection(spot);
     }
-  }, [spot.id, spot.status, spot.dispatched_at]);
+  }, [spot.id, spot.status, spot.dispatched_at, voiceEnabled]);
 
   const toggleVoice = () => {
     const next = !voiceEnabled;

@@ -21,6 +21,8 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 export async function fetchNationalFires(simulation: boolean = true): Promise<FireSpot[]> {
+  const cacheKey = simulation ? 'amazonia_fire_spots_cache_sim' : 'amazonia_fire_spots_cache_real';
+
   // 1. Tenta consulta ao backend FastAPI com timeout estrito de 2.0s
   try {
     if (!API_BASE_URL) throw new Error('Produção: usando feed sincronizado estático');
@@ -28,10 +30,14 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        try {
-          localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(data));
-        } catch {}
-        return data;
+        // No modo real, garante rigorosamente que nenhum foco simulado entre no cache
+        const sanitized = simulation ? data : data.filter((s: FireSpot) => !s.is_simulated);
+        if (sanitized.length > 0) {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(sanitized));
+          } catch {}
+          return sanitized;
+        }
       }
     }
   } catch (err) {
@@ -45,27 +51,38 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
     if (cacheRes.ok) {
       const cachedSpots: FireSpot[] = await cacheRes.json();
       if (Array.isArray(cachedSpots) && cachedSpots.length > 0) {
-        try {
-          localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(cachedSpots));
-        } catch {}
-        return cachedSpots;
+        const sanitized = simulation ? cachedSpots : cachedSpots.filter((s: FireSpot) => !s.is_simulated);
+        if (sanitized.length > 0) {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(sanitized));
+          } catch {}
+          return sanitized;
+        }
       }
     }
   } catch (cacheErr) {}
 
-  // 3. Fallback de contingência pelo localStorage
+  // 3. Fallback de contingência pelo localStorage dedicado
   try {
-    const local = localStorage.getItem('amazonia_fire_spots_cache');
+    const local = localStorage.getItem(cacheKey);
     if (local) {
       const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const sanitized = simulation ? parsed : parsed.filter((s: FireSpot) => !s.is_simulated);
+        if (sanitized.length > 0) return sanitized;
+      }
     }
   } catch {}
 
-  // Resilient fallback mínimo emergencial se offline sem cache
+  // 4. Modo Real: NUNCA inventa coordenadas ou simulações. Retorna vazio se sem satélite.
+  if (!simulation) {
+    return [];
+  }
+
+  // Resilient fallback mínimo emergencial exclusivo para Modo SIMULAÇÃO se offline sem cache
   return [
     {
-      id: "VIIRS-24H-FALLBACK-1",
+      id: "SIM-24H-FALLBACK-1",
       latitude: -3.08920,
       longitude: -60.02170,
       biome: "Amazônia",
@@ -81,10 +98,11 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
       has_video: true,
       is_arson_cluster: false,
       is_recurrent: true,
+      is_simulated: true,
       video_url: "http://localhost:8000/api/stream/live.mjpg"
     },
     {
-      id: "VIIRS-24H-FALLBACK-2",
+      id: "SIM-24H-FALLBACK-2",
       latitude: -7.25940,
       longitude: -64.79810,
       biome: "Amazônia",
@@ -100,6 +118,7 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
       has_video: true,
       is_arson_cluster: true,
       is_recurrent: true,
+      is_simulated: true,
       video_url: "http://localhost:8000/api/stream/live.mjpg"
     }
   ];

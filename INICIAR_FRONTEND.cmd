@@ -3,6 +3,7 @@ setlocal
 chcp 65001 >nul
 title AMAZONIA FIRE-WATCH AI - FRONTEND REACT
 cls
+cd /d "%~dp0"
 
 echo ========================================================
 echo   AMAZONIA FIRE-WATCH AI - CBMAM / CIOPS

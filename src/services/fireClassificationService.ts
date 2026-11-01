@@ -442,3 +442,53 @@ export function classifyFireAuthenticity(spot: FireSpot): FireAuthenticityResult
     reason: `FRP baixo (${frp} MW) em passagem diurna com baixa emissão de fumaça. Provável aquecimento solar de solo ou telhado.`,
   };
 }
+
+/**
+ * Classifica o continente de um foco com base em telemetria, metadados espaciais ou coordenadas geográficas.
+ */
+export function getSpotContinent(spot: FireSpot): string {
+  if (spot.continent) {
+    const c = spot.continent.toLowerCase();
+    if (c.includes('norte') || c.includes('north')) return 'América do Norte';
+    if (c.includes('sul') || c.includes('south')) return 'América do Sul';
+    if (c.includes('euro')) return 'Europa';
+    if (c.includes('fri') || c.includes('afr')) return 'África';
+    if (c.includes('sia') || c.includes('ásia') || c.includes('asia')) return 'Ásia';
+    if (c.includes('ocea') || c.includes('austr')) return 'Oceania';
+  }
+  const country = (spot.country_name || '').toLowerCase();
+  if (country.includes('estados unidos') || country.includes('usa') || country.includes('canadá') || country.includes('canada') || country.includes('méxico') || country.includes('mexico')) {
+    return 'América do Norte';
+  }
+  if (country.includes('portugal') || country.includes('espanha') || country.includes('grécia') || country.includes('frança') || country.includes('itália') || country.includes('europa')) {
+    return 'Europa';
+  }
+  if (country.includes('congo') || country.includes('angola') || country.includes('moçambique') || country.includes('áfrica') || country.includes('africa')) {
+    return 'África';
+  }
+  if (country.includes('indonésia') || country.includes('indonesia') || country.includes('rússia') || country.includes('russia') || country.includes('china') || country.includes('índia') || country.includes('ásia')) {
+    return 'Ásia';
+  }
+  if (country.includes('austrália') || country.includes('australia') || country.includes('nova zelândia') || country.includes('oceania')) {
+    return 'Oceania';
+  }
+  const lat = spot.latitude;
+  const lng = spot.longitude;
+  if (lat >= 15 && lat <= 72 && lng >= -170 && lng <= -50) return 'América do Norte';
+  if (lat >= 35 && lat <= 71 && lng >= -11 && lng <= 45) return 'Europa';
+  if (lat >= -35 && lat <= 37 && lng >= -18 && lng <= 52) return 'África';
+  if (lat >= -50 && lat <= -10 && lng >= 110 && lng <= 180) return 'Oceania';
+  if (lat >= -11 && lat <= 75 && lng >= 40 && lng <= 180) return 'Ásia';
+  return 'América do Sul';
+}
+
+/**
+ * Identifica se o foco pertence a países vizinhos da América do Sul (Bolívia, Paraguai, Argentina, etc.).
+ */
+export function isSouthAmericaNeighbor(spot: FireSpot): boolean {
+  if (spot.is_brazil === false && getSpotContinent(spot) === 'América do Sul') return true;
+  const country = (spot.country_name || '').toLowerCase();
+  const neighbors = ['bolívia', 'bolivia', 'paraguai', 'paraguay', 'argentina', 'peru', 'colômbia', 'colombia', 'venezuela', 'guiana', 'suriname', 'uruguai', 'uruguay', 'chile', 'equador', 'ecuador'];
+  return neighbors.some(n => country.includes(n));
+}
+

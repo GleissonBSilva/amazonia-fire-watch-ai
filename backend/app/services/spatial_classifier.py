@@ -189,9 +189,10 @@ def find_nearest_municipality(lat: float, lng: float, state_code: str):
 
 def classify_location(lat: float, lng: float) -> dict:
     """
-    Classifica espacialmente um ponto geográfico:
-    - Se dentro do Brasil (IBGE): is_brazil=True, estado, bioma e município.
-    - Se fora do Brasil: is_brazil=False, país vizinho, sem rotular como Cerrado/Amazônia brasileira.
+    Classifica espacialmente um ponto geográfico em âmbito planetário:
+    - Se dentro do Brasil (IBGE): is_brazil=True, continent='América do Sul', estado, bioma e município.
+    - Se vizinho na América do Sul: is_brazil=False, continent='América do Sul', país vizinho (Bolívia, Paraguai, Argentina, etc.).
+    - Se em outros continentes: is_brazil=False, continente correspondente (América do Norte, Europa, África, Ásia, Oceania), país e região.
     """
     in_brazil = is_within_brazil(lat, lng)
 
@@ -209,6 +210,7 @@ def classify_location(lat: float, lng: float) -> dict:
 
         return {
             "is_brazil": True,
+            "continent": "América do Sul",
             "country_code": "BR",
             "country_name": "Brasil",
             "state": state_code,
@@ -217,18 +219,132 @@ def classify_location(lat: float, lng: float) -> dict:
             "municipality": mun,
             "address": addr
         }
-    else:
-        country_code, country_name = identify_neighbor_country(lat, lng)
+
+    # Classificação Internacional Global
+    # 1. América do Sul (Países Vizinhos)
+    if -56.0 <= lat <= 13.0 and -82.0 <= lng <= -34.0:
+        c_code, c_name = identify_neighbor_country(lat, lng)
         return {
             "is_brazil": False,
-            "country_code": country_code,
-            "country_name": country_name,
-            "state": country_code,
-            "state_name": country_name,
-            "biome": "Internacional (País Vizinho)",
-            "municipality": f"{country_name} (América do Sul)",
-            "address": f"Detecção Orbital NASA FIRMS • {country_name} (Foco Transfronteiriço / Internacional)"
+            "continent": "América do Sul",
+            "country_code": c_code,
+            "country_name": c_name,
+            "state": c_code,
+            "state_name": c_name,
+            "biome": "América do Sul (País Vizinho)",
+            "municipality": f"{c_name}",
+            "address": f"Detecção Orbital NASA FIRMS • {c_name} (América do Sul)"
         }
+
+    # 2. América do Norte
+    if 15.0 <= lat <= 72.0 and -170.0 <= lng <= -50.0:
+        if lat >= 49.0:
+            c_code, c_name, city = "CA", "Canadá", "Canadá (Boreal/Alberta/BC)"
+        elif 24.5 <= lat < 49.0:
+            c_code, c_name, city = "US", "Estados Unidos", "EUA (Califórnia/Oeste Americano)"
+        else:
+            c_code, c_name, city = "MX", "México", "México"
+        return {
+            "is_brazil": False,
+            "continent": "América do Norte",
+            "country_code": c_code,
+            "country_name": c_name,
+            "state": c_code,
+            "state_name": c_name,
+            "biome": "Floresta Boreal / Chaparral",
+            "municipality": city,
+            "address": f"Detecção Orbital NASA FIRMS • {city}"
+        }
+
+    # 3. Europa & Mediterrâneo
+    if 35.0 <= lat <= 71.0 and -11.0 <= lng <= 45.0:
+        if -10.0 <= lng <= -6.0:
+            c_code, c_name, city = "PT", "Portugal", "Portugal (Serra da Estrela/Centro)"
+        elif -9.5 <= lng <= 3.5:
+            c_code, c_name, city = "ES", "Espanha", "Espanha (Península Ibérica)"
+        elif 20.0 <= lng <= 28.0 and lat <= 42.0:
+            c_code, c_name, city = "GR", "Grécia", "Grécia (Ática/Mediterrâneo)"
+        else:
+            c_code, c_name, city = "EU", "Europa", "Europa Continental"
+        return {
+            "is_brazil": False,
+            "continent": "Europa",
+            "country_code": c_code,
+            "country_name": c_name,
+            "state": c_code,
+            "state_name": c_name,
+            "biome": "Floresta Mediterrânea / Mista",
+            "municipality": city,
+            "address": f"Detecção Orbital NASA FIRMS • {city}"
+        }
+
+    # 4. África
+    if -35.0 <= lat <= 37.0 and -18.0 <= lng <= 52.0:
+        if -13.0 <= lat <= 5.0 and 12.0 <= lng <= 31.0:
+            c_code, c_name, city = "CD", "República Democrática do Congo", "RDC (Bacia do Congo)"
+        elif -18.0 <= lat <= -4.0 and 11.0 <= lng <= 24.0:
+            c_code, c_name, city = "AO", "Angola", "Angola (Savana do Miombo)"
+        else:
+            c_code, c_name, city = "AF", "África", "África Subsaariana"
+        return {
+            "is_brazil": False,
+            "continent": "África",
+            "country_code": c_code,
+            "country_name": c_name,
+            "state": c_code,
+            "state_name": c_name,
+            "biome": "Savana / Floresta Tropical Congolesa",
+            "municipality": city,
+            "address": f"Detecção Orbital NASA FIRMS • {city}"
+        }
+
+    # 5. Oceania & Austrália
+    if -50.0 <= lat <= -10.0 and 110.0 <= lng <= 180.0:
+        c_code, c_name, city = "AU", "Austrália", "Austrália (Bushfires/NSW/Outback)"
+        return {
+            "is_brazil": False,
+            "continent": "Oceania",
+            "country_code": c_code,
+            "country_name": c_name,
+            "state": c_code,
+            "state_name": c_name,
+            "biome": "Bushland / Eucaliptos",
+            "municipality": city,
+            "address": f"Detecção Orbital NASA FIRMS • {city}"
+        }
+
+    # 6. Ásia
+    if -11.0 <= lat <= 75.0 and 40.0 <= lng <= 180.0:
+        if -11.0 <= lat <= 6.0 and 95.0 <= lng <= 141.0:
+            c_code, c_name, city = "ID", "Indonésia", "Indonésia (Bornéu/Sumatra Turfa)"
+        elif lat >= 50.0 and lng >= 60.0:
+            c_code, c_name, city = "RU", "Rússia", "Rússia (Sibéria/Taiga)"
+        else:
+            c_code, c_name, city = "AS", "Ásia", "Ásia Continental"
+        return {
+            "is_brazil": False,
+            "continent": "Ásia",
+            "country_code": c_code,
+            "country_name": c_name,
+            "state": c_code,
+            "state_name": c_name,
+            "biome": "Turfa Tropical / Taiga Boreal",
+            "municipality": city,
+            "address": f"Detecção Orbital NASA FIRMS • {city}"
+        }
+
+    # Fallback global
+    return {
+        "is_brazil": False,
+        "continent": "América do Sul",
+        "country_code": "INT",
+        "country_name": "Internacional",
+        "state": "INT",
+        "state_name": "Internacional",
+        "biome": "Monitoramento Global",
+        "municipality": "Território Internacional",
+        "address": "Detecção Orbital NASA FIRMS • Global"
+    }
 
 
 # =========================================================================

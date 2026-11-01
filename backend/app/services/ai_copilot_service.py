@@ -169,6 +169,14 @@ class AICopilotService:
                     "• **Finalidade:** Mapeamento radiométrico da temperatura da superfície terrestre diurna.\n"
                     "• **Funcionamento:** Utiliza o produto `MODIS_Terra_Land_Surface_Temp_Day` da NASA em falsa-cor (escala termográfica militar do verde/amarelo até o escarlate/roxo vivo). Permite antecipar zonas de ignição espontânea e identificar vegetação severamente desidratada suscetível ao fogo."
                 )
+            elif "goes" in prompt_lower or "geoestacionario" in prompt_lower or "geoestacionário" in prompt_lower:
+                text = (
+                    "🛰️ **Constelação Geoestacionária NOAA: GOES-16, GOES-18 e GOES-19 (ABI & GLM):**\n\n"
+                    "• **GOES-16 (GOES-East / 75.2° W):** Cobre a Amazônia Central/Oriental, Pantanal, Cerrado e Bacia do Atlântico com varredura a cada 10-15 min.\n"
+                    "• **GOES-18 (GOES-West / 137.0° W):** Cobre a Amazônia Ocidental (Acre, Rondônia, fronteiras Peru/Bolívia), Roraima e Bacia do Pacífico.\n"
+                    "• **GOES-19 (GOES-U / Nova Geração):** Equipado com o sensor ABI aprimorado de 16 bandas espectrais e o Geostationary Lightning Mapper (GLM) para correlacionar tempestades de raios secos com ignições espontâneas em tempo quase-real (taxa mesoescala de 30 segundos).\n"
+                    "• **Integração Operacional:** Fornece o primeiro alerta tático ('QUENTE') antes da passagem dos satélites polares de alta resolução (VIIRS 375m)."
+                )
             elif "nasa" in prompt_lower or "firms" in prompt_lower or "viirs" in prompt_lower:
                 text = (
                     "🛰️ **Camada: NASA FIRMS (VIIRS 375m):**\n\n"

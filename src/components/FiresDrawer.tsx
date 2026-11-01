@@ -27,21 +27,67 @@ import {
 import { fetchRealWeather } from '../services/weatherService';
 import { classifyFireAuthenticity, SmokeColorKey } from '../services/fireClassificationService';
 
+
+export function getSpotContinent(spot: FireSpot): string {
+  if (spot.continent) {
+    const c = spot.continent.toLowerCase();
+    if (c.includes('norte') || c.includes('north')) return 'América do Norte';
+    if (c.includes('sul') || c.includes('south')) return 'América do Sul';
+    if (c.includes('euro')) return 'Europa';
+    if (c.includes('fri') || c.includes('afr')) return 'África';
+    if (c.includes('sia') || c.includes('ásia') || c.includes('asia')) return 'Ásia';
+    if (c.includes('ocea') || c.includes('austr')) return 'Oceania';
+  }
+  const country = (spot.country_name || '').toLowerCase();
+  if (country.includes('estados unidos') || country.includes('usa') || country.includes('canadá') || country.includes('canada') || country.includes('méxico') || country.includes('mexico')) {
+    return 'América do Norte';
+  }
+  if (country.includes('portugal') || country.includes('espanha') || country.includes('grécia') || country.includes('frança') || country.includes('itália') || country.includes('europa')) {
+    return 'Europa';
+  }
+  if (country.includes('congo') || country.includes('angola') || country.includes('moçambique') || country.includes('áfrica') || country.includes('africa')) {
+    return 'África';
+  }
+  if (country.includes('indonésia') || country.includes('indonesia') || country.includes('rússia') || country.includes('russia') || country.includes('china') || country.includes('índia') || country.includes('ásia')) {
+    return 'Ásia';
+  }
+  if (country.includes('austrália') || country.includes('australia') || country.includes('nova zelândia') || country.includes('oceania')) {
+    return 'Oceania';
+  }
+  const lat = spot.latitude;
+  const lng = spot.longitude;
+  if (lat >= 15 && lat <= 72 && lng >= -170 && lng <= -50) return 'América do Norte';
+  if (lat >= 35 && lat <= 71 && lng >= -11 && lng <= 45) return 'Europa';
+  if (lat >= -35 && lat <= 37 && lng >= -18 && lng <= 52) return 'África';
+  if (lat >= -50 && lat <= -10 && lng >= 110 && lng <= 180) return 'Oceania';
+  if (lat >= -11 && lat <= 75 && lng >= 40 && lng <= 180) return 'Ásia';
+  return 'América do Sul';
+}
+
+export function isSouthAmericaNeighbor(spot: FireSpot): boolean {
+  if (spot.is_brazil === false && getSpotContinent(spot) === 'América do Sul') return true;
+  const country = (spot.country_name || '').toLowerCase();
+  const neighbors = ['bolívia', 'bolivia', 'paraguai', 'paraguay', 'argentina', 'peru', 'colômbia', 'colombia', 'venezuela', 'guiana', 'suriname', 'uruguai', 'uruguay', 'chile', 'equador', 'ecuador'];
+  return neighbors.some(n => country.includes(n));
+}
+
 interface FiresDrawerProps {
   fireSpots: FireSpot[];
   onSelectSpot: (spot: FireSpot) => void;
   selectedSpotId?: string | null;
+  isSimulation?: boolean;
 }
 
 export const FiresDrawer: React.FC<FiresDrawerProps> = ({
   fireSpots,
   onSelectSpot,
   selectedSpotId,
+  isSimulation = true,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filterText, setFilterText] = useState('');
   const [dataNatureFilter, setDataNatureFilter] = useState<'all' | 'real' | 'simulated'>('real');
-  const [scopeFilter, setScopeFilter] = useState<'all' | 'brasil' | 'north_america' | 'europe' | 'africa' | 'asia' | 'oceania'>('all');
+  const [scopeFilter, setScopeFilter] = useState<'all' | 'brasil' | 'south_america_intl' | 'north_america' | 'europe' | 'africa' | 'asia' | 'oceania'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'video' | 'crime' | 'recurrent'>('all');
   
   // Filtros Analíticos e Científicos Reais
@@ -60,16 +106,18 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
   const baseSpots = useMemo(() => {
     return fireSpots.filter(s => {
       // 1. Filtro de Natureza: Real vs Simulado
+      if (!isSimulation && s.is_simulated) return false;
       if (dataNatureFilter === 'real' && s.is_simulated) return false;
       if (dataNatureFilter === 'simulated' && !s.is_simulated) return false;
 
-      // 2. Filtro de Escopo Territorial
-      if (scopeFilter === 'brasil') return s.is_brazil !== false;
-      if (scopeFilter === 'north_america') return s.continent === 'América do Norte' || s.country_name === 'Estados Unidos' || s.country_name === 'Canadá';
-      if (scopeFilter === 'europe') return s.continent === 'Europa';
-      if (scopeFilter === 'africa') return s.continent === 'África' || s.continent === 'Africa' || s.country_name === 'República Democrática do Congo' || s.country_name === 'África';
-      if (scopeFilter === 'asia') return s.continent === 'Ásia' || s.continent === 'Asia' || s.country_name === 'Indonésia';
-      if (scopeFilter === 'oceania') return s.continent === 'Oceania' || s.country_name === 'Austrália';
+      // 2. Filtro de Escopo Territorial Planetário
+      if (scopeFilter === 'brasil') return s.is_brazil !== false && (s.country_name === 'Brasil' || !s.country_name || s.country_code === 'BR');
+      if (scopeFilter === 'south_america_intl') return isSouthAmericaNeighbor(s);
+      if (scopeFilter === 'north_america') return getSpotContinent(s) === 'América do Norte';
+      if (scopeFilter === 'europe') return getSpotContinent(s) === 'Europa';
+      if (scopeFilter === 'africa') return getSpotContinent(s) === 'África';
+      if (scopeFilter === 'asia') return getSpotContinent(s) === 'Ásia';
+      if (scopeFilter === 'oceania') return getSpotContinent(s) === 'Oceania';
       return true; // 'all'
     });
   }, [fireSpots, dataNatureFilter, scopeFilter]);
@@ -97,26 +145,40 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
       if (frpFilter === 'moderate' && (spot.frp_mw < 20 || spot.frp_mw >= 50)) return false;
       if (frpFilter === 'low' && spot.frp_mw >= 20) return false;
 
-      // Recency Filter (Tempo decorrido da órbita do satélite)
-      const mins = spot.minutes_ago ?? (spot.is_new_outbreak ? 60 : 999);
+      // Recency Filter (Tempo decorrido da órbita do satélite calculado sem interferência)
+      let mins = spot.minutes_ago;
+      if (mins === undefined && spot.detected_iso) {
+        try {
+          const passTime = new Date(spot.detected_iso).getTime();
+          if (passTime > 0) {
+            mins = Math.max(1, Math.round((Date.now() - passTime) / 60000));
+          }
+        } catch {}
+      }
+      if (mins === undefined) {
+        mins = spot.is_new_outbreak ? 60 : 360;
+      }
+
       if (recencyFilter === '3h' && mins > 180) return false;
       if (recencyFilter === '6h' && mins > 360) return false;
       if (recencyFilter === '12h' && mins > 720) return false;
 
       // Biome Filter
-      if (biomeFilter !== 'all' && !spot.biome.toLowerCase().includes(biomeFilter.toLowerCase())) {
+      if (biomeFilter !== 'all' && !(spot.biome?.toLowerCase() || '').includes(biomeFilter.toLowerCase())) {
         return false;
       }
 
-      // Text filter
+      // Text filter (Suporta busca por Município, Estado, País Internacional, Continente, Bioma e Satélite)
       if (!filterText.trim()) return true;
       const term = filterText.toLowerCase();
       return (
-        spot.address.toLowerCase().includes(term) ||
-        spot.municipality.toLowerCase().includes(term) ||
-        spot.state.toLowerCase().includes(term) ||
-        spot.biome.toLowerCase().includes(term) ||
-        spot.satellite.toLowerCase().includes(term)
+        (spot.address?.toLowerCase() || '').includes(term) ||
+        (spot.municipality?.toLowerCase() || '').includes(term) ||
+        (spot.state?.toLowerCase() || '').includes(term) ||
+        (spot.country_name?.toLowerCase() || '').includes(term) ||
+        (spot.continent?.toLowerCase() || '').includes(term) ||
+        (spot.biome?.toLowerCase() || '').includes(term) ||
+        (spot.satellite?.toLowerCase() || '').includes(term)
       );
     });
   }, [baseSpots, filterText, categoryFilter, frpFilter, recencyFilter, biomeFilter, onlyRealVegetation, smokeColorFilter]);
@@ -128,16 +190,41 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
       all: fireSpots.length,
       real: realTotal,
       simulated: simTotal,
-      brasil: fireSpots.filter(s => s.is_brazil !== false).length,
-      northAmerica: fireSpots.filter(s => s.continent === 'América do Norte').length,
-      europe: fireSpots.filter(s => s.continent === 'Europa').length,
-      africa: fireSpots.filter(s => s.continent === 'África').length,
-      asia: fireSpots.filter(s => s.continent === 'Ásia').length,
-      oceania: fireSpots.filter(s => s.continent === 'Oceania').length,
+      brasil: fireSpots.filter(s => s.is_brazil !== false && (s.country_name === 'Brasil' || !s.country_name || s.country_code === 'BR')).length,
+      southAmericaIntl: fireSpots.filter(s => isSouthAmericaNeighbor(s)).length,
+      northAmerica: fireSpots.filter(s => getSpotContinent(s) === 'América do Norte').length,
+      europe: fireSpots.filter(s => getSpotContinent(s) === 'Europa').length,
+      africa: fireSpots.filter(s => getSpotContinent(s) === 'África').length,
+      asia: fireSpots.filter(s => getSpotContinent(s) === 'Ásia').length,
+      oceania: fireSpots.filter(s => getSpotContinent(s) === 'Oceania').length,
       recent3h: fireSpots.filter(s => (s.minutes_ago ?? (s.is_new_outbreak ? 60 : 999)) <= 180).length,
       currentFiltered: baseSpots.length,
     };
   }, [fireSpots, baseSpots]);
+
+  const activeFiltersCount = useMemo(() => {
+    return [
+      scopeFilter !== 'all',
+      categoryFilter !== 'all',
+      frpFilter !== 'all',
+      recencyFilter !== 'all',
+      biomeFilter !== 'all',
+      smokeColorFilter !== 'all',
+      onlyRealVegetation,
+      Boolean(filterText.trim()),
+    ].filter(Boolean).length;
+  }, [scopeFilter, categoryFilter, frpFilter, recencyFilter, biomeFilter, smokeColorFilter, onlyRealVegetation, filterText]);
+
+  const resetAllFilters = () => {
+    setScopeFilter('all');
+    setCategoryFilter('all');
+    setFrpFilter('all');
+    setRecencyFilter('all');
+    setBiomeFilter('all');
+    setSmokeColorFilter('all');
+    setOnlyRealVegetation(false);
+    setFilterText('');
+  };
 
   const handleFetchCardWeather = async (spot: FireSpot, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -185,40 +272,47 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
           </div>
 
           {/* SELETOR 1: NATUREZA DO DADO (REAIS vs SIMULADOS) */}
-          <div className="flex items-center gap-1 mb-2 font-mono text-[9.5px]">
-            <button
-              onClick={() => setDataNatureFilter('real')}
-              className={`flex-1 py-1 rounded font-bold text-center transition flex items-center justify-center gap-1 border ${
-                dataNatureFilter === 'real'
-                  ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-sm shadow-emerald-950'
-                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-              }`}
-            >
-              <Satellite size={10} className="text-emerald-400" />
-              <span>🛰️ REAIS ({counts.real})</span>
-            </button>
-            <button
-              onClick={() => setDataNatureFilter('simulated')}
-              className={`flex-1 py-1 rounded font-bold text-center transition flex items-center justify-center gap-1 border ${
-                dataNatureFilter === 'simulated'
-                  ? 'bg-amber-950 text-amber-300 border-amber-500 shadow-sm shadow-amber-950'
-                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-              }`}
-            >
-              <span>🎯 SIMULADOS ({counts.simulated})</span>
-            </button>
-            <button
-              onClick={() => setDataNatureFilter('all')}
-              className={`px-2 py-1 rounded font-bold text-center transition border ${
-                dataNatureFilter === 'all'
-                  ? 'bg-cyan-950 text-cyan-200 border-cyan-500'
-                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-              }`}
-              title="Exibir todos com separação nítida"
-            >
-              TODOS ({counts.all})
-            </button>
-          </div>
+          {!isSimulation ? (
+            <div className="flex items-center gap-2 mb-2 p-1.5 rounded bg-emerald-950/70 border border-emerald-500/80 font-mono text-[9px] text-emerald-300">
+              <Satellite size={12} className="text-emerald-400 shrink-0" />
+              <span className="font-bold">🛰️ DADOS ORBITAIS REAIS NASA FIRMS ({counts.real}) • ZERO SIMULAÇÃO</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 mb-2 font-mono text-[9.5px]">
+              <button
+                onClick={() => setDataNatureFilter('real')}
+                className={`flex-1 py-1 rounded font-bold text-center transition flex items-center justify-center gap-1 border ${
+                  dataNatureFilter === 'real'
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-sm shadow-emerald-950'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+              >
+                <Satellite size={10} className="text-emerald-400" />
+                <span>🛰️ REAIS ({counts.real})</span>
+              </button>
+              <button
+                onClick={() => setDataNatureFilter('simulated')}
+                className={`flex-1 py-1 rounded font-bold text-center transition flex items-center justify-center gap-1 border ${
+                  dataNatureFilter === 'simulated'
+                    ? 'bg-amber-950 text-amber-300 border-amber-500 shadow-sm shadow-amber-950'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+              >
+                <span>🎯 SIMULADOS ({counts.simulated})</span>
+              </button>
+              <button
+                onClick={() => setDataNatureFilter('all')}
+                className={`px-2 py-1 rounded font-bold text-center transition border ${
+                  dataNatureFilter === 'all'
+                    ? 'bg-cyan-950 text-cyan-200 border-cyan-500'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+                title="Exibir todos com separação nítida"
+              >
+                TODOS ({counts.all})
+              </button>
+            </div>
+          )}
 
           {/* SELETOR 2: ESCOPO CONTINENTAL / MUNDIAL */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1.5 mb-2 no-scrollbar font-mono text-[8.5px]">
@@ -228,7 +322,7 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
                 scopeFilter === 'all' ? 'bg-cyan-600 text-white border-cyan-400 font-bold' : 'bg-slate-950 text-slate-400 border-slate-800'
               }`}
             >
-              🌐 Global
+              🌐 Global ({counts.all})
             </button>
             <button
               onClick={() => setScopeFilter('brasil')}
@@ -239,12 +333,20 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
               🇧🇷 Brasil ({counts.brasil})
             </button>
             <button
+              onClick={() => setScopeFilter('south_america_intl')}
+              className={`px-2 py-0.5 rounded border transition flex-shrink-0 ${
+                scopeFilter === 'south_america_intl' ? 'bg-teal-600 text-white border-teal-400 font-bold' : 'bg-slate-950 text-slate-400 border-slate-800'
+              }`}
+            >
+              🌎 Vizinhos ({counts.southAmericaIntl})
+            </button>
+            <button
               onClick={() => setScopeFilter('north_america')}
               className={`px-2 py-0.5 rounded border transition flex-shrink-0 ${
                 scopeFilter === 'north_america' ? 'bg-blue-600 text-white border-blue-400 font-bold' : 'bg-slate-950 text-slate-400 border-slate-800'
               }`}
             >
-              🇺🇸 EUA/Canadá
+              🇺🇸 EUA/Canadá ({counts.northAmerica})
             </button>
             <button
               onClick={() => setScopeFilter('europe')}
@@ -252,7 +354,7 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
                 scopeFilter === 'europe' ? 'bg-purple-600 text-white border-purple-400 font-bold' : 'bg-slate-950 text-slate-400 border-slate-800'
               }`}
             >
-              🇪🇺 Europa
+              🇪🇺 Europa ({counts.europe})
             </button>
             <button
               onClick={() => setScopeFilter('africa')}
@@ -260,7 +362,7 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
                 scopeFilter === 'africa' ? 'bg-amber-600 text-white border-amber-400 font-bold' : 'bg-slate-950 text-slate-400 border-slate-800'
               }`}
             >
-              🌍 África
+              🌍 África ({counts.africa})
             </button>
             <button
               onClick={() => setScopeFilter('asia')}
@@ -268,7 +370,15 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
                 scopeFilter === 'asia' ? 'bg-rose-600 text-white border-rose-400 font-bold' : 'bg-slate-950 text-slate-400 border-slate-800'
               }`}
             >
-              🇮🇩 Ásia
+              🇮🇩 Ásia ({counts.asia})
+            </button>
+            <button
+              onClick={() => setScopeFilter('oceania')}
+              className={`px-2 py-0.5 rounded border transition flex-shrink-0 ${
+                scopeFilter === 'oceania' ? 'bg-yellow-600 text-white border-yellow-400 font-bold' : 'bg-slate-950 text-slate-400 border-slate-800'
+              }`}
+            >
+              🦘 Oceania ({counts.oceania})
             </button>
           </div>
 
@@ -317,6 +427,23 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
               />
             </div>
           </div>
+
+          {/* BANNER INDICADOR DE FILTROS ATIVOS E RESET DE INTERFERÊNCIA */}
+          {activeFiltersCount > 0 && (
+            <div className="mb-2 p-1.5 rounded-lg bg-amber-950/80 border border-amber-500/80 flex items-center justify-between font-mono text-[9px] animate-fade-in shadow-sm">
+              <span className="text-amber-200 font-bold flex items-center gap-1 truncate">
+                <span>⚡ {activeFiltersCount} filtro{activeFiltersCount > 1 ? 's' : ''} ativo{activeFiltersCount > 1 ? 's' : ''} ({filteredSpots.length} focos)</span>
+              </span>
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[9px] transition cursor-pointer shrink-0 ml-1 shadow"
+                title="Limpar todos os filtros simultaneamente para evitar interferência na listagem"
+              >
+                ✕ Resetar Filtros
+              </button>
+            </div>
+          )}
 
           {/* Campo de Busca Rápida no Drawer */}
           <div className="relative mb-2">
@@ -574,8 +701,18 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
         {/* Lista de Focos com Scroll */}
         <div className="flex-1 overflow-y-auto divide-y divide-slate-800 p-1 font-mono">
           {filteredSpots.length === 0 ? (
-            <div className="p-6 text-center text-slate-500 text-xs">
-              Nenhum foco ativo coincide com os filtros analíticos selecionados.
+            <div className="p-6 text-center text-slate-400 font-mono text-xs space-y-2">
+              <div className="text-amber-400 font-bold">⚠️ Nenhum foco encontrado com os filtros atuais</div>
+              <div className="text-[10px] text-slate-400 leading-relaxed">
+                Pode haver interferência entre a busca de texto, recorte geográfico ({scopeFilter}) ou restrição de fumaça/bioma.
+              </div>
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="mt-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded text-[10.5px] transition shadow-md cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <span>🔄 Resetar Todos os Filtros</span>
+              </button>
             </div>
           ) : (
             filteredSpots.map((spot) => {

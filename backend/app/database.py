@@ -10,23 +10,6 @@ from .config import settings
 def get_db_connection():
     conn = sqlite3.connect(settings.DATABASE_PATH)
     conn.row_factory = sqlite3.Row
-    # Ensure tables exist
-    cursor = conn.cursor()
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS osint_alerts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        source TEXT NOT NULL,
-        author TEXT,
-        original_url TEXT NOT NULL,
-        text TEXT NOT NULL,
-        latitude REAL,
-        longitude REAL,
-        confidence REAL DEFAULT 0.85,
-        keywords_matched TEXT,
-        created_at TEXT NOT NULL
-    );
-    """)
-    conn.commit()
     return conn
 
 def init_db():
@@ -47,6 +30,7 @@ def init_db():
         created_at TEXT NOT NULL
     );
     """)
+    conn.commit()
     
     # Check if empty, seed initial verified OSINT alerts for Manaus
     cursor.execute("SELECT COUNT(*) FROM osint_alerts")

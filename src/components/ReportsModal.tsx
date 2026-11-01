@@ -73,7 +73,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
           f.longitude <= maxLng
       );
     } else if (reportScope === 'amazonia') {
-      list = list.filter((f) => f.biome.toLowerCase().includes('amazônia') || f.state === 'AM');
+      list = list.filter((f) => (f.biome?.toLowerCase() || '').includes('amazônia') || f.state === 'AM');
     }
 
     if (timeScope === 'recent') {
@@ -126,11 +126,11 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
     const term = searchTableQuery.toLowerCase();
     return reportFires.filter(
       (f) =>
-        f.id.toLowerCase().includes(term) ||
-        f.municipality.toLowerCase().includes(term) ||
-        f.state.toLowerCase().includes(term) ||
-        f.satellite.toLowerCase().includes(term) ||
-        f.biome.toLowerCase().includes(term)
+        (f.id?.toLowerCase() || '').includes(term) ||
+        (f.municipality?.toLowerCase() || '').includes(term) ||
+        (f.state?.toLowerCase() || '').includes(term) ||
+        (f.satellite?.toLowerCase() || '').includes(term) ||
+        (f.biome?.toLowerCase() || '').includes(term)
     );
   }, [reportFires, searchTableQuery]);
 

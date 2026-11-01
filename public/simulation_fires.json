@@ -8,8 +8,8 @@
     "municipality": "Lábrea",
     "address": "BR-230 Transamazônica km 50 - Lábrea/AM",
     "satellite": "NOAA-20 (VIIRS 375m)",
-    "frp_mw": 33.0,
-    "bright_ti4_k": 345.0,
+    "frp_mw": 33,
+    "bright_ti4_k": 345,
     "confidence": 0.96,
     "detected_at": "28/10/2026 18:40:13",
     "detected_iso": "2026-10-28T18:40:13.324647-04:00",
@@ -27,7 +27,9 @@
     "pm25": 97.2,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1002",
@@ -39,7 +41,7 @@
     "address": "BR-230 Transamazônica km 52 - Lábrea/AM",
     "satellite": "NOAA-20 (VIIRS 375m)",
     "frp_mw": 43.5,
-    "bright_ti4_k": 349.0,
+    "bright_ti4_k": 349,
     "confidence": 0.96,
     "detected_at": "28/10/2026 18:25:13",
     "detected_iso": "2026-10-28T18:25:13.324647-04:00",
@@ -57,7 +59,9 @@
     "pm25": 124.3,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1003",
@@ -69,7 +73,7 @@
     "address": "BR-230 Transamazônica km 54 - Lábrea/AM",
     "satellite": "NOAA-20 (VIIRS 375m)",
     "frp_mw": 52.7,
-    "bright_ti4_k": 353.0,
+    "bright_ti4_k": 353,
     "confidence": 0.96,
     "detected_at": "28/10/2026 18:10:13",
     "detected_iso": "2026-10-28T18:10:13.324647-04:00",
@@ -87,7 +91,9 @@
     "pm25": 148.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1004",
@@ -99,7 +105,7 @@
     "address": "BR-230 Transamazônica km 56 - Lábrea/AM",
     "satellite": "NOAA-20 (VIIRS 375m)",
     "frp_mw": 60.2,
-    "bright_ti4_k": 357.0,
+    "bright_ti4_k": 357,
     "confidence": 0.96,
     "detected_at": "28/10/2026 17:55:13",
     "detected_iso": "2026-10-28T17:55:13.324647-04:00",
@@ -117,7 +123,9 @@
     "pm25": 167.4,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1005",
@@ -129,7 +137,7 @@
     "address": "BR-230 Transamazônica km 58 - Lábrea/AM",
     "satellite": "NOAA-20 (VIIRS 375m)",
     "frp_mw": 70.8,
-    "bright_ti4_k": 361.0,
+    "bright_ti4_k": 361,
     "confidence": 0.96,
     "detected_at": "28/10/2026 17:40:13",
     "detected_iso": "2026-10-28T17:40:13.324647-04:00",
@@ -147,7 +155,9 @@
     "pm25": 194.8,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1006",
@@ -177,7 +187,9 @@
     "pm25": 75.3,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1007",
@@ -207,7 +219,9 @@
     "pm25": 88.2,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1008",
@@ -237,7 +251,9 @@
     "pm25": 101.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1009",
@@ -249,7 +265,7 @@
     "address": "Av. das Torres, Bairro Flores - Manaus/AM",
     "satellite": "Suomi-NPP (VIIRS)",
     "frp_mw": 18.1,
-    "bright_ti4_k": 325.0,
+    "bright_ti4_k": 325,
     "confidence": 0.95,
     "detected_at": "28/10/2026 12:36:13",
     "detected_iso": "2026-10-28T12:36:13.324647-04:00",
@@ -267,7 +283,9 @@
     "pm25": 58.7,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1010",
@@ -297,7 +315,9 @@
     "pm25": 162.5,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1011",
@@ -327,7 +347,9 @@
     "pm25": 185.2,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1012",
@@ -357,7 +379,9 @@
     "pm25": 70.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1013",
@@ -387,7 +411,9 @@
     "pm25": 148.6,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1014",
@@ -417,7 +443,9 @@
     "pm25": 82.2,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1015",
@@ -447,7 +475,9 @@
     "pm25": 61.8,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1016",
@@ -477,7 +507,9 @@
     "pm25": 54.6,
     "air_quality_level": "RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1017",
@@ -507,7 +539,9 @@
     "pm25": 126.9,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1018",
@@ -537,7 +571,9 @@
     "pm25": 163.3,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1019",
@@ -567,7 +603,9 @@
     "pm25": 176.2,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1020",
@@ -597,7 +635,9 @@
     "pm25": 166.7,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1021",
@@ -627,7 +667,9 @@
     "pm25": 96.4,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1022",
@@ -657,7 +699,9 @@
     "pm25": 124.6,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1023",
@@ -668,7 +712,7 @@
     "municipality": "Autazes",
     "address": "AM-254 km 18 - Autazes/AM",
     "satellite": "Aqua (MODIS)",
-    "frp_mw": 35.0,
+    "frp_mw": 35,
     "bright_ti4_k": 333.3,
     "confidence": 0.77,
     "detected_at": "28/10/2026 17:40:13",
@@ -687,7 +731,9 @@
     "pm25": 102.4,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1024",
@@ -717,7 +763,9 @@
     "pm25": 53.1,
     "air_quality_level": "RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1025",
@@ -747,7 +795,9 @@
     "pm25": 145.2,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1026",
@@ -777,7 +827,9 @@
     "pm25": 125.9,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1027",
@@ -807,7 +859,9 @@
     "pm25": 89.7,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1028",
@@ -837,7 +891,9 @@
     "pm25": 166.7,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1029",
@@ -864,10 +920,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 185,
-    "pm25": 122.0,
+    "pm25": 122,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1030",
@@ -894,10 +952,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 189,
-    "pm25": 130.0,
+    "pm25": 130,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1031",
@@ -924,10 +984,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 218,
-    "pm25": 168.0,
+    "pm25": 168,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1032",
@@ -957,7 +1019,9 @@
     "pm25": 68.3,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1033",
@@ -987,7 +1051,9 @@
     "pm25": 144.5,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1034",
@@ -1014,10 +1080,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 226,
-    "pm25": 176.0,
+    "pm25": 176,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1035",
@@ -1047,7 +1115,9 @@
     "pm25": 78.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1036",
@@ -1077,7 +1147,9 @@
     "pm25": 110.6,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1037",
@@ -1107,7 +1179,9 @@
     "pm25": 53.8,
     "air_quality_level": "RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1038",
@@ -1137,7 +1211,9 @@
     "pm25": 121.2,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1039",
@@ -1148,7 +1224,7 @@
     "municipality": "São Félix do Xingu",
     "address": "Área de Pastagem e Floresta - São Félix do Xingu/PA",
     "satellite": "Suomi-NPP (VIIRS)",
-    "frp_mw": 19.0,
+    "frp_mw": 19,
     "bright_ti4_k": 343.4,
     "confidence": 0.8,
     "detected_at": "28/10/2026 16:30:13",
@@ -1167,7 +1243,9 @@
     "pm25": 61.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1040",
@@ -1197,7 +1275,9 @@
     "pm25": 116.3,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1041",
@@ -1227,7 +1307,9 @@
     "pm25": 173.6,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1042",
@@ -1257,7 +1339,9 @@
     "pm25": 55.6,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1043",
@@ -1269,7 +1353,7 @@
     "address": "Rodovia Transamazônica - Marabá/PA",
     "satellite": "Terra (MODIS)",
     "frp_mw": 44.5,
-    "bright_ti4_k": 348.0,
+    "bright_ti4_k": 348,
     "confidence": 0.77,
     "detected_at": "28/10/2026 14:58:13",
     "detected_iso": "2026-10-28T14:58:13.324647-04:00",
@@ -1287,7 +1371,9 @@
     "pm25": 126.9,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1044",
@@ -1317,7 +1403,9 @@
     "pm25": 132.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1045",
@@ -1347,7 +1435,9 @@
     "pm25": 174.9,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1046",
@@ -1377,7 +1467,9 @@
     "pm25": 150.7,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1047",
@@ -1388,7 +1480,7 @@
     "municipality": "Rio Branco",
     "address": "Estrada Transacreana - Rio Branco/AC",
     "satellite": "Suomi-NPP (VIIRS)",
-    "frp_mw": 40.0,
+    "frp_mw": 40,
     "bright_ti4_k": 342.2,
     "confidence": 0.77,
     "detected_at": "28/10/2026 13:49:13",
@@ -1407,7 +1499,9 @@
     "pm25": 115.3,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1048",
@@ -1418,7 +1512,7 @@
     "municipality": "Rio Branco",
     "address": "Estrada Transacreana - Rio Branco/AC",
     "satellite": "Suomi-NPP (VIIRS)",
-    "frp_mw": 46.0,
+    "frp_mw": 46,
     "bright_ti4_k": 339.3,
     "confidence": 0.92,
     "detected_at": "28/10/2026 16:06:13",
@@ -1437,7 +1531,9 @@
     "pm25": 130.8,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1049",
@@ -1464,10 +1560,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 220,
-    "pm25": 170.0,
+    "pm25": 170,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1050",
@@ -1478,7 +1576,7 @@
     "municipality": "Cantá",
     "address": "Lavrado Roraimense - Cantá/RR",
     "satellite": "Suomi-NPP (VIIRS)",
-    "frp_mw": 54.0,
+    "frp_mw": 54,
     "bright_ti4_k": 335.1,
     "confidence": 0.87,
     "detected_at": "28/10/2026 09:48:13",
@@ -1497,7 +1595,9 @@
     "pm25": 151.4,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1051",
@@ -1527,7 +1627,9 @@
     "pm25": 187.1,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1052",
@@ -1557,7 +1659,9 @@
     "pm25": 111.7,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1053",
@@ -1568,7 +1672,7 @@
     "municipality": "Poconé",
     "address": "Rodovia Transpantaneira km 32 - Poconé/MT",
     "satellite": "Suomi-NPP (VIIRS)",
-    "frp_mw": 41.0,
+    "frp_mw": 41,
     "bright_ti4_k": 348.3,
     "confidence": 0.82,
     "detected_at": "28/10/2026 09:17:13",
@@ -1587,7 +1691,9 @@
     "pm25": 117.9,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1054",
@@ -1617,7 +1723,9 @@
     "pm25": 165.1,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1055",
@@ -1629,7 +1737,7 @@
     "address": "Parque Nacional do Pantanal Matogrossense - Corumbá/MS",
     "satellite": "Aqua (MODIS)",
     "frp_mw": 67.2,
-    "bright_ti4_k": 355.0,
+    "bright_ti4_k": 355,
     "confidence": 0.77,
     "detected_at": "28/10/2026 13:13:13",
     "detected_iso": "2026-10-28T13:13:13.324647-04:00",
@@ -1647,7 +1755,9 @@
     "pm25": 185.5,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1056",
@@ -1677,7 +1787,9 @@
     "pm25": 151.9,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1057",
@@ -1688,7 +1800,7 @@
     "municipality": "Aquidauana",
     "address": "Pantanal de Aquidauana - MS",
     "satellite": "Aqua (MODIS)",
-    "frp_mw": 42.0,
+    "frp_mw": 42,
     "bright_ti4_k": 353.1,
     "confidence": 0.88,
     "detected_at": "28/10/2026 12:41:13",
@@ -1707,7 +1819,9 @@
     "pm25": 120.4,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1058",
@@ -1737,7 +1851,9 @@
     "pm25": 59.5,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1059",
@@ -1767,7 +1883,9 @@
     "pm25": 174.1,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1060",
@@ -1794,10 +1912,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 161,
-    "pm25": 75.0,
+    "pm25": 75,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1061",
@@ -1827,7 +1947,9 @@
     "pm25": 151.2,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1062",
@@ -1854,10 +1976,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 185,
-    "pm25": 121.0,
+    "pm25": 121,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1063",
@@ -1887,7 +2011,9 @@
     "pm25": 180.9,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1064",
@@ -1917,7 +2043,9 @@
     "pm25": 122.5,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1065",
@@ -1947,7 +2075,9 @@
     "pm25": 127.2,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1066",
@@ -1977,7 +2107,9 @@
     "pm25": 122.5,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1067",
@@ -2007,7 +2139,9 @@
     "pm25": 137.5,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1068",
@@ -2037,7 +2171,9 @@
     "pm25": 72.7,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1069",
@@ -2048,7 +2184,7 @@
     "municipality": "Ribeirão Preto",
     "address": "Rodovia Anhanguera km 312 - Ribeirão Preto/SP",
     "satellite": "Aqua (MODIS)",
-    "frp_mw": 28.0,
+    "frp_mw": 28,
     "bright_ti4_k": 349.6,
     "confidence": 0.77,
     "detected_at": "28/10/2026 07:21:13",
@@ -2067,7 +2203,9 @@
     "pm25": 84.3,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1070",
@@ -2079,7 +2217,7 @@
     "address": "Rodovia Anhanguera km 312 - Ribeirão Preto/SP",
     "satellite": "Terra (MODIS)",
     "frp_mw": 34.5,
-    "bright_ti4_k": 323.0,
+    "bright_ti4_k": 323,
     "confidence": 0.96,
     "detected_at": "28/10/2026 10:43:13",
     "detected_iso": "2026-10-28T10:43:13.324647-04:00",
@@ -2097,7 +2235,9 @@
     "pm25": 101.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1071",
@@ -2127,7 +2267,9 @@
     "pm25": 148.6,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1072",
@@ -2154,10 +2296,12 @@
     "hover_thumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "is_simulated": true,
     "aqi": 193,
-    "pm25": 137.0,
+    "pm25": 137,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1073",
@@ -2187,7 +2331,9 @@
     "pm25": 154.5,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1074",
@@ -2199,7 +2345,7 @@
     "address": "Serra do Curral - Belo Horizonte/MG",
     "satellite": "Aqua (MODIS)",
     "frp_mw": 43.4,
-    "bright_ti4_k": 336.0,
+    "bright_ti4_k": 336,
     "confidence": 0.82,
     "detected_at": "28/10/2026 11:29:13",
     "detected_iso": "2026-10-28T11:29:13.324647-04:00",
@@ -2217,7 +2363,9 @@
     "pm25": 124.1,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1075",
@@ -2247,7 +2395,9 @@
     "pm25": 175.2,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1076",
@@ -2277,7 +2427,9 @@
     "pm25": 176.7,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1077",
@@ -2307,7 +2459,9 @@
     "pm25": 106.5,
     "air_quality_level": "MUITO RUIM",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
   },
   {
     "id": "VIIRS-24H-1078",
@@ -2318,7 +2472,7 @@
     "municipality": "Sobral",
     "address": "Sertão Central - Sobral/CE",
     "satellite": "NOAA-20 (VIIRS)",
-    "frp_mw": 62.0,
+    "frp_mw": 62,
     "bright_ti4_k": 320.7,
     "confidence": 0.82,
     "detected_at": "28/10/2026 10:53:13",
@@ -2337,6 +2491,443 @@
     "pm25": 172.1,
     "air_quality_level": "PÉSSIMA",
     "continent": "América do Sul",
-    "is_brazil": true
+    "is_brazil": true,
+    "country_name": "Brasil",
+    "country_code": "BR"
+  },
+  {
+    "id": "SIM-GLOBAL-US-1",
+    "latitude": 34.2531,
+    "longitude": -118.1425,
+    "continent": "América do Norte",
+    "country_code": "US",
+    "country_name": "Estados Unidos",
+    "is_brazil": false,
+    "state": "CA",
+    "municipality": "Los Angeles",
+    "address": "Angeles National Forest / San Gabriel Mountains - Califórnia/EUA",
+    "satellite": "GOES-18 (West ABI) & NOAA-20",
+    "biome": "Chaparral / Floresta Montanhosa",
+    "frp_mw": 88.5,
+    "bright_ti4_k": 367.2,
+    "confidence": 0.98,
+    "detected_at": "30/10/2026, 23:36:40",
+    "detected_iso": "2026-10-31T03:36:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 45,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 185,
+    "pm25": 110.4,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-US-2",
+    "latitude": 37.8651,
+    "longitude": -119.5383,
+    "continent": "América do Norte",
+    "country_code": "US",
+    "country_name": "Estados Unidos",
+    "is_brazil": false,
+    "state": "CA",
+    "municipality": "Yosemite",
+    "address": "Sierra National Forest / Yosemite Valley - Califórnia/EUA",
+    "satellite": "NOAA-20 (VIIRS 375m)",
+    "biome": "Floresta Temperada de Coníferas",
+    "frp_mw": 64.2,
+    "bright_ti4_k": 352,
+    "confidence": 0.95,
+    "detected_at": "30/10/2026, 22:31:40",
+    "detected_iso": "2026-10-31T02:31:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": false,
+    "is_new_outbreak": true,
+    "minutes_ago": 110,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 140,
+    "pm25": 52.8,
+    "air_quality_level": "RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-CA-1",
+    "latitude": 56.7264,
+    "longitude": -111.3803,
+    "continent": "América do Norte",
+    "country_code": "CA",
+    "country_name": "Canadá",
+    "is_brazil": false,
+    "state": "AB",
+    "municipality": "Fort McMurray",
+    "address": "Boreal Taiga Belt / Athabasca Basin - Alberta/Canadá",
+    "satellite": "Suomi-NPP (VIIRS 375m)",
+    "biome": "Floresta Boreal (Taiga Canadense)",
+    "frp_mw": 115,
+    "bright_ti4_k": 378.5,
+    "confidence": 0.99,
+    "detected_at": "30/10/2026, 23:51:40",
+    "detected_iso": "2026-10-31T03:51:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 30,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 220,
+    "pm25": 165,
+    "air_quality_level": "PÉSSIMA"
+  },
+  {
+    "id": "SIM-GLOBAL-PT-1",
+    "latitude": 40.3214,
+    "longitude": -7.6128,
+    "continent": "Europa",
+    "country_code": "PT",
+    "country_name": "Portugal",
+    "is_brazil": false,
+    "state": "Guarda",
+    "municipality": "Serra da Estrela",
+    "address": "Parque Natural da Serra da Estrela - Região Centro/Portugal",
+    "satellite": "Meteosat-11 (SEVIRI) & Suomi-NPP",
+    "biome": "Floresta Mediterrânea / Pinhais",
+    "frp_mw": 72,
+    "bright_ti4_k": 358.4,
+    "confidence": 0.96,
+    "detected_at": "30/10/2026, 23:21:40",
+    "detected_iso": "2026-10-31T03:21:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": true,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 60,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 162,
+    "pm25": 75.3,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-ES-1",
+    "latitude": 42.3358,
+    "longitude": -7.8639,
+    "continent": "Europa",
+    "country_code": "ES",
+    "country_name": "Espanha",
+    "is_brazil": false,
+    "state": "Galícia",
+    "municipality": "Ourense",
+    "address": "Macizo Central Ourensán - Galícia/Espanha",
+    "satellite": "NOAA-20 (VIIRS 375m)",
+    "biome": "Matagal Atlântico / Floresta Mista",
+    "frp_mw": 58.4,
+    "bright_ti4_k": 348.1,
+    "confidence": 0.92,
+    "detected_at": "30/10/2026, 22:46:40",
+    "detected_iso": "2026-10-31T02:46:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": false,
+    "is_new_outbreak": true,
+    "minutes_ago": 95,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 135,
+    "pm25": 49.5,
+    "air_quality_level": "RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-GR-1",
+    "latitude": 38.0503,
+    "longitude": 23.8681,
+    "continent": "Europa",
+    "country_code": "GR",
+    "country_name": "Grécia",
+    "is_brazil": false,
+    "state": "Ática",
+    "municipality": "Atenas",
+    "address": "Monte Penteli / Entorno de Atenas - Região da Ática/Grécia",
+    "satellite": "Meteosat-11 & NOAA-20",
+    "biome": "Pinhal Mediterrâneo / Garrigue",
+    "frp_mw": 92.4,
+    "bright_ti4_k": 369,
+    "confidence": 0.97,
+    "detected_at": "31/10/2026, 00:01:40",
+    "detected_iso": "2026-10-31T04:01:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": true,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 20,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 210,
+    "pm25": 155,
+    "air_quality_level": "PÉSSIMA"
+  },
+  {
+    "id": "SIM-GLOBAL-CD-1",
+    "latitude": -10.7167,
+    "longitude": 25.4667,
+    "continent": "África",
+    "country_code": "CD",
+    "country_name": "República Democrática do Congo",
+    "is_brazil": false,
+    "state": "Lualaba",
+    "municipality": "Kolwezi",
+    "address": "Corredor Savânico Katanga-Lualaba - RDC",
+    "satellite": "Suomi-NPP (VIIRS 375m)",
+    "biome": "Savana Congolesa / Miombo",
+    "frp_mw": 104,
+    "bright_ti4_k": 372,
+    "confidence": 0.98,
+    "detected_at": "30/10/2026, 23:31:40",
+    "detected_iso": "2026-10-31T03:31:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 50,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 195,
+    "pm25": 135,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-AO-1",
+    "latitude": -11.7833,
+    "longitude": 19.9167,
+    "continent": "África",
+    "country_code": "AO",
+    "country_name": "Angola",
+    "is_brazil": false,
+    "state": "Moxico",
+    "municipality": "Luena",
+    "address": "Savana do Alto Zambeze / Bacia do Cassai - Moxico/Angola",
+    "satellite": "NOAA-20 (VIIRS 375m)",
+    "biome": "Mosaico Savana-Floresta de Miombo",
+    "frp_mw": 76.5,
+    "bright_ti4_k": 360.2,
+    "confidence": 0.94,
+    "detected_at": "30/10/2026, 23:01:40",
+    "detected_iso": "2026-10-31T03:01:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": false,
+    "is_new_outbreak": true,
+    "minutes_ago": 80,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 158,
+    "pm25": 69.2,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-ID-1",
+    "latitude": -2.2136,
+    "longitude": 113.9108,
+    "continent": "Ásia",
+    "country_code": "ID",
+    "country_name": "Indonésia",
+    "is_brazil": false,
+    "state": "Kalimantan Central",
+    "municipality": "Palangka Raya",
+    "address": "Turfeiras de Bornéu / Bacia de Kahayan - Bornéu/Indonésia",
+    "satellite": "Himawari-9 & Suomi-NPP",
+    "biome": "Floresta Tropical Úmida de Turfa",
+    "frp_mw": 142,
+    "bright_ti4_k": 388,
+    "confidence": 0.99,
+    "detected_at": "30/10/2026, 23:56:40",
+    "detected_iso": "2026-10-31T03:56:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": true,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 25,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 310,
+    "pm25": 280,
+    "air_quality_level": "PERIGOSA"
+  },
+  {
+    "id": "SIM-GLOBAL-RU-1",
+    "latitude": 62.0355,
+    "longitude": 129.6755,
+    "continent": "Ásia",
+    "country_code": "RU",
+    "country_name": "Rússia",
+    "is_brazil": false,
+    "state": "Sakha (Iakútia)",
+    "municipality": "Yakutsk",
+    "address": "Taiga Siberiana / Vale do Rio Lena - Sibéria/Rússia",
+    "satellite": "NOAA-20 (VIIRS 375m)",
+    "biome": "Taiga Boreal Siberiana / Lariço",
+    "frp_mw": 89,
+    "bright_ti4_k": 366.5,
+    "confidence": 0.95,
+    "detected_at": "30/10/2026, 23:06:40",
+    "detected_iso": "2026-10-31T03:06:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 75,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 178,
+    "pm25": 98.4,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-AU-1",
+    "latitude": -33.715,
+    "longitude": 150.3114,
+    "continent": "Oceania",
+    "country_code": "AU",
+    "country_name": "Austrália",
+    "is_brazil": false,
+    "state": "New South Wales",
+    "municipality": "Katoomba",
+    "address": "Blue Mountains National Park / Jamison Valley - NSW/Austrália",
+    "satellite": "Himawari-9 & NOAA-20",
+    "biome": "Eucalyptus Bushland / Floresta Seca Esclerófila",
+    "frp_mw": 98,
+    "bright_ti4_k": 371.4,
+    "confidence": 0.97,
+    "detected_at": "30/10/2026, 23:46:40",
+    "detected_iso": "2026-10-31T03:46:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 35,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 190,
+    "pm25": 125,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-AU-2",
+    "latitude": -12.4634,
+    "longitude": 130.8456,
+    "continent": "Oceania",
+    "country_code": "AU",
+    "country_name": "Austrália",
+    "is_brazil": false,
+    "state": "Northern Territory",
+    "municipality": "Darwin",
+    "address": "Top End Savanna / Kakadu Region - Território do Norte/Austrália",
+    "satellite": "Suomi-NPP (VIIRS 375m)",
+    "biome": "Savana Tropical Australiana",
+    "frp_mw": 65,
+    "bright_ti4_k": 354.2,
+    "confidence": 0.93,
+    "detected_at": "30/10/2026, 22:21:40",
+    "detected_iso": "2026-10-31T02:21:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": false,
+    "is_new_outbreak": true,
+    "minutes_ago": 120,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 145,
+    "pm25": 56,
+    "air_quality_level": "RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-BO-1",
+    "latitude": -17.7833,
+    "longitude": -63.1821,
+    "continent": "América do Sul",
+    "country_code": "BO",
+    "country_name": "Bolívia",
+    "is_brazil": false,
+    "state": "Santa Cruz",
+    "municipality": "Santa Cruz de la Sierra",
+    "address": "Bosque Seco Chiquitano - Santa Cruz/Bolívia",
+    "satellite": "NOAA-20 (VIIRS 375m)",
+    "biome": "Chiquitania / Transição Amazônia-Chaco",
+    "frp_mw": 82,
+    "bright_ti4_k": 362.5,
+    "confidence": 0.96,
+    "detected_at": "30/10/2026, 23:41:40",
+    "detected_iso": "2026-10-31T03:41:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": true,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 40,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 175,
+    "pm25": 92,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-PY-1",
+    "latitude": -22.3833,
+    "longitude": -59.8333,
+    "continent": "América do Sul",
+    "country_code": "PY",
+    "country_name": "Paraguai",
+    "is_brazil": false,
+    "state": "Boquerón",
+    "municipality": "Filadelfia",
+    "address": "Gran Chaco Boreal - Boquerón/Paraguai",
+    "satellite": "Suomi-NPP (VIIRS 375m)",
+    "biome": "Gran Chaco",
+    "frp_mw": 68,
+    "bright_ti4_k": 355,
+    "confidence": 0.94,
+    "detected_at": "30/10/2026, 23:16:40",
+    "detected_iso": "2026-10-31T03:16:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": true,
+    "is_new_outbreak": true,
+    "minutes_ago": 65,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 152,
+    "pm25": 64,
+    "air_quality_level": "MUITO RUIM"
+  },
+  {
+    "id": "SIM-GLOBAL-AR-1",
+    "latitude": -27.4692,
+    "longitude": -58.8306,
+    "continent": "América do Sul",
+    "country_code": "AR",
+    "country_name": "Argentina",
+    "is_brazil": false,
+    "state": "Corrientes",
+    "municipality": "Corrientes",
+    "address": "Esteros del Iberá / Humedales - Corrientes/Argentina",
+    "satellite": "NOAA-20 (VIIRS 375m)",
+    "biome": "Pantanal do Iberá / Pastagens",
+    "frp_mw": 54,
+    "bright_ti4_k": 346,
+    "confidence": 0.91,
+    "detected_at": "30/10/2026, 22:51:40",
+    "detected_iso": "2026-10-31T02:51:40.900Z",
+    "has_video": false,
+    "is_arson_cluster": false,
+    "is_recurrent": false,
+    "is_new_outbreak": true,
+    "minutes_ago": 90,
+    "status": "PENDENTE",
+    "is_simulated": true,
+    "aqi": 128,
+    "pm25": 45,
+    "air_quality_level": "RUIM"
   }
 ]

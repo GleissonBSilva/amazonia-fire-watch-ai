@@ -147,7 +147,17 @@ export interface WindowState {
 
 export type TemporalMode = '24h' | 'month' | 'historical' | 'recent_3h';
 
-export type MapLayerType = 'google_hybrid' | 'satellite' | 'google_earth' | 'streets' | 'dark' | 'topo';
+export type MapLayerType =
+  | 'google_hybrid'
+  | 'satellite'
+  | 'nasa_truecolor'
+  | 'nasa_blackmarble'
+  | 'google_earth'
+  | 'osm_standard'
+  | 'carto_dark'
+  | 'streets'
+  | 'dark'
+  | 'topo';
 
 export interface ActiveOverlaysState {
   nasaFirms: boolean;
@@ -207,6 +217,34 @@ export const MAP_LAYERS: Record<MapLayerType, MapLayerConfig> = {
         maxNativeZoom: 18,
       },
     ],
+  },
+  nasa_truecolor: {
+    name: 'NASA TrueColor (Mundial)',
+    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',
+    attribution: '&copy; NASA GIBS &mdash; Terra MODIS TrueColor Diário Planetário',
+    maxZoom: 10,
+    maxNativeZoom: 9,
+  },
+  nasa_blackmarble: {
+    name: 'NASA Noite & Fogo (Black Marble)',
+    url: 'https://map1.vis.earthdata.nasa.gov/wmts-webmerc/VIIRS_Black_Marble/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+    attribution: '&copy; NASA GIBS &mdash; Suomi-NPP VIIRS Luzes Noturnas e Queimadas Globais',
+    maxZoom: 9,
+    maxNativeZoom: 8,
+  },
+  osm_standard: {
+    name: 'OpenStreetMap (Malha Global)',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors &mdash; Cartografia Global Colaborativa',
+    maxZoom: 19,
+    maxNativeZoom: 19,
+  },
+  carto_dark: {
+    name: 'CartoDB Dark (Tático Global)',
+    url: 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
+    attribution: '&copy; CARTO &copy; OpenStreetMap &mdash; Visão Noturna C2 Mundial',
+    maxZoom: 20,
+    maxNativeZoom: 19,
   },
   google_earth: {
     name: 'Google Earth 3D (Terreno)',

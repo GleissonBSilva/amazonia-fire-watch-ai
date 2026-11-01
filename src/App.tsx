@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MainMap } from './components/MainMap';
 import { FloatingWindow } from './components/FloatingWindow';
 import { VideoStreamWindow } from './components/VideoStreamWindow';
@@ -51,10 +51,14 @@ const TacticalClock: React.FC = () => {
 const AppContent: React.FC = () => {
   const [fireSpots, setFireSpots] = useState<FireSpot[]>(() => {
     try {
-      const local = localStorage.getItem('amazonia_fire_spots_cache');
+      const isSim = localStorage.getItem('isSimulation') === 'true';
+      const key = isSim ? 'amazonia_fire_spots_cache_sim' : 'amazonia_fire_spots_cache_real';
+      const local = localStorage.getItem(key);
       if (local) {
         const parsed = JSON.parse(local);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return isSim ? parsed : parsed.filter((s: FireSpot) => !s.is_simulated);
+        }
       }
     } catch {}
     return [];
@@ -183,7 +187,8 @@ const AppContent: React.FC = () => {
     setIsSimulation(nextVal);
     localStorage.setItem('isSimulation', String(nextVal));
     if (!nextVal) {
-      // Switching to REAL: clear simulated items
+      // Switching to REAL: limpa estritamente itens simulados do estado imediatamente!
+      setFireSpots(prev => prev.filter(s => !s.is_simulated));
       setHoveredSpot(null);
       setSelectedSpot(null);
       setOpenWindows(prev => ({ ...prev, videoStream: false }));
@@ -205,19 +210,21 @@ const AppContent: React.FC = () => {
   // Trava de concorrência para evitar chamadas de rede simultâneas duplicadas
   const isFetchingRef = useRef<boolean>(false);
 
-  // Hidratação instantânea (0ms): se o estado inicial estiver vazio, carrega imediatamente o cache local da NASA
+  // Sincronização e hidratação imediata: carrega e consolida o feed local com cobertura planetária
   useEffect(() => {
-    if (fireSpots.length === 0) {
-      fetch('/real_firms_cache.json')
-        .then(res => (res.ok ? res.json() : []))
-        .then((cachedSpots: FireSpot[]) => {
-          if (cachedSpots && Array.isArray(cachedSpots) && cachedSpots.length > 0) {
-            setFireSpots(prev => upsertFireSpots(prev, cachedSpots));
+    const targetFile = isSimulation ? '/simulation_fires.json' : '/real_firms_cache.json';
+    fetch(targetFile)
+      .then(res => (res.ok ? res.json() : []))
+      .then((cachedSpots: FireSpot[]) => {
+        if (cachedSpots && Array.isArray(cachedSpots) && cachedSpots.length > 0) {
+          const sanitized = isSimulation ? cachedSpots : cachedSpots.filter(s => !s.is_simulated);
+          if (sanitized.length > 0) {
+            setFireSpots(prev => upsertFireSpots(prev, sanitized));
           }
-        })
-        .catch(() => {});
-    }
-  }, []);
+        }
+      })
+      .catch(() => {});
+  }, [isSimulation]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -237,16 +244,22 @@ const AppContent: React.FC = () => {
         if (isCancelled) return;
 
         if (spots && spots.length > 0) {
-          // Reconcilia focos do GOES-16 (geoestacionário) com passagens de alta resolução do VIIRS/MODIS
-          goes16Manager.reconcileWithPolarFires(spots);
-          const goesSpots = goes16Manager.getActiveGoesSpots();
-          const combined = [...goesSpots, ...spots];
+          let combined = isSimulation ? spots : spots.filter(s => !s.is_simulated);
+
+          // Anomalias da constelação GOES preliminares são ativadas estritamente na Simulação
+          if (isSimulation) {
+            goes16Manager.reconcileWithPolarFires(spots);
+            const goesSpots = goes16Manager.getActiveGoesSpots();
+            combined = [...goesSpots, ...combined];
+          }
           
           // Upsert direto no mesmo registro: consolida mesmo raio <= 2.5km, congela início e atualiza voláteis
           setFireSpots(prevActiveSpots => {
-            const upserted = upsertFireSpots(prevActiveSpots, combined);
+            const baseSpots = isSimulation ? prevActiveSpots : prevActiveSpots.filter(s => !s.is_simulated);
+            const upserted = upsertFireSpots(baseSpots, combined);
             try {
-              localStorage.setItem('amazonia_fire_spots_cache', JSON.stringify(upserted));
+              const cacheKey = isSimulation ? 'amazonia_fire_spots_cache_sim' : 'amazonia_fire_spots_cache_real';
+              localStorage.setItem(cacheKey, JSON.stringify(upserted));
             } catch {}
             return upserted;
           });
@@ -414,13 +427,22 @@ const AppContent: React.FC = () => {
     setIsAreaInspectionOpen(true);
   };
 
-  const handleSpotClick = (spot: FireSpot) => {
+  const handleSpotClick = useCallback((spot: FireSpot) => {
     setSelectedSpot(spot);
     setIsBannerVisible(true);
     setOpenWindows(prev => ({ ...prev, spotDetail: true }));
     setMinimizedWindows(prev => ({ ...prev, spotDetail: false }));
     bringToFront('spotDetail');
-  };
+  }, []);
+
+  const handleHoverSpot = useCallback((spot: FireSpot, pos: { x: number; y: number }) => {
+    setHoveredSpot(spot);
+    setHoverPosition(pos);
+  }, []);
+
+  const handleLeaveSpot = useCallback(() => {
+    setHoveredSpot(null);
+  }, []);
 
   const handleActivateGeofence = (facility: Facility) => {
     setActiveGeofence({
@@ -487,10 +509,10 @@ const AppContent: React.FC = () => {
     <div className="relative w-full h-full min-h-[100dvh] max-h-screen overflow-hidden bg-slate-950 font-sans select-none">
       {/* 1. Telão Master Fullscreen GIS (Cobertura Nacional Brasil) */}
       {(() => {
-        // Filtragem estrita do Ecossistema IA quando a Cerca Virtual está ativa
-        let displayFireSpots = fireSpots;
+        // Filtragem estrita: no Modo Real, exclui terminantemente qualquer dado simulado
+        let displayFireSpots = isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated);
         if (activeGeofence) {
-          displayFireSpots = fireSpots.filter((s) => {
+          displayFireSpots = displayFireSpots.filter((s) => {
             if (activeGeofence.bounds) {
               const [sw, ne] = activeGeofence.bounds;
               const minLat = Math.min(sw[0], ne[0]);
@@ -523,11 +545,15 @@ const AppContent: React.FC = () => {
               detected_at: matchedFacility.activeIncident.firstDetectedAt,
               detected_iso: new Date().toISOString(),
               is_recurrent: false,
-              is_arson_cluster: false
+              is_arson_cluster: false,
+              is_simulated: true
             }];
           }
-        } else if (onlyNewOutbreaks) {
-          displayFireSpots = fireSpots.filter(f => f.is_new_outbreak);
+        }
+
+        // 3. Filtro de Novos Focos (< 3h): Cumulativo e independente
+        if (onlyNewOutbreaks) {
+          displayFireSpots = displayFireSpots.filter(f => f.is_new_outbreak);
         }
 
         return (
@@ -548,11 +574,8 @@ const AppContent: React.FC = () => {
           setMinimizedWindows(prev => ({ ...prev, osintFeed: false }));
           bringToFront('osintFeed');
         }}
-        onHoverSpot={(spot, pos) => {
-          setHoveredSpot(spot);
-          setHoverPosition(pos);
-        }}
-        onLeaveSpot={() => setHoveredSpot(null)}
+        onHoverSpot={handleHoverSpot}
+        onLeaveSpot={handleLeaveSpot}
         onSpotClick={handleSpotClick}
         temporalMode={temporalMode}
         currentLayer={currentLayer}
@@ -816,7 +839,8 @@ const AppContent: React.FC = () => {
 
       {/* 4. Drawer Lateral de Focos Detectados (Collapsible Sidebar) */}
       <FiresDrawer
-        fireSpots={fireSpots}
+        fireSpots={isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated)}
+        isSimulation={isSimulation}
         onSelectSpot={handleSelectSpotFromDrawer}
         selectedSpotId={selectedSpot?.id}
       />

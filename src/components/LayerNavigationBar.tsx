@@ -63,13 +63,23 @@ const OVERLAYS_CONFIG: OverlayConfigItem[] = [
   },
   {
     key: 'goes16',
-    label: 'GOES-16 ABI (~10-15m)',
-    sublabel: 'Tempo Real Geoestacionário',
-    icon: CloudRain,
+    label: 'Constelação Geoestacionária 360°',
+    sublabel: 'GOES-16/18/19, Meteosat & Himawari',
+    icon: Satellite,
     activeBg: 'bg-cyan-950/90',
     activeText: 'text-cyan-200',
     activeBorder: 'border-cyan-500/80',
     iconActiveColor: 'text-cyan-400',
+  },
+  {
+    key: 'rainRadar',
+    label: 'Radar de Precipitação & Chuvas',
+    sublabel: 'Radar Meteorológico Global RainViewer',
+    icon: CloudRain,
+    activeBg: 'bg-sky-950/90',
+    activeText: 'text-sky-200',
+    activeBorder: 'border-sky-500/80',
+    iconActiveColor: 'text-sky-400',
   },
   {
     key: 'inpeBdqueimadas',
@@ -158,11 +168,12 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
 
   const currentLayerName = MAP_LAYERS[currentLayer]?.name || 'Satélite Híbrido';
 
-  // Contagem de overlays ativos
+  // Contagem de overlays ativos (Total: 9 camadas de satélite e dados mundiais)
   const activeOverlaysCount = [
     activeOverlays.clustering !== false,
     Boolean(activeOverlays.nasaFirms),
     Boolean(activeOverlays.goes16),
+    Boolean(activeOverlays.rainRadar),
     Boolean(activeOverlays.inpeBdqueimadas),
     Boolean(activeOverlays.googleEarth3d),
     Boolean(activeOverlays.carCadastre),
@@ -288,41 +299,110 @@ export const LayerNavigationBar: React.FC<LayerNavigationBarProps> = ({
         </button>
 
         {isOverlaysDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1.5 w-72 bg-slate-950/98 border border-slate-700 rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.9)] p-2 z-[1300] backdrop-blur-xl space-y-1 animate-fade-in text-[11px]">
-            <div className="px-1.5 py-1 text-[9.5px] text-cyan-400 uppercase tracking-wider font-bold border-b border-slate-800 flex items-center justify-between mb-1">
-              <span>Camadas & Satélites</span>
-              <span className="text-[8.5px] text-slate-400 font-mono">{activeOverlaysCount}/8 Ativas</span>
+          <div className="absolute top-full left-0 mt-1.5 w-80 bg-slate-950/98 border border-slate-700 rounded-lg shadow-[0_12px_40px_rgba(0,0,0,0.9)] p-2 z-[1300] backdrop-blur-xl space-y-1.5 animate-fade-in text-[11px]">
+            <div className="px-1.5 py-1 text-[9.5px] text-cyan-400 uppercase tracking-wider font-bold border-b border-slate-800 flex items-center justify-between">
+              <span>Camadas & Satélites Mundiais</span>
+              <span className="text-[8.5px] text-slate-400 font-mono">{activeOverlaysCount}/{OVERLAYS_CONFIG.length} Ativas</span>
             </div>
 
-            {/* Lista dos 8 Overlays com Toggle Tático */}
-            {OVERLAYS_CONFIG.map((ov) => {
-              const isActive = ov.key === 'clustering' ? activeOverlays.clustering !== false : Boolean(activeOverlays[ov.key]);
-              const Icon = ov.icon;
-              return (
-                <button
-                  key={ov.key}
-                  onClick={() => onToggleOverlay(ov.key)}
-                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition-colors border cursor-pointer ${
-                    isActive
-                      ? `${ov.activeBg} ${ov.activeText} ${ov.activeBorder} font-bold shadow-sm`
-                      : 'bg-slate-900/60 text-slate-400 border-slate-800/80 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 truncate">
-                    <Icon size={12} className={isActive ? ov.iconActiveColor : 'text-slate-500 shrink-0'} />
-                    <span className="truncate text-[10.5px]">{ov.label}</span>
-                  </div>
-                  <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase shrink-0 ${
-                    isActive ? 'bg-white/10 text-white border border-white/20' : 'bg-slate-800 text-slate-500'
-                  }`}>
-                    {isActive ? 'ON' : 'OFF'}
-                  </span>
-                </button>
-              );
-            })}
+            {/* Ações Rápidas de Comando C2: Ativar / Desativar Todas as Camadas Mundiais */}
+            <div className="grid grid-cols-2 gap-1.5 pt-0.5 pb-1 border-b border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => {
+                  OVERLAYS_CONFIG.forEach(ov => {
+                    const isCurrentlyActive = ov.key === 'clustering' ? activeOverlays.clustering !== false : Boolean(activeOverlays[ov.key]);
+                    if (!isCurrentlyActive) {
+                      onToggleOverlay(ov.key);
+                    }
+                  });
+                }}
+                className="py-1 px-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/80 text-emerald-300 font-bold text-[9.5px] rounded flex items-center justify-center gap-1 transition cursor-pointer shadow-sm"
+                title="Ativar todas as camadas mundiais simultaneamente (NASA FIRMS, GOES 360°, Chuvas, Fumaça, etc.)"
+              >
+                <span>🌐 Ativar Todas ON</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  OVERLAYS_CONFIG.forEach(ov => {
+                    if (ov.key === 'clustering') return; // Mantém cluster para performance
+                    const isCurrentlyActive = Boolean(activeOverlays[ov.key]);
+                    if (isCurrentlyActive) {
+                      onToggleOverlay(ov.key);
+                    }
+                  });
+                }}
+                className="py-1 px-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-400 font-bold text-[9.5px] rounded flex items-center justify-center gap-1 transition cursor-pointer"
+                title="Desativar camadas de satélite para visualização limpa do terreno"
+              >
+                <span>Limpar Overlays</span>
+              </button>
+            </div>
+
+            {/* Lista dos 9 Overlays Mundiais com Toggle Tático */}
+            <div className="space-y-1 max-h-[360px] overflow-y-auto pr-0.5 custom-scrollbar">
+              {OVERLAYS_CONFIG.map((ov) => {
+                const isActive = ov.key === 'clustering' ? activeOverlays.clustering !== false : Boolean(activeOverlays[ov.key]);
+                const Icon = ov.icon;
+                return (
+                  <button
+                    key={ov.key}
+                    onClick={() => onToggleOverlay(ov.key)}
+                    className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition-colors border cursor-pointer ${
+                      isActive
+                        ? `${ov.activeBg} ${ov.activeText} ${ov.activeBorder} font-bold shadow-sm`
+                        : 'bg-slate-900/60 text-slate-400 border-slate-800/80 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Icon size={12} className={isActive ? ov.iconActiveColor : 'text-slate-500 shrink-0'} />
+                      <div className="truncate">
+                        <div className="truncate text-[10.5px]">{ov.label}</div>
+                        <div className="text-[8.5px] text-slate-400 font-normal truncate">{ov.sublabel}</div>
+                      </div>
+                    </div>
+                    <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase shrink-0 ${
+                      isActive ? 'bg-white/10 text-white border border-white/20' : 'bg-slate-800 text-slate-500'
+                    }`}>
+                      {isActive ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
+
+      {/* BOTÃO ATALHO DIRETO: TODAS AS CAMADAS MUNDIAIS ON/OFF */}
+      <button
+        type="button"
+        onClick={() => {
+          const allActive = OVERLAYS_CONFIG.every(ov => ov.key === 'clustering' ? activeOverlays.clustering !== false : Boolean(activeOverlays[ov.key]));
+          OVERLAYS_CONFIG.forEach(ov => {
+            if (allActive) {
+              if (ov.key !== 'clustering' && Boolean(activeOverlays[ov.key])) {
+                onToggleOverlay(ov.key);
+              }
+            } else {
+              const isCurrentlyActive = ov.key === 'clustering' ? activeOverlays.clustering !== false : Boolean(activeOverlays[ov.key]);
+              if (!isCurrentlyActive) {
+                onToggleOverlay(ov.key);
+              }
+            }
+          });
+        }}
+        className={`px-1.5 sm:px-2 py-1 rounded border h-7 transition-all font-bold text-[10px] flex items-center gap-1 shadow-sm cursor-pointer ${
+          activeOverlaysCount >= OVERLAYS_CONFIG.length - 1
+            ? 'bg-cyan-950 text-cyan-200 border-cyan-400 shadow-cyan-900/40'
+            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
+        }`}
+        title="Alternar Ativação de Todas as Camadas Mundiais de Satélite"
+      >
+        <Globe size={11} className={activeOverlaysCount >= OVERLAYS_CONFIG.length - 1 ? 'text-cyan-400 animate-spin-slow' : 'text-slate-400'} />
+        <span className="hidden sm:inline">Mundial</span>
+      </button>
     </div>
   );
 };

@@ -11,21 +11,26 @@
 import { FireSpot } from '../types';
 import { queryLandRegistry } from './landRegistryService';
 
-export interface Goes16SweepInfo {
+export interface GoesConstellationSweepInfo {
   lastSweepTime: Date;
   minutesAgo: number;
-  satelliteOrbit: 'GEOESTACIONARIA (GOES-East)';
-  sensor: 'ABI (Advanced Baseline Imager - Band 7 3.9µm)';
-  resolutionKm: '2.0 km (Full Disk) / 1.0 km (Mesoescala)';
+  satelliteOrbit: 'CONSTELAÇÃO GEOESTACIONÁRIA (GOES-16 / GOES-18 / GOES-19)';
+  sensor: 'ABI (Band 7 3.9µm) + GLM (Lightning Mapper)';
+  resolutionKm: '1.0 km (Mesoescala 30s) / 2.0 km (Full Disk)';
   status: 'OPERACIONAL' | 'VARRENDO' | 'STANDBY';
   preliminaryHotspotsCount: number;
+  activeSatellites: string[];
 }
 
-// Exemplos de anomalias preliminares em tempo real captadas pelo GOES-16 ABI na Amazônia
+export type Goes16SweepInfo = GoesConstellationSweepInfo;
+
+// Anomalias preliminares em tempo real da Constelação Geoestacionária NOAA (GOES-16, GOES-18 e GOES-19)
 export const INITIAL_GOES16_ANOMALIES = [
-  // 1. América do Sul / Amazônia (NOAA GOES-16 ABI)
+  // -------------------------------------------------------------
+  // 1. GOES-16 (GOES-East / 75.2° W - Atlântico & Amazônia Oriental/Central)
+  // -------------------------------------------------------------
   {
-    id: 'GEO-GOES16-20261027-001',
+    id: 'GEO-GOES16-20261030-001',
     latitude: -1.0421,
     longitude: -62.8842,
     municipality: 'Barcelos',
@@ -34,14 +39,14 @@ export const INITIAL_GOES16_ANOMALIES = [
     continent: 'América do Sul',
     is_brazil: true,
     biome: 'Amazônia',
-    satellite: 'GOES-16 ABI (Américas)',
+    satellite: 'GOES-16 ABI (East)',
     frp_mw: 64.2,
     bright_ti4_k: 368.5,
     confidence: 0.92,
     minutes_ago: 8,
   },
   {
-    id: 'GEO-GOES16-20261027-002',
+    id: 'GEO-GOES16-20261030-002',
     latitude: -7.2814,
     longitude: -64.7102,
     municipality: 'Lábrea',
@@ -50,15 +55,66 @@ export const INITIAL_GOES16_ANOMALIES = [
     continent: 'América do Sul',
     is_brazil: true,
     biome: 'Amazônia',
-    satellite: 'GOES-16 ABI (Américas)',
+    satellite: 'GOES-16 ABI (East)',
     frp_mw: 88.0,
     bright_ti4_k: 382.1,
     confidence: 0.96,
     minutes_ago: 12,
   },
-  // 2. América do Norte / Califórnia (NOAA GOES-18 ABI West)
   {
-    id: 'GEO-GOES18-20261027-003',
+    id: 'GEO-GOES16-20261030-003',
+    latitude: -19.0120,
+    longitude: -57.6540,
+    municipality: 'Corumbá',
+    state: 'MS',
+    country_name: 'Brasil',
+    continent: 'América do Sul',
+    is_brazil: true,
+    biome: 'Pantanal',
+    satellite: 'GOES-16 ABI (East)',
+    frp_mw: 76.5,
+    bright_ti4_k: 374.0,
+    confidence: 0.94,
+    minutes_ago: 6,
+  },
+
+  // -------------------------------------------------------------
+  // 2. GOES-18 (GOES-West / 137.0° W - Pacífico & Amazônia Ocidental)
+  // -------------------------------------------------------------
+  {
+    id: 'GEO-GOES18-20261030-004',
+    latitude: -9.9749,
+    longitude: -67.8243,
+    municipality: 'Rio Branco (Transacreana)',
+    state: 'AC',
+    country_name: 'Brasil',
+    continent: 'América do Sul',
+    is_brazil: true,
+    biome: 'Amazônia',
+    satellite: 'GOES-18 ABI (West)',
+    frp_mw: 95.4,
+    bright_ti4_k: 388.2,
+    confidence: 0.95,
+    minutes_ago: 9,
+  },
+  {
+    id: 'GEO-GOES18-20261030-005',
+    latitude: 2.6108,
+    longitude: -60.6019,
+    municipality: 'Cantá (Lavrado)',
+    state: 'RR',
+    country_name: 'Brasil',
+    continent: 'América do Sul',
+    is_brazil: true,
+    biome: 'Amazônia',
+    satellite: 'GOES-18 ABI (West)',
+    frp_mw: 71.0,
+    bright_ti4_k: 371.8,
+    confidence: 0.91,
+    minutes_ago: 14,
+  },
+  {
+    id: 'GEO-GOES18-20261030-006',
     latitude: 39.7540,
     longitude: -121.6120,
     municipality: 'Butte County (Califórnia)',
@@ -67,15 +123,70 @@ export const INITIAL_GOES16_ANOMALIES = [
     continent: 'América do Norte',
     is_brazil: false,
     biome: 'Matagal Mediterrâneo / Chaparral',
-    satellite: 'GOES-18 ABI (North America West)',
+    satellite: 'GOES-18 ABI (West)',
     frp_mw: 145.0,
     bright_ti4_k: 412.0,
     confidence: 0.97,
     minutes_ago: 5,
   },
-  // 3. Europa / Mediterrâneo (EUMETSAT Meteosat MSG SEVIRI)
+
+  // -------------------------------------------------------------
+  // 3. GOES-19 (GOES-U / Nova Geração GOES-East / 75.2° W - ABI 16 Bandas & GLM)
+  // -------------------------------------------------------------
   {
-    id: 'GEO-METEOSAT-20261027-004',
+    id: 'GEO-GOES19-20261030-007',
+    latitude: -7.1458,
+    longitude: -55.4214,
+    municipality: 'Novo Progresso (BR-163)',
+    state: 'PA',
+    country_name: 'Brasil',
+    continent: 'América do Sul',
+    is_brazil: true,
+    biome: 'Amazônia',
+    satellite: 'GOES-19 ABI (Next-Gen)',
+    frp_mw: 112.5,
+    bright_ti4_k: 395.0,
+    confidence: 0.98,
+    minutes_ago: 3,
+  },
+  {
+    id: 'GEO-GOES19-20261030-008',
+    latitude: -6.6447,
+    longitude: -51.9878,
+    municipality: 'São Félix do Xingu',
+    state: 'PA',
+    country_name: 'Brasil',
+    continent: 'América do Sul',
+    is_brazil: true,
+    biome: 'Amazônia',
+    satellite: 'GOES-19 ABI (Next-Gen)',
+    frp_mw: 135.0,
+    bright_ti4_k: 404.2,
+    confidence: 0.99,
+    minutes_ago: 4,
+  },
+  {
+    id: 'GEO-GOES19-20261030-009',
+    latitude: -3.5791,
+    longitude: -59.1306,
+    municipality: 'Autazes (AM-254)',
+    state: 'AM',
+    country_name: 'Brasil',
+    continent: 'América do Sul',
+    is_brazil: true,
+    biome: 'Amazônia',
+    satellite: 'GOES-19 ABI (Next-Gen)',
+    frp_mw: 82.0,
+    bright_ti4_k: 379.5,
+    confidence: 0.93,
+    minutes_ago: 7,
+  },
+
+  // -------------------------------------------------------------
+  // 4. Rede Global Geoestacionária Parceira (Meteosat MSG e Himawari-9)
+  // -------------------------------------------------------------
+  {
+    id: 'GEO-METEOSAT-20261030-010',
     latitude: 37.8920,
     longitude: -3.2140,
     municipality: 'Jaén / Andaluzia',
@@ -90,9 +201,8 @@ export const INITIAL_GOES16_ANOMALIES = [
     confidence: 0.91,
     minutes_ago: 11,
   },
-  // 4. África Subsaariana / Bacia do Congo (EUMETSAT Meteosat)
   {
-    id: 'GEO-METEOSAT-20261027-005',
+    id: 'GEO-METEOSAT-20261030-011',
     latitude: -4.5210,
     longitude: 23.8140,
     municipality: 'Sankuru (Bacia do Congo)',
@@ -107,9 +217,8 @@ export const INITIAL_GOES16_ANOMALIES = [
     confidence: 0.94,
     minutes_ago: 9,
   },
-  // 5. Ásia / Indonésia (JMA Himawari-9 AHI)
   {
-    id: 'GEO-HIMAWARI-20261027-006',
+    id: 'GEO-HIMAWARI-20261030-012',
     latitude: -1.8420,
     longitude: 114.5120,
     municipality: 'Kalimantan Central (Bornéu)',
@@ -124,9 +233,8 @@ export const INITIAL_GOES16_ANOMALIES = [
     confidence: 0.96,
     minutes_ago: 7,
   },
-  // 6. Oceania / Austrália (JMA Himawari-9 AHI)
   {
-    id: 'GEO-HIMAWARI-20261027-007',
+    id: 'GEO-HIMAWARI-20261030-013',
     latitude: -32.5120,
     longitude: 149.8240,
     municipality: 'Hunter Valley (New South Wales)',
@@ -183,7 +291,7 @@ class Goes16PollingManager {
         aqi: Math.min(500, Math.round(a.frp_mw * 2.8 + 40)),
         pm25: parseFloat((a.frp_mw * 1.4 + 18).toFixed(1)),
         air_quality_level: a.frp_mw > 80 ? 'PERIGOSA' : 'MUITO INADEQUADA',
-        is_simulated: false,
+        is_simulated: true,
         is_estimated_aqi: true,
         detection_type: 'PRELIMINAR_GEOESTACIONARIO',
         is_geostationary_preliminary: true,
@@ -196,30 +304,31 @@ class Goes16PollingManager {
   }
 
   /**
-   * Retorna informações da última varredura do GOES-16
+   * Retorna informações da última varredura da constelação GOES (16, 18 e 19)
    */
   public getSweepInfo(): Goes16SweepInfo {
     const elapsedMinutes = Math.max(1, Math.floor((Date.now() - this.lastSweep.getTime()) / 60000));
     return {
       lastSweepTime: this.lastSweep,
       minutesAgo: elapsedMinutes,
-      satelliteOrbit: 'GEOESTACIONARIA (GOES-East)',
-      sensor: 'ABI (Advanced Baseline Imager - Band 7 3.9µm)',
-      resolutionKm: '2.0 km (Full Disk) / 1.0 km (Mesoescala)',
+      satelliteOrbit: 'CONSTELAÇÃO GEOESTACIONÁRIA (GOES-16 / GOES-18 / GOES-19)',
+      sensor: 'ABI (Band 7 3.9µm) + GLM (Lightning Mapper)',
+      resolutionKm: '1.0 km (Mesoescala 30s) / 2.0 km (Full Disk)',
       status: 'OPERACIONAL',
-      preliminaryHotspotsCount: this.currentGoesSpots.length
+      preliminaryHotspotsCount: this.currentGoesSpots.length,
+      activeSatellites: ['GOES-16 (East)', 'GOES-18 (West)', 'GOES-19 (Next-Gen)']
     };
   }
 
   /**
-   * Retorna os focos ativos captados pelo GOES-16
+   * Retorna os focos ativos captados pela constelação GOES
    */
   public getActiveGoesSpots(): FireSpot[] {
     return this.currentGoesSpots;
   }
 
   /**
-   * Força uma nova varredura instantânea da NOAA (Simulação de ciclo de 10 min)
+   * Força uma nova varredura instantânea da NOAA (Simulação de ciclo de 10-15 min)
    */
   public forceSweepNow(): { spots: FireSpot[]; sweepInfo: Goes16SweepInfo } {
     this.lastSweep = new Date();
@@ -227,7 +336,7 @@ class Goes16PollingManager {
     this.currentGoesSpots = this.currentGoesSpots.map((s) => ({
       ...s,
       minutes_ago: Math.max(1, Math.floor(Math.random() * 5) + 2),
-      detected_at: 'Há poucos instantes (NOAA GOES-16 ABI)'
+      detected_at: `Há poucos instantes (NOAA ${s.satellite || 'GOES ABI'})`
     }));
 
     const sweepInfo = this.getSweepInfo();
@@ -236,8 +345,8 @@ class Goes16PollingManager {
   }
 
   /**
-   * Cruza anomalias do GOES-16 com os focos do VIIRS/MODIS.
-   * Se um foco do VIIRS estiver a menos de 3km de uma detecção do GOES-16,
+   * Cruza anomalias dos satélites GOES (16, 18, 19) com os focos do VIIRS/MODIS.
+   * Se um foco do VIIRS estiver a menos de 3km de uma detecção geoestacionária,
    * ele é reconciliado como "CONFIRMADO POR VIIRS (ALTA RESOLUÇÃO)".
    */
   public reconcileWithPolarFires(polarSpots: FireSpot[]): FireSpot[] {
@@ -256,7 +365,7 @@ class Goes16PollingManager {
         goesSpot.detection_type = 'CONFIRMADO_POLAR';
         goesSpot.awaiting_polar_confirmation = false;
         goesSpot.status = 'PENDENTE';
-        goesSpot.address = `Confirmado VIIRS 375m (${matchingPolar.satellite}) • Detectado Inicialmente via GOES-16 ABI`;
+        goesSpot.address = `Confirmado VIIRS 375m (${matchingPolar.satellite}) • Detectado Inicialmente via ${goesSpot.satellite || 'GOES ABI'}`;
       } else {
         // Alerta permanece QUENTE aguardando órbita polar
         goesSpot.detection_type = 'PRELIMINAR_GEOESTACIONARIO';

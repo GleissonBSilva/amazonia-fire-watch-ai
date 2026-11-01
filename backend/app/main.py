@@ -265,6 +265,7 @@ class MapContext(BaseModel):
     pergunta_operador: str
     cerca_virtual_ativa: Optional[str] = None
     planta_baixa_ativa: Optional[str] = None
+    is_simulation: Optional[bool] = True
 
 @app.post("/api/ai/tactical-copilot")
 async def tactical_copilot(ctx: MapContext):

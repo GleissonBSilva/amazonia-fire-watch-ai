@@ -96,7 +96,7 @@ export const AreaInspectionModal: React.FC<AreaInspectionModalProps> = ({
     const count = firesInArea.length;
     const totalFrp = firesInArea.reduce((acc, f) => acc + (f.frp_mw || 0), 0);
     const avgFrp = count > 0 ? totalFrp / count : 0;
-    const maxBright = count > 0 ? Math.max(...firesInArea.map((f) => f.bright_ti4_k || 300)) : 300;
+    const maxBright = count > 0 ? firesInArea.reduce((max, f) => Math.max(max, f.bright_ti4_k || 300), 300) : 300;
     const maxTempC = Math.round(maxBright - 273.15);
     const criticalFires = firesInArea.filter((f) => f.frp_mw >= 50).length;
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, WMSTileLayer, Circle, Marker, Popup, Polygon, Rectangle, useMap } from 'react-leaflet';
 import { INDUSTRIAL_FACILITIES, Facility } from '../data/facilityFloorPlans';
 import { fetchLatestRainViewerRadar } from '../services/weatherService';
@@ -221,6 +221,30 @@ const getGibsDate = () => {
 const GIBS_DATE = getGibsDate();
 
 const STATIC_WMS_CONFIG = {
+  goesEast: {
+    layers: 'GOES-East_ABI_GeoColor',
+    format: 'image/png',
+    transparent: true,
+    version: '1.1.1',
+  },
+  goesWest: {
+    layers: 'GOES-West_ABI_GeoColor',
+    format: 'image/png',
+    transparent: true,
+    version: '1.1.1',
+  },
+  meteosat: {
+    layers: 'Meteosat_Colorized_Infrared',
+    format: 'image/png',
+    transparent: true,
+    version: '1.1.1',
+  },
+  himawari: {
+    layers: 'Himawari_AHI_GeoColor',
+    format: 'image/png',
+    transparent: true,
+    version: '1.1.1',
+  },
   goes16: {
     layers: 'GOES-East_ABI_GeoColor',
     format: 'image/png',
@@ -278,6 +302,18 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
   isSimulation,
 }) => {
   const map = useMap();
+
+  const onSpotClickRef = useRef(onSpotClick);
+  const onHoverSpotRef = useRef(onHoverSpot);
+  const onLeaveSpotRef = useRef(onLeaveSpot);
+  const getRealisticFlameIconRef = useRef(getRealisticFlameIcon);
+
+  useEffect(() => {
+    onSpotClickRef.current = onSpotClick;
+    onHoverSpotRef.current = onHoverSpot;
+    onLeaveSpotRef.current = onLeaveSpot;
+    getRealisticFlameIconRef.current = getRealisticFlameIcon;
+  });
 
   useEffect(() => {
     if (!map) return;
@@ -355,7 +391,7 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
 
     // Povoar marcadores
     spots.forEach((spot) => {
-      const icon = getRealisticFlameIcon(spot);
+      const icon = getRealisticFlameIconRef.current(spot);
       const marker = L.marker([spot.latitude, spot.longitude], {
         icon,
         title: spot.address || `${spot.municipality} - ${spot.state}`,
@@ -364,18 +400,18 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
       (marker as any).__spotData = spot;
 
       marker.on('click', () => {
-        onSpotClick(spot);
+        onSpotClickRef.current(spot);
       });
 
       marker.on('mouseover', (e: any) => {
         if (map) {
           const mapPoint = map.latLngToContainerPoint(e.latlng);
-          onHoverSpot(spot, { x: mapPoint.x, y: mapPoint.y });
+          onHoverSpotRef.current(spot, { x: mapPoint.x, y: mapPoint.y });
         }
       });
 
       marker.on('mouseout', () => {
-        onLeaveSpot();
+        onLeaveSpotRef.current();
       });
 
       // Template de Popup Cockpit C2
@@ -435,7 +471,7 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
       marker.on('popupopen', () => {
         const btn = document.getElementById(`btn-expand-${spot.id}`);
         if (btn) {
-          btn.onclick = () => onSpotClick(spot);
+          btn.onclick = () => onSpotClickRef.current(spot);
         }
       });
 
@@ -447,7 +483,7 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
     return () => {
       map.removeLayer(clusterGroup);
     };
-  }, [map, spots, getRealisticFlameIcon, onSpotClick, onHoverSpot, onLeaveSpot, isSimulation]);
+  }, [map, spots, isSimulation]);
 
   return null;
 };
@@ -500,7 +536,10 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
     let realCount = 0;
     const counts = { all: 0, green: 0, yellow: 0, orange: 0, red: 0, purple: 0, dark_purple: 0 };
 
-    const classified = fireSpots.map(s => {
+    // Se NÃO estiver em modo de simulação, restringe terminantemente apenas a focos reais de satélite
+    const validSpots = isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated);
+
+    const classified = validSpots.map(s => {
       const auth = classifyFireAuthenticity(s);
       if (auth.isRealVegetationFire) realCount++;
       counts.all++;
@@ -512,7 +551,8 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
 
     let display = classified;
     if (filterOnlyRealFires) {
-      display = display.filter(c => c.auth.isRealVegetationFire);
+      // Isola queimadas reais de vegetação e incêndios fabris, descartando apenas calor industrial pontual de chaminés
+      display = display.filter(c => !c.auth.isIndustrialHeat || c.auth.isStructuralIndustrialFire);
     }
     if (smokeColorFilter !== 'all') {
       display = display.filter(c => c.auth.smokeColorKey === smokeColorFilter);
@@ -523,7 +563,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
       smokeCounts: counts,
       filteredDisplaySpots: display.map(c => c.spot),
     };
-  }, [fireSpots, filterOnlyRealFires, smokeColorFilter]);
+  }, [fireSpots, filterOnlyRealFires, smokeColorFilter, isSimulation]);
 
   // Consolidated Overlays State
   const overlays: ActiveOverlaysState = activeOverlays || {
@@ -540,7 +580,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   // MARCADOR TÁTICO MILITAR SVG (RETÍCULO C2 + RADAR PING RIPPLE)
   // Sem cliparts ou emojis infantis de fogo
   // ========================================================
-  const getRealisticFlameIcon = (spot: FireSpot) => {
+  const getRealisticFlameIcon = useCallback((spot: FireSpot) => {
     const auth = classifyFireAuthenticity(spot);
     const frp = spot.frp_mw || 0;
     const isNew = spot.is_new_outbreak;
@@ -611,7 +651,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
       `,
       iconSize: [48, 48],
     });
-  };
+  }, []);
 
   // Marcador Tático OSINT (Radar Ciano de Fontes Abertas)
   const osintIcon = L.divIcon({
@@ -700,17 +740,46 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           />
         )}
 
-        {/* OVERLAY: Satélite Meteorológico GOES-16 (Fumaça & Nuvens ao Vivo via NOAA / NASA GIBS WMS) */}
+        {/* OVERLAY: Constelação Geoestacionária Planetária 360° (GOES-East, GOES-West, Meteosat e Himawari-9) */}
         {overlays.goes16 && (
-          <WMSTileLayer
-            key="overlay-goes16-geocolor"
-            url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
-            params={STATIC_WMS_CONFIG.goes16}
-            attribution="&copy; NOAA / NASA GIBS &mdash; GOES-East ABI GeoColor (Satélite Meteorológico & Fumaça)"
-            opacity={0.65}
-            className="goes16-weather-overlay mix-blend-screen"
-            zIndex={7}
-          />
+          <>
+            <WMSTileLayer
+              key="overlay-goes-east-geocolor"
+              url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
+              params={STATIC_WMS_CONFIG.goesEast}
+              attribution="&copy; NOAA / NASA GIBS &mdash; GOES-East (GOES-16/19 ABI GeoColor)"
+              opacity={0.65}
+              className="goes16-weather-overlay mix-blend-screen"
+              zIndex={7}
+            />
+            <WMSTileLayer
+              key="overlay-goes-west-geocolor"
+              url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
+              params={STATIC_WMS_CONFIG.goesWest}
+              attribution="&copy; NOAA / NASA GIBS &mdash; GOES-West (GOES-18 ABI GeoColor)"
+              opacity={0.65}
+              className="goes18-weather-overlay mix-blend-screen"
+              zIndex={7}
+            />
+            <WMSTileLayer
+              key="overlay-meteosat-geocolor"
+              url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
+              params={STATIC_WMS_CONFIG.meteosat}
+              attribution="&copy; EUMETSAT / NASA GIBS &mdash; Meteosat (Europa/África/Oriente Médio)"
+              opacity={0.65}
+              className="meteosat-weather-overlay mix-blend-screen"
+              zIndex={7}
+            />
+            <WMSTileLayer
+              key="overlay-himawari-geocolor"
+              url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
+              params={STATIC_WMS_CONFIG.himawari}
+              attribution="&copy; JMA / NASA GIBS &mdash; Himawari-9 (Ásia/Oceania/Pacífico)"
+              opacity={0.65}
+              className="himawari-weather-overlay mix-blend-screen"
+              zIndex={7}
+            />
+          </>
         )}
 
         {/* OVERLAY: Pluma de Fumaça (Aerossol / Dispersão Atmosférica via NASA GIBS WMS) */}
@@ -918,12 +987,9 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
             3. MARCADORES TÁTICOS C2 & POPUP DE COMANDO AEROESPACIAL
             ======================================================== */}
         {/* DISPERSÃO EM TEMPO REAL DA NUVEM DE FUMAÇA SEPARADA POR CORES (CONAMA / EPA) */}
-        {(overlays.smokePlume || true) &&
+        {Boolean(overlays.smokePlume) &&
           filteredDisplaySpots.map((spot) => {
             const auth = classifyFireAuthenticity(spot);
-            // Mostra a nuvem de fumaça sempre para incêndios reais ou quando o overlay smokePlume estiver ativado
-            if (!overlays.smokePlume && !auth.isRealVegetationFire) return null;
-
             const radiusM = auth.smokeRadiusMeters;
             const color = auth.smokeColor;
 
@@ -980,8 +1046,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
             );
           })}
 
-        {(temporalMode === '24h' || temporalMode === 'historical') && (
-          overlays.clustering !== false ? (
+        {overlays.clustering !== false ? (
             <TacticalClusterGroup
               spots={filteredDisplaySpots}
               getRealisticFlameIcon={getRealisticFlameIcon}
@@ -1083,8 +1148,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
               </Popup>
             </Marker>
           ))
-        )
-      )}
+        )}
 
         {/* Marcadores de Relatos OSINT (Redes Sociais / Cidadão) */}
         {osintAlerts.map((alert) => (
