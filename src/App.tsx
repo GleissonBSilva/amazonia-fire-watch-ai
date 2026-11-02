@@ -10,7 +10,7 @@ import { WhatsAppConfirmModal } from './components/WhatsAppConfirmModal';
 import L from 'leaflet';
 import { BottomDock } from './components/BottomDock';
 import { SettingsModal, DEFAULT_CONFIG, SystemConfigState } from './components/SettingsModal';
-import { Settings, Compass, User as UserIcon, LogOut, UserCheck } from 'lucide-react';
+import { Settings, Compass, User as UserIcon, LogOut, UserCheck, ExternalLink } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
@@ -1452,11 +1452,10 @@ const AppContent: React.FC = () => {
         isSimulation={isSimulation}
       />
 
-      {/* D. NASA FIRMS VIIRS (Via Backend Proxy Anti-403) */}
+      {/* D. NASA FIRMS VIIRS (Painel Tático com Telemetria e Camada WMS Integrada) */}
       <FloatingWindow
         id="firms"
-        title="NASA FIRMS • Focos VIIRS / MODIS (Amazonas)"
-        url="http://localhost:8000/api/proxy?url=https%3A%2F%2Fzoom.earth%2Fmaps%2Fsatellite%2F%23view%3D-5.790675%2C-66.643552%2C11z%2Foverlays%3Dheat%2Cfires"
+        title="NASA FIRMS • Focos Térmicos VIIRS / MODIS"
         isOpen={openWindows.firms}
         isMinimized={minimizedWindows.firms}
         zIndex={windowZ.firms}
@@ -1464,8 +1463,76 @@ const AppContent: React.FC = () => {
         onClose={closeWindow}
         onMinimize={minimizeWindow}
         defaultPosition={{ x: 120, y: 90 }}
-        defaultSize={{ width: 660, height: 450 }}
-      />
+        defaultSize={{ width: 660, height: 460 }}
+      >
+        <div className="p-4 bg-slate-950 font-mono text-xs text-white h-full flex flex-col justify-between overflow-y-auto">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-amber-900/60 pb-2">
+              <div className="flex items-center gap-2">
+                <Satellite className="w-5 h-5 text-amber-400 animate-pulse" />
+                <div>
+                  <h3 className="font-bold text-amber-300 text-sm">NASA FIRMS (Earthdata GIBS)</h3>
+                  <p className="text-[10px] text-slate-400">Fire Information for Resource Management System</p>
+                </div>
+              </div>
+              <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold border ${activeOverlays.nasaFirms ? 'bg-amber-950 text-amber-300 border-amber-500' : 'bg-slate-900 text-slate-400 border-slate-700'}`}>
+                {activeOverlays.nasaFirms ? 'CAMADA MAPA ATIVA' : 'CAMADA MAPA INATIVA'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Sensores Primários</span>
+                <span className="text-white font-bold">VIIRS S-NPP (375m) & NOAA-20</span>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Resolução Radiométrica</span>
+                <span className="text-amber-300 font-bold">Canal Térmico I4 (3.74 µm)</span>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Cobertura Global</span>
+                <span className="text-emerald-300 font-bold">Órbita Heliossíncrona (~13:30 LT)</span>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Alimentação WMS</span>
+                <span className="text-cyan-300 font-bold">EPSG:3857 / EPSG:4326</span>
+              </div>
+            </div>
+
+            <div className="bg-amber-950/30 border border-amber-800/40 rounded p-2.5 text-[10.5px] text-amber-200/90 leading-relaxed">
+              💡 <strong>Dica Operacional:</strong> Ative a camada WMS diretamente no mapa tático principal para visualizar a mancha térmica sincronizada com os alertas sonoros e radares de chuva.
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-800 flex flex-wrap gap-2">
+            <button
+              onClick={() => handleToggleOverlay('nasaFirms')}
+              className={`flex-1 py-2 px-3 rounded text-xs font-bold transition flex items-center justify-center gap-1.5 shadow ${
+                activeOverlays.nasaFirms
+                  ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                  : 'bg-amber-950 hover:bg-amber-900 text-amber-200 border border-amber-600'
+              }`}
+            >
+              <Satellite size={13} />
+              <span>{activeOverlays.nasaFirms ? 'Desativar Camada no Mapa' : 'Ativar Camada WMS no Mapa'}</span>
+            </button>
+            <button
+              onClick={() => window.open('https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@-60.0,-3.1,8z', '_blank')}
+              className="py-2 px-3 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5"
+            >
+              <ExternalLink size={13} />
+              <span>Portal NASA FIRMS ↗</span>
+            </button>
+            <button
+              onClick={() => window.open('https://zoom.earth/maps/satellite/#view=-5.790675,-66.643552,8z/overlays=heat,fires', '_blank')}
+              className="py-2 px-3 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition flex items-center gap-1.5"
+            >
+              <ExternalLink size={13} />
+              <span>Zoom.earth Focos ↗</span>
+            </button>
+          </div>
+        </div>
+      </FloatingWindow>
 
       {/* E. Google Earth 3D (Visualizador Tático com Telemetria e Voo Direto) */}
       <FloatingWindow
@@ -1490,11 +1557,10 @@ const AppContent: React.FC = () => {
         />
       </FloatingWindow>
 
-      {/* F. INPE BDQueimadas (Via Backend Proxy Anti-403) */}
+      {/* F. INPE BDQueimadas (Painel Tático com Telemetria Oficial e Camada WMS) */}
       <FloatingWindow
         id="bdqueimadas"
         title="INPE • Portal BDQueimadas (Bioma Amazônia)"
-        url="https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/"
         isOpen={openWindows.bdqueimadas}
         isMinimized={minimizedWindows.bdqueimadas}
         zIndex={windowZ.bdqueimadas}
@@ -1502,8 +1568,76 @@ const AppContent: React.FC = () => {
         onClose={closeWindow}
         onMinimize={minimizeWindow}
         defaultPosition={{ x: 320, y: 140 }}
-        defaultSize={{ width: 620, height: 430 }}
-      />
+        defaultSize={{ width: 620, height: 460 }}
+      >
+        <div className="p-4 bg-slate-950 font-mono text-xs text-white h-full flex flex-col justify-between overflow-y-auto">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-red-900/60 pb-2">
+              <div className="flex items-center gap-2">
+                <Flame className="w-5 h-5 text-red-500 animate-pulse" />
+                <div>
+                  <h3 className="font-bold text-red-400 text-sm">INPE BDQueimadas (TerraBrasilis)</h3>
+                  <p className="text-[10px] text-slate-400">Programa Queimadas • Monitoramento Oficial do Brasil</p>
+                </div>
+              </div>
+              <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold border ${activeOverlays.inpeBdqueimadas ? 'bg-red-950 text-red-300 border-red-500' : 'bg-slate-900 text-slate-400 border-slate-700'}`}>
+                {activeOverlays.inpeBdqueimadas ? 'CAMADA MAPA ATIVA' : 'CAMADA MAPA INATIVA'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Satélite de Referência</span>
+                <span className="text-white font-bold">AQUA M-T (Sensor MODIS)</span>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Satélites Geoestacionários</span>
+                <span className="text-red-300 font-bold">GOES-16 & MSG-3</span>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Órgãos Vinculados</span>
+                <span className="text-emerald-300 font-bold">IBAMA, PrevFogo, ICMBio, CBMAM</span>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-2.5">
+                <span className="text-slate-400 block text-[9.5px] uppercase font-bold">Filtro de Ruído</span>
+                <span className="text-cyan-300 font-bold">Máscara Solar e Nuvem Ativa</span>
+              </div>
+            </div>
+
+            <div className="bg-red-950/30 border border-red-800/40 rounded p-2.5 text-[10.5px] text-red-200/90 leading-relaxed">
+              🇧🇷 <strong>Base Oficial Laudos:</strong> Os dados do INPE alimentam os boletins diários de situação da Defesa Civil e autos de infração ambiental do IBAMA e IPAAM.
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-800 flex flex-wrap gap-2">
+            <button
+              onClick={() => handleToggleOverlay('inpeBdqueimadas')}
+              className={`flex-1 py-2 px-3 rounded text-xs font-bold transition flex items-center justify-center gap-1.5 shadow ${
+                activeOverlays.inpeBdqueimadas
+                  ? 'bg-red-600 hover:bg-red-500 text-white'
+                  : 'bg-red-950 hover:bg-red-900 text-red-200 border border-red-600'
+              }`}
+            >
+              <Flame size={13} />
+              <span>{activeOverlays.inpeBdqueimadas ? 'Desativar Camada no Mapa' : 'Ativar Camada WMS no Mapa'}</span>
+            </button>
+            <button
+              onClick={() => window.open('https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/', '_blank')}
+              className="py-2 px-3 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5"
+            >
+              <ExternalLink size={13} />
+              <span>Portal INPE BDQueimadas ↗</span>
+            </button>
+            <button
+              onClick={() => window.open('https://terrabrasilis.dpi.inpe.br/app/dashboard/alerts/biomes/legal_amazon/aggregated/', '_blank')}
+              className="py-2 px-3 rounded text-xs font-bold bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 transition flex items-center gap-1.5"
+            >
+              <ExternalLink size={13} />
+              <span>Painel Amazônia Legal ↗</span>
+            </button>
+          </div>
+        </div>
+      </FloatingWindow>
 
       {/* G. Visão da Rua (Street View 360° em Tempo Real) */}
       <FloatingWindow
@@ -1518,13 +1652,35 @@ const AppContent: React.FC = () => {
         defaultPosition={{ x: 80, y: 70 }}
         defaultSize={{ width: 620, height: 440 }}
       >
-        {streetViewLocation && (
+        {streetViewLocation ? (
           <StreetViewWindow
             location={streetViewLocation}
             onFlyTo={(lat, lng) => {
               setTargetMapLocation({ center: [lat, lng], zoom: 17, trigger: Date.now() });
             }}
           />
+        ) : (
+          <div className="p-6 text-center text-slate-300 space-y-3 font-mono flex flex-col items-center justify-center h-full">
+            <Compass className="w-12 h-12 text-cyan-400 animate-spin-slow" />
+            <p className="text-sm font-semibold text-white">Nenhum Ponto Selecionado</p>
+            <p className="text-xs text-slate-400 max-w-sm">
+              Selecione qualquer foco de calor, instalação industrial ou clique no botão abaixo para abrir a visão 360° no centro atual da câmera do radar.
+            </p>
+            <button
+              onClick={() => {
+                const lat = currentMapCenter?.lat ?? -3.1019;
+                const lng = currentMapCenter?.lng ?? -60.0250;
+                setStreetViewLocation({
+                  lat,
+                  lng,
+                  label: 'Centro Tático do Mapa',
+                });
+              }}
+              className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-xs font-bold transition-all shadow cursor-pointer"
+            >
+              Abrir no Centro Atual ({currentMapCenter?.lat ? currentMapCenter.lat.toFixed(4) : '-3.1019'}, {currentMapCenter?.lng ? currentMapCenter.lng.toFixed(4) : '-60.0250'})
+            </button>
+          </div>
         )}
       </FloatingWindow>
 
@@ -1541,6 +1697,10 @@ const AppContent: React.FC = () => {
         openWindows={openWindows}
         minimizedWindows={minimizedWindows}
         onToggleWindow={(id) => {
+          if (id === 'whatsappAlert') {
+            setIsWhatsAppModalOpen(true);
+            return;
+          }
           if (id === 'floorPlan') {
             setIsFloorPlanOpen(true);
             return;
@@ -1553,6 +1713,26 @@ const AppContent: React.FC = () => {
             setIsSettingsOpen(true);
             return;
           }
+          if (id === 'spotDetail') {
+            if (!selectedSpot && fireSpots.length > 0) {
+              setSelectedSpot(fireSpots[0]);
+            }
+            toggleWindow('spotDetail');
+            return;
+          }
+          if (id === 'streetView') {
+            if (!streetViewLocation) {
+              const lat = currentMapCenter?.lat ?? (targetMapLocation?.center?.[0] || -3.1019);
+              const lng = currentMapCenter?.lng ?? (targetMapLocation?.center?.[1] || -60.0250);
+              setStreetViewLocation({
+                lat,
+                lng,
+                label: 'Área Central do Radar Tático',
+              });
+            }
+            toggleWindow('streetView');
+            return;
+          }
           if (id === 'geofence') {
             if (activeGeofence) {
               const nextEdit = !isEditingGeofence;
@@ -1560,7 +1740,7 @@ const AppContent: React.FC = () => {
               const centroid = getPolygonCentroid(normalizeGeofenceToPolygon(activeGeofence));
               setTargetMapLocation({ center: centroid, zoom: 16, trigger: Date.now() });
             } else {
-              handleActivateGeofence(INDUSTRIAL_FACILITIES[0]);
+              handleCreateNewGeofence();
               setIsEditingGeofence(true);
             }
             return;

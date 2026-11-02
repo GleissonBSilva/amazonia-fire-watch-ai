@@ -28,8 +28,12 @@ export const WhatsAppConfirmModal: React.FC<WhatsAppConfirmModalProps> = ({
   const lat = selectedSpot ? selectedSpot.latitude : selectedArea ? selectedArea.center.lat : -3.11902;
   const lng = selectedSpot ? selectedSpot.longitude : selectedArea ? selectedArea.center.lng : -60.02173;
   const areaKm2 = selectedArea ? selectedArea.areaSqKm : 1.45;
-  const localNome = selectedSpot ? `${selectedSpot.address} - ${selectedSpot.municipality}/${selectedSpot.state}` : 'Área Demarcada pelo Operador (Manaus/AM)';
-  const municipio = selectedSpot ? selectedSpot.municipality : 'Manaus';
+  const localNome = selectedSpot
+    ? `${selectedSpot.address} - ${selectedSpot.municipality}/${selectedSpot.state}`
+    : selectedArea?.road
+    ? `${selectedArea.road}${selectedArea.neighborhood ? `, ${selectedArea.neighborhood}` : ''} - ${selectedArea.city}/${selectedArea.state || 'AM'}`
+    : 'Área Demarcada pelo Operador';
+  const municipio = selectedSpot ? selectedSpot.municipality : selectedArea?.city || 'Região Metropolitana';
   const frpMw = selectedSpot ? selectedSpot.frp_mw : 35.5;
   const isRecurrent = selectedSpot ? (selectedSpot.is_recurrent || selectedSpot.is_arson_cluster) : false;
   const mapsLink = `https://www.google.com/maps?q=${lat.toFixed(5)},${lng.toFixed(5)}`;

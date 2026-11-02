@@ -116,17 +116,31 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
 
       {/* Conteúdo Iframe / Sandbox ou Componente Filho */}
       <div className="flex-1 w-full h-full bg-slate-950 relative overflow-hidden flex flex-col">
-        {url ? (
-          <iframe
-            src={url}
-            title={title}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            className="w-full h-full border-0"
-            loading="lazy"
-          />
-        ) : (
+        {children ? (
           children
-        )}
+        ) : url ? (
+          <>
+            <div className="bg-slate-900/90 border-b border-slate-800 px-2 py-1 text-[10px] font-mono text-slate-300 flex items-center justify-between shrink-0">
+              <span className="truncate max-w-[280px] sm:max-w-[420px] text-slate-400">Origem: {url.split('?')[0]}</span>
+              <button
+                type="button"
+                onClick={() => window.open(url, '_blank')}
+                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white flex items-center gap-1 font-bold text-[9.5px] transition cursor-pointer"
+                title="Abrir página oficial diretamente em nova aba"
+              >
+                <ExternalLink size={10} />
+                <span>Abrir em Nova Aba</span>
+              </button>
+            </div>
+            <iframe
+              src={url}
+              title={title}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              className="w-full flex-1 border-0"
+              loading="lazy"
+            />
+          </>
+        ) : null}
       </div>
     </Rnd>
   );
