@@ -1516,7 +1516,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* 5. HUD Tático Hierárquico: Mundo -> País -> Bioma -> Estado */}
-      <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-[1000] pointer-events-auto">
+      <div className="absolute top-12 sm:top-13 left-1/2 transform -translate-x-1/2 z-[1200] pointer-events-auto">
         <HierarchicalTelemetryHUD
           fireSpots={activeTemporalSpots}
           onFlyToLocation={(center, zoom, label) => {
@@ -1530,7 +1530,7 @@ const AppContent: React.FC = () => {
 
       {/* 6. Barra e Painel Avançado para Modo Histórico & Intervalo de Meses */}
       {temporalMode === 'historical' && (
-        <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-[950] pointer-events-auto">
+        <div className="absolute top-36 sm:top-40 left-1/2 transform -translate-x-1/2 z-[1150] pointer-events-auto">
           <TimeFilterBar
             temporalMode={temporalMode}
             setTemporalMode={setTemporalMode}
