@@ -86,7 +86,13 @@ export const FiresDrawer: React.FC<FiresDrawerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filterText, setFilterText] = useState('');
-  const [dataNatureFilter, setDataNatureFilter] = useState<'all' | 'real' | 'simulated'>('real');
+  const [dataNatureFilter, setDataNatureFilter] = useState<'all' | 'real' | 'simulated'>(
+    isSimulation ? 'all' : 'real'
+  );
+
+  useEffect(() => {
+    setDataNatureFilter(isSimulation ? 'all' : 'real');
+  }, [isSimulation]);
   const [scopeFilter, setScopeFilter] = useState<'all' | 'brasil' | 'south_america_intl' | 'north_america' | 'europe' | 'africa' | 'asia' | 'oceania'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'video' | 'crime' | 'recurrent'>('all');
   

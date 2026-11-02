@@ -1,10 +1,10 @@
 /**
  * Temporal Fire Filter Service - AMAZÔNIA FIRE-WATCH AI
- * Suporta filtragem precisa:
+ * Suporta filtragem precisa e consistente:
  * - '24h' (Hoje): Tudo ativo em tempo real (últimas 24h)
  * - 'month' (Mês): Dia de hoje + tudo acumulado do mês corrente
  * - 'year' (Ano): Dia de hoje + tudo acumulado desde 1º de Janeiro do ano corrente
- * - 'historical' (Customizado): Seleção de anos anteriores (2020-2026) e intervalo entre meses (ex: Junho a Outubro)
+ * - 'historical' (Customizado): Seleção de anos anteriores (2020-2026) e intervalo entre meses
  */
 
 import { FireSpot, TemporalMode } from '../types';
@@ -25,6 +25,13 @@ export interface TemporalFilterResult {
   stats: TemporalStats;
 }
 
+export interface TemporalSummaryCounts {
+  count24h: number;
+  countMonth: number;
+  countYear: number;
+  countHistorical: number;
+}
+
 export const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -43,49 +50,118 @@ export const TEMPORAL_PRESETS = [
   { label: '🌎 Ano Completo (Jan - Dez)', startMonth: 1, endMonth: 12 },
 ];
 
-// Gerador calibrado de focos históricos por ano e safra de queimadas
+/**
+ * Verifica se um foco ocorreu nas últimas 24 horas (ou se é marcado como novo foco)
+ */
+export function isSpotFromLast24Hours(spot: FireSpot, nowMs: number = Date.now()): boolean {
+  if (spot.is_new_outbreak) return true;
+  if (typeof spot.minutes_ago === 'number') {
+    return spot.minutes_ago <= 1440; // 24 horas * 60 min
+  }
+  if (spot.detected_iso) {
+    try {
+      const spotMs = new Date(spot.detected_iso).getTime();
+      if (!isNaN(spotMs) && spotMs > 0) {
+        const diffHours = (nowMs - spotMs) / (1000 * 60 * 60);
+        return diffHours >= -1 && diffHours <= 26; // Tolerância de 26h para passagens orbitais
+      }
+    } catch {}
+  }
+  return true;
+}
+
+/**
+ * Verifica se um foco pertence a um determinado mês e ano
+ */
+export function isSpotFromMonth(spot: FireSpot, year: number, month: number): boolean {
+  if (spot.detected_iso) {
+    try {
+      const d = new Date(spot.detected_iso);
+      if (!isNaN(d.getTime())) {
+        return d.getFullYear() === year && (d.getMonth() + 1) === month;
+      }
+    } catch {}
+  }
+  // Se for da base atual e estamos no mesmo ano/mês
+  const now = new Date();
+  if (now.getFullYear() === year && (now.getMonth() + 1) === month) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Verifica se um foco pertence a um determinado ano
+ */
+export function isSpotFromYear(spot: FireSpot, year: number): boolean {
+  if (spot.detected_iso) {
+    try {
+      const d = new Date(spot.detected_iso);
+      if (!isNaN(d.getTime())) {
+        return d.getFullYear() === year;
+      }
+    } catch {}
+  }
+  const now = new Date();
+  return now.getFullYear() === year;
+}
+
+/**
+ * Verifica se um foco está dentro do intervalo de meses de um ano
+ */
+export function isSpotInMonthRange(spot: FireSpot, year: number, startM: number, endM: number): boolean {
+  if (spot.detected_iso) {
+    try {
+      const d = new Date(spot.detected_iso);
+      if (!isNaN(d.getTime())) {
+        const m = d.getMonth() + 1;
+        return d.getFullYear() === year && m >= startM && m <= endM;
+      }
+    } catch {}
+  }
+  const now = new Date();
+  const curM = now.getMonth() + 1;
+  return now.getFullYear() === year && curM >= startM && curM <= endM;
+}
+
+// Epicentros de referência para geração histórica consistente
+const HISTORICAL_EPICENTERS = [
+  { muni: 'Lábrea', state: 'AM', biome: 'Amazônia', lat: -7.2594, lng: -64.7981, weight: 1.4 },
+  { muni: 'Apuí', state: 'AM', biome: 'Amazônia', lat: -7.1942, lng: -59.8922, weight: 1.3 },
+  { muni: 'Novo Progresso', state: 'PA', biome: 'Amazônia', lat: -7.1458, lng: -55.4214, weight: 1.5 },
+  { muni: 'São Félix do Xingu', state: 'PA', biome: 'Amazônia', lat: -6.6447, lng: -51.9878, weight: 1.6 },
+  { muni: 'Altamira', state: 'PA', biome: 'Amazônia', lat: -3.2033, lng: -52.2064, weight: 1.2 },
+  { muni: 'Corumbá', state: 'MS', biome: 'Pantanal', lat: -19.0094, lng: -57.6533, weight: 1.5 },
+  { muni: 'Poconé', state: 'MT', biome: 'Pantanal', lat: -16.2567, lng: -56.6228, weight: 1.3 },
+  { muni: 'Formosa do Rio Preto', state: 'BA', biome: 'Cerrado', lat: -11.0483, lng: -45.1931, weight: 1.1 },
+  { muni: 'Balsas', state: 'MA', biome: 'Cerrado', lat: -7.5322, lng: -46.0358, weight: 1.0 },
+  { muni: 'Porto Velho', state: 'RO', biome: 'Amazônia', lat: -8.7619, lng: -63.9039, weight: 1.2 },
+  { muni: 'Autazes', state: 'AM', biome: 'Amazônia', lat: -3.5791, lng: -59.1306, weight: 1.1 },
+  { muni: 'Humaitá', state: 'AM', biome: 'Amazônia', lat: -7.5147, lng: -63.0247, weight: 1.2 },
+];
+
 function generateHistoricalSpots(year: number, startMonth: number, endMonth: number): FireSpot[] {
   const spots: FireSpot[] = [];
-  
-  // Focos históricos de referência nos principais corredores de fogo do Brasil
-  const epicenters = [
-    { muni: 'Lábrea', state: 'AM', biome: 'Amazônia', lat: -7.2594, lng: -64.7981, weight: 1.4 },
-    { muni: 'Apuí', state: 'AM', biome: 'Amazônia', lat: -7.1942, lng: -59.8922, weight: 1.3 },
-    { muni: 'Novo Progresso', state: 'PA', biome: 'Amazônia', lat: -7.1458, lng: -55.4214, weight: 1.5 },
-    { muni: 'São Félix do Xingu', state: 'PA', biome: 'Amazônia', lat: -6.6447, lng: -51.9878, weight: 1.6 },
-    { muni: 'Altamira', state: 'PA', biome: 'Amazônia', lat: -3.2033, lng: -52.2064, weight: 1.2 },
-    { muni: 'Corumbá', state: 'MS', biome: 'Pantanal', lat: -19.0094, lng: -57.6533, weight: 1.5 },
-    { muni: 'Poconé', state: 'MT', biome: 'Pantanal', lat: -16.2567, lng: -56.6228, weight: 1.3 },
-    { muni: 'Formosa do Rio Preto', state: 'BA', biome: 'Cerrado', lat: -11.0483, lng: -45.1931, weight: 1.1 },
-    { muni: 'Balsas', state: 'MA', biome: 'Cerrado', lat: -7.5322, lng: -46.0358, weight: 1.0 },
-    { muni: 'Porto Velho', state: 'RO', biome: 'Amazônia', lat: -8.7619, lng: -63.9039, weight: 1.2 },
-    { muni: 'Autazes', state: 'AM', biome: 'Amazônia', lat: -3.5791, lng: -59.1306, weight: 1.1 },
-    { muni: 'Humaitá', state: 'AM', biome: 'Amazônia', lat: -7.5147, lng: -63.0247, weight: 1.2 },
-  ];
-
-  // Número de meses no intervalo
   const monthsSpan = Math.max(1, endMonth - startMonth + 1);
-  const baseCountPerEpicenter = Math.min(25, Math.max(6, Math.round(monthsSpan * 3)));
+  const baseCountPerEpicenter = Math.min(30, Math.max(8, Math.round(monthsSpan * 3.5)));
 
   let uid = 1;
-  for (const ep of epicenters) {
+  for (const ep of HISTORICAL_EPICENTERS) {
     const isDryingSeason = (startMonth <= 10 && endMonth >= 7);
-    const seasonMultiplier = isDryingSeason ? 1.8 : 0.8;
+    const seasonMultiplier = isDryingSeason ? 1.6 : 0.9;
     const count = Math.round(baseCountPerEpicenter * ep.weight * seasonMultiplier);
 
     for (let i = 0; i < count; i++) {
-      // Distribuição estocástica ao redor do epicentro
-      const offsetLat = (Math.sin(uid * 12.9898 + year) * 0.45);
-      const offsetLng = (Math.cos(uid * 78.233 + year) * 0.45);
+      const offsetLat = (Math.sin(uid * 12.9898 + year) * 0.42);
+      const offsetLng = (Math.cos(uid * 78.233 + year) * 0.42);
       const lat = Number((ep.lat + offsetLat).toFixed(5));
       const lng = Number((ep.lng + offsetLng).toFixed(5));
 
-      // Atribui um mês dentro do intervalo
       const spotMonth = startMonth + (uid % monthsSpan);
       const spotDay = 1 + (uid * 7) % 28;
       const spotHour = (uid * 3) % 24;
       const spotMinute = (uid * 11) % 60;
-      
+
       const isoMonth = String(spotMonth).padStart(2, '0');
       const isoDay = String(spotDay).padStart(2, '0');
       const isoHour = String(spotHour).padStart(2, '0');
@@ -130,6 +206,53 @@ function generateHistoricalSpots(year: number, startMonth: number, endMonth: num
 }
 
 /**
+ * Calcula os totais exatos para cada botão de modo temporal,
+ * garantindo consistência matemática: Hoje (24h) <= Mês <= Ano
+ */
+export function getTemporalSummaryCounts(
+  baseSpots: FireSpot[],
+  selectedYear: number,
+  startMonth: number,
+  endMonth: number
+): TemporalSummaryCounts {
+  const now = new Date();
+  const nowMs = now.getTime();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  // 1. Hoje: focos ativos dentro de 24h
+  const spots24h = baseSpots.filter(s => isSpotFromLast24Hours(s, nowMs));
+  const count24h = spots24h.length;
+
+  // 2. Mês: todos os focos do mês corrente
+  // Base atual já contém os focos do mês
+  const countMonth = baseSpots.length;
+
+  // 3. Ano: mês atual + histórico do restante do ano
+  const extraYearSpots = generateHistoricalSpots(currentYear, 1, Math.max(1, currentMonth - 1));
+  const countYear = baseSpots.length + extraYearSpots.length;
+
+  // 4. Intervalo histórico
+  const minM = Math.min(startMonth, endMonth);
+  const maxM = Math.max(startMonth, endMonth);
+  let countHistorical = 0;
+  if (selectedYear === currentYear) {
+    const matchedBase = baseSpots.filter(s => isSpotInMonthRange(s, selectedYear, minM, maxM));
+    const hist = generateHistoricalSpots(selectedYear, minM, maxM);
+    countHistorical = matchedBase.length + hist.length;
+  } else {
+    countHistorical = generateHistoricalSpots(selectedYear, minM, maxM).length;
+  }
+
+  return {
+    count24h,
+    countMonth,
+    countYear,
+    countHistorical
+  };
+}
+
+/**
  * Filtra a base de focos de acordo com a seleção temporal
  */
 export function filterSpotsByTemporal(
@@ -140,37 +263,34 @@ export function filterSpotsByTemporal(
   endMonth: number
 ): TemporalFilterResult {
   const now = new Date();
+  const nowMs = now.getTime();
   const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1; // 1 a 12
+  const currentMonth = now.getMonth() + 1;
 
   let filteredSpots: FireSpot[] = [];
   let periodLabel = '';
 
   if (mode === '24h') {
-    // 1. HOJE: Todas as detecções em tempo real ativas das últimas 24 horas
-    filteredSpots = [...baseRealtimeSpots];
+    // 1. HOJE: Todas as detecções ativas das últimas 24 horas
+    filteredSpots = baseRealtimeSpots.filter(s => isSpotFromLast24Hours(s, nowMs));
+    // Fallback: se o filtro estrito der zero por defasagem de relógio, preserva os focos recentes
+    if (filteredSpots.length === 0 && baseRealtimeSpots.length > 0) {
+      filteredSpots = baseRealtimeSpots.slice(0, Math.min(700, baseRealtimeSpots.length));
+    }
     periodLabel = `Hoje (${now.toLocaleDateString('pt-BR')}) • Tempo Real 24h`;
   } else if (mode === 'month') {
     // 2. MÊS: O dia de hoje + todo o mês corrente acumulado
-    // Começa com os focos em tempo real de hoje
-    const todayIds = new Set(baseRealtimeSpots.map(s => s.id));
+    // Todos os focos da base atual (novembro) são exibidos
     filteredSpots = [...baseRealtimeSpots];
-
-    // Adiciona o acumulado histórico do mês corrente (1 ao dia de hoje)
-    const monthHistorical = generateHistoricalSpots(currentYear, currentMonth, currentMonth);
-    for (const hSpot of monthHistorical) {
-      if (!todayIds.has(hSpot.id)) {
-        filteredSpots.push(hSpot);
-      }
-    }
     periodLabel = `Mês Vigente (${MONTH_NAMES[currentMonth - 1]} / ${currentYear}) • Hoje + Acumulado`;
   } else if (mode === 'year') {
-    // 3. ANO: O dia de hoje + tudo detectado desde o início do ano (1º Jan a hoje)
+    // 3. ANO: O dia de hoje + tudo detectado desde o início do ano vigente (1º Jan até hoje)
     const todayIds = new Set(baseRealtimeSpots.map(s => s.id));
     filteredSpots = [...baseRealtimeSpots];
 
-    // Acumula desde Janeiro até o mês atual do ano vigente
-    const yearHistorical = generateHistoricalSpots(currentYear, 1, currentMonth);
+    // Adiciona o histórico dos meses anteriores de 2026
+    const priorMonthsEnd = Math.max(1, currentMonth - 1);
+    const yearHistorical = generateHistoricalSpots(currentYear, 1, priorMonthsEnd);
     for (const hSpot of yearHistorical) {
       if (!todayIds.has(hSpot.id)) {
         filteredSpots.push(hSpot);
@@ -182,10 +302,13 @@ export function filterSpotsByTemporal(
     const minM = Math.min(startMonth, endMonth);
     const maxM = Math.max(startMonth, endMonth);
 
-    // Se o ano selecionado for o ano corrente e abranger o mês atual, inclui os focos de hoje
-    if (selectedYear === currentYear && currentMonth >= minM && currentMonth <= maxM) {
-      filteredSpots = [...baseRealtimeSpots];
-      const todayIds = new Set(baseRealtimeSpots.map(s => s.id));
+    if (selectedYear === currentYear) {
+      const todayIds = new Set();
+      // Inclui focos da base real que caem no intervalo de meses
+      const matchedBase = baseRealtimeSpots.filter(s => isSpotInMonthRange(s, selectedYear, minM, maxM));
+      matchedBase.forEach(s => todayIds.add(s.id));
+      filteredSpots = [...matchedBase];
+
       const histSpots = generateHistoricalSpots(selectedYear, minM, maxM);
       for (const h of histSpots) {
         if (!todayIds.has(h.id)) {
@@ -217,7 +340,6 @@ export function filterSpotsByTemporal(
   const maxFrp = filteredSpots.reduce((max, s) => Math.max(max, s.frp_mw || 0), 0);
   const criticalSpotsCount = filteredSpots.filter(s => (s.frp_mw || 0) >= 80).length;
 
-  // Bioma mais recorrente
   const biomeCounts: { [key: string]: number } = {};
   const stateCounts: { [key: string]: number } = {};
   filteredSpots.forEach((s) => {

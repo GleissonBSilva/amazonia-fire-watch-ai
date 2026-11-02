@@ -160,3 +160,4 @@ export const MANAUS_METROPOLITAN_SMOKE_POLYGON: [number, number][] = [
   [-3.3000, -60.3500], // Sudoeste (Iranduba / Solimões)
   [-3.0500, -60.4000], // Oeste (Manacapuru entrada)
 ];
+

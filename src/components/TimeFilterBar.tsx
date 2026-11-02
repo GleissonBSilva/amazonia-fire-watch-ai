@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TemporalMode } from '../types';
 import { Clock, Calendar, BarChart2, Filter, ChevronDown, Flame, Sparkles } from 'lucide-react';
-import { MONTH_NAMES, MONTH_SHORT_NAMES, TEMPORAL_PRESETS, TemporalStats } from '../services/temporalFilterService';
+import { MONTH_NAMES, MONTH_SHORT_NAMES, TEMPORAL_PRESETS, TemporalStats, TemporalSummaryCounts } from '../services/temporalFilterService';
 
 interface TimeFilterBarProps {
   temporalMode: TemporalMode;
@@ -13,6 +13,7 @@ interface TimeFilterBarProps {
   endMonth: number;
   setEndMonth: (month: number) => void;
   stats?: TemporalStats;
+  summaryCounts?: TemporalSummaryCounts;
   totalSpotsCount: number;
 }
 
@@ -26,6 +27,7 @@ export const TimeFilterBar: React.FC<TimeFilterBarProps> = ({
   endMonth,
   setEndMonth,
   stats,
+  summaryCounts,
   totalSpotsCount,
 }) => {
   const [isCustomExpanded, setIsCustomExpanded] = useState<boolean>(false);
@@ -49,7 +51,7 @@ export const TimeFilterBar: React.FC<TimeFilterBarProps> = ({
           <Clock size={12} className={temporalMode === '24h' ? 'animate-spin' : ''} />
           <span>HOJE / 24H</span>
           <span className="ml-0.5 px-1.5 py-0.2 bg-black/40 rounded text-[9.5px]">
-            {temporalMode === '24h' ? totalSpotsCount : '24h'}
+            {summaryCounts ? summaryCounts.count24h : (temporalMode === '24h' ? totalSpotsCount : '24h')}
           </span>
         </button>
 
@@ -66,7 +68,7 @@ export const TimeFilterBar: React.FC<TimeFilterBarProps> = ({
           <Calendar size={12} />
           <span>MÊS ATUAL</span>
           <span className="ml-0.5 px-1.5 py-0.2 bg-black/40 rounded text-[9.5px]">
-            {temporalMode === 'month' ? totalSpotsCount : 'Mês'}
+            {summaryCounts ? summaryCounts.countMonth : (temporalMode === 'month' ? totalSpotsCount : 'Mês')}
           </span>
         </button>
 
@@ -83,7 +85,7 @@ export const TimeFilterBar: React.FC<TimeFilterBarProps> = ({
           <Sparkles size={12} />
           <span>ANO {currentYear}</span>
           <span className="ml-0.5 px-1.5 py-0.2 bg-black/40 rounded text-[9.5px]">
-            {temporalMode === 'year' ? totalSpotsCount : `${currentYear}`}
+            {summaryCounts ? summaryCounts.countYear : (temporalMode === 'year' ? totalSpotsCount : `${currentYear}`)}
           </span>
         </button>
 
@@ -102,6 +104,9 @@ export const TimeFilterBar: React.FC<TimeFilterBarProps> = ({
         >
           <BarChart2 size={12} />
           <span>INTERVALO / HISTÓRICO</span>
+          <span className="ml-0.5 px-1.5 py-0.2 bg-black/40 rounded text-[9.5px]">
+            {summaryCounts ? summaryCounts.countHistorical : (temporalMode === 'historical' ? totalSpotsCount : 'Hist')}
+          </span>
           <ChevronDown
             size={12}
             className={`transition-transform duration-200 ${

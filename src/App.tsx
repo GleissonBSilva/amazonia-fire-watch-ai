@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MainMap } from './components/MainMap';
 import { FloatingWindow } from './components/FloatingWindow';
 import { VideoStreamWindow } from './components/VideoStreamWindow';
@@ -17,7 +17,7 @@ import { LandingPage } from './components/LandingPage';
 import { Globe2 } from 'lucide-react';
 import { LayerNavigationBar } from './components/LayerNavigationBar';
 import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LAYERS, ActiveOverlaysState, ActiveGeofenceState } from './types';
-import { filterSpotsByTemporal, TemporalStats } from './services/temporalFilterService';
+import { filterSpotsByTemporal, getTemporalSummaryCounts, TemporalStats, TemporalSummaryCounts } from './services/temporalFilterService';
 import { TimeFilterBar } from './components/TimeFilterBar';
 import {
   normalizeGeofenceToPolygon,
@@ -844,6 +844,66 @@ const AppContent: React.FC = () => {
     });
   };
 
+  // 1. Filtragem por Modo de Operação (Real vs Simulação) e Foco da Instalação Fabril
+  const baseOperatingSpots = useMemo(() => {
+    let spots = isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated);
+
+    if (activeGeofence && isSimulation) {
+      const matchedFacility = INDUSTRIAL_FACILITIES.find(f => f.id === activeGeofence.facilityId);
+      if (matchedFacility && matchedFacility.activeIncident && !spots.some(s => s.id === matchedFacility.activeIncident!.id)) {
+        spots = [{
+          id: matchedFacility.activeIncident.id,
+          latitude: matchedFacility.coordinates.lat,
+          longitude: matchedFacility.coordinates.lng,
+          frp_mw: 85.4,
+          confidence: 0.99,
+          municipality: 'Manaus',
+          state: 'AM',
+          address: `${matchedFacility.shortName} - ${matchedFacility.activeIncident.sectorName}`,
+          satellite: 'FLIR / IOT TÉRMICO',
+          biome: 'Amazônia (PIM Urbano)',
+          status: 'PENDENTE',
+          is_new_outbreak: true,
+          has_video: true,
+          bright_ti4_k: 457.6,
+          detected_at: matchedFacility.activeIncident.firstDetectedAt,
+          detected_iso: new Date().toISOString(),
+          is_recurrent: false,
+          is_arson_cluster: false,
+          is_simulated: true
+        }, ...spots];
+      }
+    }
+
+    if (onlyNewOutbreaks) {
+      spots = spots.filter(f => f.is_new_outbreak);
+    }
+
+    return spots;
+  }, [fireSpots, isSimulation, activeGeofence, onlyNewOutbreaks]);
+
+  // 2. Contagens matemáticas consistentes para os botões e indicadores temporais
+  const temporalCounts = useMemo(() => {
+    return getTemporalSummaryCounts(baseOperatingSpots, selectedYear, startMonth, endMonth);
+  }, [baseOperatingSpots, selectedYear, startMonth, endMonth]);
+
+  // 3. Filtro Temporal Unificado (Hoje 24h, Mês, Ano e Intervalo Histórico)
+  const temporalResult = useMemo(() => {
+    return filterSpotsByTemporal(
+      baseOperatingSpots,
+      temporalMode,
+      selectedYear,
+      startMonth,
+      endMonth
+    );
+  }, [baseOperatingSpots, temporalMode, selectedYear, startMonth, endMonth]);
+
+  const activeTemporalSpots = temporalResult.spots;
+  const activeTemporalHeatmap = temporalResult.heatmapSpots.length > 0
+    ? temporalResult.heatmapSpots
+    : heatmapSpots;
+  const temporalStats = temporalResult.stats;
+
   if (currentView === 'landing') {
     return <LandingPage onEnterDashboard={() => handleSwitchView('dashboard')} />;
   }
@@ -851,73 +911,17 @@ const AppContent: React.FC = () => {
   return (
     <div className="relative w-full h-full min-h-[100dvh] max-h-screen overflow-hidden bg-slate-950 font-sans select-none">
       {/* 1. Telão Master Fullscreen GIS (Cobertura Nacional Brasil) */}
-      {(() => {
-        // Filtragem estrita: no Modo Real, exclui terminantemente qualquer dado simulado
-        // Todos os focos do Brasil e da Amazônia permanecem 100% visíveis no mapa
-        let displayFireSpots = isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated);
-
-        // Se uma instalação fabril tiver incidente e simulação estiver ativa, garante o ponto térmico visível
-        if (activeGeofence && isSimulation) {
-          const matchedFacility = INDUSTRIAL_FACILITIES.find(f => f.id === activeGeofence.facilityId);
-          if (matchedFacility && matchedFacility.activeIncident && !displayFireSpots.some(s => s.id === matchedFacility.activeIncident!.id)) {
-            displayFireSpots = [{
-              id: matchedFacility.activeIncident.id,
-              latitude: matchedFacility.coordinates.lat,
-              longitude: matchedFacility.coordinates.lng,
-              frp_mw: 85.4,
-              confidence: 0.99,
-              municipality: 'Manaus',
-              state: 'AM',
-              address: `${matchedFacility.shortName} - ${matchedFacility.activeIncident.sectorName}`,
-              satellite: 'FLIR / IOT TÉRMICO',
-              biome: 'Amazônia (PIM Urbano)',
-              status: 'PENDENTE',
-              is_new_outbreak: true,
-              has_video: true,
-              bright_ti4_k: 457.6,
-              detected_at: matchedFacility.activeIncident.firstDetectedAt,
-              detected_iso: new Date().toISOString(),
-              is_recurrent: false,
-              is_arson_cluster: false,
-              is_simulated: true
-            }, ...displayFireSpots];
-          }
-        }
-
-        // 3. Filtro de Novos Focos (< 3h): Cumulativo e independente
-        if (onlyNewOutbreaks) {
-          displayFireSpots = displayFireSpots.filter(f => f.is_new_outbreak);
-        }
-
-        // 4. Filtro Temporal Preciso:
-        // - '24h': Hoje em tempo real
-        // - 'month': Hoje + todo o mês corrente acumulado
-        // - 'year': Hoje + tudo detectado desde 1º de Janeiro do ano corrente
-        // - 'historical': Anos anteriores (2020-2026) e intervalo customizado entre meses
-        const temporalResult = filterSpotsByTemporal(
-          displayFireSpots,
-          temporalMode,
-          selectedYear,
-          startMonth,
-          endMonth
-        );
-        const activeTemporalSpots = temporalResult.spots;
-        const activeTemporalHeatmap = temporalResult.heatmapSpots.length > 0
-          ? temporalResult.heatmapSpots
-          : heatmapSpots;
-
-        return (
-          <MainMap
-            onAreaSelected={handleAreaSelected}
-            onClearArea={() => setSelectedArea(null)}
-            onMapCenterChange={(c) => setCurrentMapCenter(c)}
-            onInspectMapPoint={handleInspectMapPoint}
-            fireSpots={activeTemporalSpots}
-            activeGeofence={activeGeofence}
-            isEditingGeofence={isEditingGeofence}
-            onToggleEditGeofence={handleToggleEditGeofence}
-            onUpdateGeofence={handleUpdateGeofence}
-            onClearGeofence={handleClearGeofence}
+      <MainMap
+        onAreaSelected={handleAreaSelected}
+        onClearArea={() => setSelectedArea(null)}
+        onMapCenterChange={(c) => setCurrentMapCenter(c)}
+        onInspectMapPoint={handleInspectMapPoint}
+        fireSpots={activeTemporalSpots}
+        activeGeofence={activeGeofence}
+        isEditingGeofence={isEditingGeofence}
+        onToggleEditGeofence={handleToggleEditGeofence}
+        onUpdateGeofence={handleUpdateGeofence}
+        onClearGeofence={handleClearGeofence}
             onOpenFloorPlan={handleOpenFloorPlan}
             onActivateGeofence={handleActivateGeofence}
             onTriggerAutoEmergency={handleTriggerAutoEmergency}
@@ -947,8 +951,6 @@ const AppContent: React.FC = () => {
           setTargetMapLocation({ center: [lat, lng], zoom: 16, trigger: Date.now() });
         }}
       />
-        );
-      })()}
 
       {/* Alerta Tático de Alta Nitidez de Novo Foco (<3h) ou Selecionado */}
       {selectedSpot && isBannerVisible && (
@@ -1050,6 +1052,9 @@ const AppContent: React.FC = () => {
             >
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
               <span>Hoje</span>
+              <span className="px-1 py-0.2 bg-black/40 rounded text-[9px] font-bold text-red-300">
+                {temporalCounts.count24h}
+              </span>
             </button>
 
             {/* MÊS */}
@@ -1063,6 +1068,9 @@ const AppContent: React.FC = () => {
               title="Hoje + Acumulado do Mês Vigente"
             >
               <span>Mês</span>
+              <span className="px-1 py-0.2 bg-black/40 rounded text-[9px] font-bold text-amber-300">
+                {temporalCounts.countMonth}
+              </span>
             </button>
 
             {/* ANO */}
@@ -1076,6 +1084,9 @@ const AppContent: React.FC = () => {
               title="Hoje + Tudo Detectado Desde o Início do Ano Vigente"
             >
               <span>Ano</span>
+              <span className="px-1 py-0.2 bg-black/40 rounded text-[9px] font-bold text-emerald-300">
+                {temporalCounts.countYear}
+              </span>
             </button>
 
             {/* INTERVALO / HISTÓRICO */}
@@ -1089,6 +1100,9 @@ const AppContent: React.FC = () => {
               title="Filtro de Anos Anteriores e Intervalo entre Meses"
             >
               <span>Intervalo</span>
+              <span className="px-1 py-0.2 bg-black/40 rounded text-[9px] font-bold text-cyan-300">
+                {temporalCounts.countHistorical}
+              </span>
             </button>
           </div>
         </div>
@@ -1423,7 +1437,7 @@ const AppContent: React.FC = () => {
 
       {/* 4. Drawer Lateral de Focos Detectados (Collapsible Sidebar) */}
       <FiresDrawer
-        fireSpots={isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated)}
+        fireSpots={activeTemporalSpots}
         isSimulation={isSimulation}
         onSelectSpot={handleSelectSpotFromDrawer}
         selectedSpotId={selectedSpot?.id}
@@ -1491,7 +1505,9 @@ const AppContent: React.FC = () => {
             setStartMonth={setStartMonth}
             endMonth={endMonth}
             setEndMonth={setEndMonth}
-            totalSpotsCount={fireSpots.length}
+            stats={temporalStats}
+            summaryCounts={temporalCounts}
+            totalSpotsCount={activeTemporalSpots.length}
           />
         </div>
       )}
@@ -1506,12 +1522,12 @@ const AppContent: React.FC = () => {
         onMinimize={() => minimizeWindow('aiAssistant')}
         fires={
           activeGeofence
-            ? fireSpots.filter((s) => {
+            ? activeTemporalSpots.filter((s: FireSpot) => {
                 const poly = normalizeGeofenceToPolygon(activeGeofence);
                 return poly.length >= 3 && isPointInPolygon([s.latitude, s.longitude], poly);
               })
             : selectedArea
-            ? fireSpots.filter((s) => {
+            ? activeTemporalSpots.filter((s: FireSpot) => {
                 const minLat = Math.min(selectedArea.northEast.lat, selectedArea.southWest.lat);
                 const maxLat = Math.max(selectedArea.northEast.lat, selectedArea.southWest.lat);
                 const minLng = Math.min(selectedArea.northEast.lng, selectedArea.southWest.lng);
@@ -1523,7 +1539,7 @@ const AppContent: React.FC = () => {
                   s.longitude <= maxLng
                 );
               })
-            : fireSpots
+            : activeTemporalSpots
         }
         selectedArea={selectedArea}
         geofence={activeGeofence}
@@ -1918,7 +1934,7 @@ const AppContent: React.FC = () => {
             isOpen={isAreaInspectionOpen}
             onClose={() => setIsAreaInspectionOpen(false)}
             area={selectedArea}
-            allFires={fireSpots}
+            allFires={activeTemporalSpots}
             onOpenReport={() => {
               setIsReportsOpen(true);
             }}
@@ -1948,7 +1964,7 @@ const AppContent: React.FC = () => {
         <ReportsModal
           isOpen={isReportsOpen}
           onClose={() => setIsReportsOpen(false)}
-          fireSpots={fireSpots}
+          fireSpots={activeTemporalSpots}
           selectedArea={selectedArea}
           onSelectLocation={(lat, lng) => {
             setTargetMapLocation({ center: [lat, lng], zoom: 13, trigger: Date.now() });
