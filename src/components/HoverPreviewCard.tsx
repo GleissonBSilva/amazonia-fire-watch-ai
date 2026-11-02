@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crosshair, ExternalLink, Activity, Radio, Eye, ShieldAlert, Truck, Droplets, Zap, CheckCircle2, Wind, Sun, Moon, Clock, Navigation } from 'lucide-react';
+import { Crosshair, ExternalLink, Activity, Radio, Eye, ShieldAlert, Truck, Droplets, Zap, CheckCircle2, Wind, Sun, Moon, Clock, Navigation, X } from 'lucide-react';
 import { FireSpot } from '../types';
 import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
 import { calculateAirQuality } from '../data/airQuality';
@@ -12,6 +12,7 @@ interface HoverPreviewCardProps {
   position: { x: number; y: number };
   onOpenDetails: (spot: FireSpot) => void;
   onStatusChange?: (spotId: string, newStatus: any, dispatchedAt: string) => void;
+  onClose?: () => void;
   isSimulation?: boolean;
 }
 
@@ -20,6 +21,7 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
   position,
   onOpenDetails,
   onStatusChange,
+  onClose,
   isSimulation = true,
 }) => {
   // Constrain position to anchor cleanly without covering the map center
@@ -32,6 +34,17 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
   const [localStatus, setLocalStatus] = useState<string>(spot.status || 'PENDENTE');
   const [dispatchedTime, setDispatchedTime] = useState<string | null>(spot.dispatched_at || null);
   const [resolvedAddress, setResolvedAddress] = useState<ReverseGeocodingResult | null>(null);
+
+  // Fecha no atalho da tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -141,17 +154,34 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-1 text-[8.5px] font-bold tracking-widest uppercase">
-          {isSimulation ? (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="text-emerald-400">FLIR LIVE</span>
-            </>
-          ) : (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-              <span className="text-cyan-400">ORBITAL REAL</span>
-            </>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 text-[8.5px] font-bold tracking-widest uppercase">
+            {isSimulation ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="text-emerald-400">FLIR LIVE</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                <span className="text-cyan-400">ORBITAL REAL</span>
+              </>
+            )}
+          </div>
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="p-1 rounded-md bg-slate-800/90 hover:bg-red-600 text-slate-400 hover:text-white border border-slate-700 hover:border-red-500 transition-all cursor-pointer flex items-center justify-center shrink-0 ml-1 shadow"
+              title="Fechar visualização de vídeo (Esc)"
+              aria-label="Fechar"
+            >
+              <X size={13} className="stroke-[2.5]" />
+            </button>
           )}
         </div>
       </div>

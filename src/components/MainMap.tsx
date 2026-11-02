@@ -712,19 +712,13 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
 
       (marker as any).__spotData = spot;
 
-      marker.on('click', () => {
-        onSpotClickRef.current(spot);
-      });
-
-      marker.on('mouseover', (e: any) => {
+      // Dispara a visualização do card de vídeo exclusivamente ao clicar no marcador
+      marker.on('click', (e: any) => {
         if (map) {
-          const mapPoint = map.latLngToContainerPoint(e.latlng);
+          const mapPoint = map.latLngToContainerPoint(e.latlng || [spot.latitude, spot.longitude]);
           onHoverSpotRef.current(spot, { x: mapPoint.x, y: mapPoint.y });
         }
-      });
-
-      marker.on('mouseout', () => {
-        onLeaveSpotRef.current();
+        onSpotClickRef.current(spot);
       });
 
       // Template de Popup Cockpit C2
@@ -1399,14 +1393,9 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
               position={[spot.latitude, spot.longitude]}
               icon={getRealisticFlameIcon(spot)}
               eventHandlers={{
-                mouseover: (e) => {
-                  const mapPoint = e.target._map.latLngToContainerPoint(e.latlng);
+                click: (e) => {
+                  const mapPoint = e.target._map ? e.target._map.latLngToContainerPoint(e.latlng) : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
                   onHoverSpot(spot, { x: mapPoint.x, y: mapPoint.y });
-                },
-                mouseout: () => {
-                  onLeaveSpot();
-                },
-                click: () => {
                   onSpotClick(spot);
                 },
               }}

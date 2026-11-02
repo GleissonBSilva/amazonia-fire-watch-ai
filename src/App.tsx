@@ -619,7 +619,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   const handleLeaveSpot = useCallback(() => {
-    setHoveredSpot(null);
+    // Mantém o card aberto fixo na tela; fecha exclusivamente no botão [X] ou tecla Esc
   }, []);
 
   // Enriquecimento e Geocodificação Reversa Automática para a Cerca Virtual Ativa
@@ -947,7 +947,7 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* 2. Hover Preview Card para Marcadores com Vídeo */}
+      {/* 2. Card de Visualização de Vídeo / Sensor Térmico (Exibido apenas ao Clicar, com botão Fechar [X]) */}
       {hoveredSpot && (
         <HoverPreviewCard
           spot={hoveredSpot}
@@ -955,6 +955,7 @@ const AppContent: React.FC = () => {
           position={hoverPosition}
           onOpenDetails={handleSpotClick}
           onStatusChange={handleSpotStatusChange}
+          onClose={() => setHoveredSpot(null)}
         />
       )}
 
