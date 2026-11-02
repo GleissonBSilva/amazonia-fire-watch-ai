@@ -206,34 +206,34 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
-      className="flex items-center gap-2 sm:gap-3 font-mono select-none pointer-events-auto max-w-[calc(100vw-1.5rem)] overflow-x-auto no-scrollbar p-1"
+      className="flex items-center justify-center gap-2 sm:gap-3.5 font-mono select-none pointer-events-auto max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar py-1.5 px-2"
     >
       
       {/* ================= CARD 1: 🌐 MUNDO (RELÓGIO DIGITAL CIANO) ================= */}
       <div
         onClick={handleSelectWorld}
-        className="relative flex flex-col justify-between w-32 sm:w-44 h-20 sm:h-22 bg-slate-950/95 backdrop-blur-xl border-2 border-cyan-500/60 hover:border-cyan-400 rounded-xl px-3 py-2 shadow-[0_10px_35px_rgba(6,182,212,0.35)] cursor-pointer transition-all hover:scale-105 group shrink-0"
+        className="relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 border-cyan-500/70 hover:border-cyan-400 rounded-2xl p-3 shadow-[0_12px_40px_rgba(6,182,212,0.4)] cursor-pointer transition-all hover:scale-105 group shrink-0"
         title="Nível 1: Visão Global Planetária (NASA FIRMS 24h)"
       >
-        <div className="flex items-center justify-between border-b border-cyan-900/60 pb-1">
-          <span className="text-[9px] font-black tracking-widest uppercase text-cyan-300 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+        <div className="flex items-center justify-between border-b border-cyan-900/80 pb-1.5">
+          <span className="text-[10px] font-black tracking-widest uppercase text-cyan-300 flex items-center gap-1.5 whitespace-nowrap">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             1. MUNDO
           </span>
-          <Globe size={13} className="text-cyan-400 group-hover:rotate-45 transition-transform" />
+          <Globe size={14} className="text-cyan-400 group-hover:rotate-45 transition-transform shrink-0" />
         </div>
 
         {/* Mostrador Digital LED */}
-        <div className="flex items-baseline justify-between my-0.5">
-          <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-300 tracking-wider drop-shadow-[0_0_12px_rgba(6,182,212,0.7)]">
+        <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-cyan-950 flex items-baseline justify-between">
+          <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-300 tracking-wider drop-shadow-[0_0_15px_rgba(6,182,212,0.8)] whitespace-nowrap">
             {TOTAL_GLOBAL_FIRES_COUNT.toLocaleString('pt-BR')}
           </span>
-          <span className="text-[8px] font-bold text-cyan-500 uppercase">focos</span>
+          <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider ml-1">focos</span>
         </div>
 
-        <div className="flex items-center justify-between text-[9px] text-cyan-400 font-bold bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/60">
+        <div className="flex items-center justify-between text-[10px] text-cyan-300 font-bold bg-cyan-950/80 px-2 py-1 rounded-lg border border-cyan-800/80 whitespace-nowrap">
           <span>NASA 360°</span>
-          <span className="text-[8px] opacity-75">PLANETA</span>
+          <span className="text-[9px] text-cyan-400/80 uppercase">PLANETA</span>
         </div>
       </div>
 
@@ -241,39 +241,39 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
       <div className="relative shrink-0">
         <div
           onClick={() => setOpenDropdown(prev => (prev === 'country' ? null : 'country'))}
-          className={`relative flex flex-col justify-between w-32 sm:w-44 h-20 sm:h-22 bg-slate-950/95 backdrop-blur-xl border-2 rounded-xl px-3 py-2 cursor-pointer transition-all hover:scale-105 group ${
+          className={`relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 group ${
             openDropdown === 'country'
-              ? 'border-emerald-400 shadow-[0_10px_35px_rgba(16,185,129,0.5)]'
-              : 'border-emerald-500/60 hover:border-emerald-400 shadow-[0_10px_35px_rgba(16,185,129,0.35)]'
+              ? 'border-emerald-400 shadow-[0_12px_40px_rgba(16,185,129,0.55)]'
+              : 'border-emerald-500/70 hover:border-emerald-400 shadow-[0_12px_40px_rgba(16,185,129,0.4)]'
           }`}
           title="Nível 2: Alternar País monitorado"
         >
-          <div className="flex items-center justify-between border-b border-emerald-900/60 pb-1">
-            <span className="text-[9px] font-black tracking-widest uppercase text-emerald-300 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          <div className="flex items-center justify-between border-b border-emerald-900/80 pb-1.5">
+            <span className="text-[10px] font-black tracking-widest uppercase text-emerald-300 flex items-center gap-1.5 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               2. PAÍS
             </span>
-            <span className="text-xs">{COUNTRY_METADATA[selectedCountry]?.flag || '🇧🇷'}</span>
+            <span className="text-sm shrink-0">{COUNTRY_METADATA[selectedCountry]?.flag || '🇧🇷'}</span>
           </div>
 
           {/* Mostrador Digital LED */}
-          <div className="flex items-baseline justify-between my-0.5">
-            <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-300 tracking-wider drop-shadow-[0_0_12px_rgba(16,185,129,0.7)]">
+          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-emerald-950 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-300 tracking-wider drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] whitespace-nowrap">
               {countryCount.toLocaleString('pt-BR')}
             </span>
-            <span className="text-[8px] font-bold text-emerald-500 uppercase">focos</span>
+            <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider ml-1">focos</span>
           </div>
 
-          <div className="flex items-center justify-between text-[9px] text-emerald-300 font-bold bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60">
-            <span className="truncate">{selectedCountry}</span>
-            <ChevronDown size={11} className={`text-emerald-400 transition-transform ${openDropdown === 'country' ? 'rotate-180' : ''}`} />
+          <div className="flex items-center justify-between text-[10px] text-emerald-200 font-bold bg-emerald-950/80 px-2 py-1 rounded-lg border border-emerald-800/80 whitespace-nowrap gap-1">
+            <span className="truncate max-w-[130px]">{selectedCountry}</span>
+            <ChevronDown size={12} className={`text-emerald-400 transition-transform shrink-0 ${openDropdown === 'country' ? 'rotate-180' : ''}`} />
           </div>
         </div>
 
         {/* Dropdown de Países Flutuante com z-index Máximo */}
         {openDropdown === 'country' && (
-          <div className="absolute top-full left-0 mt-2 w-56 max-h-64 overflow-y-auto bg-slate-950 border-2 border-emerald-500 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] p-1.5 z-[2500] backdrop-blur-2xl">
-            <div className="px-2.5 py-1 text-[9px] text-emerald-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
+          <div className="absolute top-full left-0 mt-2.5 w-60 max-h-72 overflow-y-auto bg-slate-950 border-2 border-emerald-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3000] backdrop-blur-2xl">
+            <div className="px-2.5 py-1 text-[9.5px] text-emerald-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
               <span>Selecione o País</span>
               <span>Focos</span>
             </div>
@@ -281,15 +281,15 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
               <button
                 key={c}
                 onClick={(e) => handleSelectCountry(c, e)}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left text-xs transition cursor-pointer my-0.5 ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
                   selectedCountry === c ? 'bg-emerald-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
-                  <span className="text-sm">{COUNTRY_METADATA[c]?.flag || '🏳️'}</span>
-                  <span className="truncate">{c}</span>
+                  <span className="text-base shrink-0">{COUNTRY_METADATA[c]?.flag || '🏳️'}</span>
+                  <span className="truncate font-medium">{c}</span>
                 </div>
-                <span className="text-xs font-mono font-black text-emerald-400 ml-1">
+                <span className="text-xs font-mono font-black text-emerald-400 shrink-0 ml-2">
                   {countryCounts[c]}
                 </span>
               </button>
@@ -302,39 +302,39 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
       <div className="relative shrink-0">
         <div
           onClick={() => setOpenDropdown(prev => (prev === 'biome' ? null : 'biome'))}
-          className={`relative flex flex-col justify-between w-32 sm:w-44 h-20 sm:h-22 bg-slate-950/95 backdrop-blur-xl border-2 rounded-xl px-3 py-2 cursor-pointer transition-all hover:scale-105 group ${
+          className={`relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 group ${
             openDropdown === 'biome'
-              ? 'border-amber-400 shadow-[0_10px_35px_rgba(245,158,11,0.5)]'
-              : 'border-amber-500/60 hover:border-amber-400 shadow-[0_10px_35px_rgba(245,158,11,0.35)]'
+              ? 'border-amber-400 shadow-[0_12px_40px_rgba(245,158,11,0.55)]'
+              : 'border-amber-500/70 hover:border-amber-400 shadow-[0_12px_40px_rgba(245,158,11,0.4)]'
           }`}
           title="Nível 3: Alternar Bioma / Região Ecológica"
         >
-          <div className="flex items-center justify-between border-b border-amber-900/60 pb-1">
-            <span className="text-[9px] font-black tracking-widest uppercase text-amber-300 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+          <div className="flex items-center justify-between border-b border-amber-900/80 pb-1.5">
+            <span className="text-[10px] font-black tracking-widest uppercase text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
               3. BIOMA
             </span>
-            <span className="text-xs">{BRAZIL_BIOMES[selectedBiome]?.icon || '🌲'}</span>
+            <span className="text-sm shrink-0">{BRAZIL_BIOMES[selectedBiome]?.icon || '🌲'}</span>
           </div>
 
           {/* Mostrador Digital LED */}
-          <div className="flex items-baseline justify-between my-0.5">
-            <span className="text-2xl sm:text-3xl font-black font-mono text-amber-300 tracking-wider drop-shadow-[0_0_12px_rgba(245,158,11,0.7)]">
+          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-amber-950 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black font-mono text-amber-300 tracking-wider drop-shadow-[0_0_15px_rgba(245,158,11,0.8)] whitespace-nowrap">
               {biomeCount.toLocaleString('pt-BR')}
             </span>
-            <span className="text-[8px] font-bold text-amber-500 uppercase">focos</span>
+            <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider ml-1">focos</span>
           </div>
 
-          <div className="flex items-center justify-between text-[9px] text-amber-300 font-bold bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/60">
-            <span className="truncate">{selectedBiome}</span>
-            <ChevronDown size={11} className={`text-amber-400 transition-transform ${openDropdown === 'biome' ? 'rotate-180' : ''}`} />
+          <div className="flex items-center justify-between text-[10px] text-amber-200 font-bold bg-amber-950/80 px-2 py-1 rounded-lg border border-amber-800/80 whitespace-nowrap gap-1">
+            <span className="truncate max-w-[130px]">{selectedBiome}</span>
+            <ChevronDown size={12} className={`text-amber-400 transition-transform shrink-0 ${openDropdown === 'biome' ? 'rotate-180' : ''}`} />
           </div>
         </div>
 
         {/* Dropdown de Biomas Flutuante com z-index Máximo */}
         {openDropdown === 'biome' && (
-          <div className="absolute top-full left-0 mt-2 w-52 max-h-60 overflow-y-auto bg-slate-950 border-2 border-amber-500 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] p-1.5 z-[2500] backdrop-blur-2xl">
-            <div className="px-2.5 py-1 text-[9px] text-amber-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
+          <div className="absolute top-full left-0 mt-2.5 w-56 max-h-68 overflow-y-auto bg-slate-950 border-2 border-amber-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3000] backdrop-blur-2xl">
+            <div className="px-2.5 py-1 text-[9.5px] text-amber-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
               <span>Biomas &amp; Regiões</span>
               <span>Focos</span>
             </div>
@@ -342,15 +342,15 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
               <button
                 key={b}
                 onClick={(e) => handleSelectBiome(b, e)}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left text-xs transition cursor-pointer my-0.5 ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
                   selectedBiome === b ? 'bg-amber-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
-                  <span>{BRAZIL_BIOMES[b]?.icon || '🌲'}</span>
-                  <span className="truncate">{b}</span>
+                  <span className="text-base shrink-0">{BRAZIL_BIOMES[b]?.icon || '🌲'}</span>
+                  <span className="truncate font-medium">{b}</span>
                 </div>
-                <span className="text-xs font-mono font-black text-amber-400 ml-1">
+                <span className="text-xs font-mono font-black text-amber-400 shrink-0 ml-2">
                   {biomeCounts[b] || 0}
                 </span>
               </button>
@@ -363,39 +363,43 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
       <div className="relative shrink-0">
         <div
           onClick={() => setOpenDropdown(prev => (prev === 'state' ? null : 'state'))}
-          className={`relative flex flex-col justify-between w-32 sm:w-44 h-20 sm:h-22 bg-slate-950/95 backdrop-blur-xl border-2 rounded-xl px-3 py-2 cursor-pointer transition-all hover:scale-105 group ${
+          className={`relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 group ${
             openDropdown === 'state'
-              ? 'border-red-400 shadow-[0_10px_35px_rgba(239,68,68,0.5)]'
-              : 'border-red-500/60 hover:border-red-400 shadow-[0_10px_35px_rgba(239,68,68,0.35)]'
+              ? 'border-red-400 shadow-[0_12px_40px_rgba(239,68,68,0.55)]'
+              : 'border-red-500/70 hover:border-red-400 shadow-[0_12px_40px_rgba(239,68,68,0.4)]'
           }`}
           title="Nível 4: Alternar Estado da Federação (AM, PA, etc.)"
         >
-          <div className="flex items-center justify-between border-b border-red-900/60 pb-1">
-            <span className="text-[9px] font-black tracking-widest uppercase text-red-300 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+          <div className="flex items-center justify-between border-b border-red-900/80 pb-1.5">
+            <span className="text-[10px] font-black tracking-widest uppercase text-red-300 flex items-center gap-1.5 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
               4. ESTADO
             </span>
-            <span className="text-[10px] font-bold text-red-400">{selectedState}</span>
+            <span className="text-[11px] font-black text-red-400 bg-red-950/60 px-1.5 py-0.2 rounded border border-red-800/60 shrink-0">
+              {selectedState}
+            </span>
           </div>
 
           {/* Mostrador Digital LED */}
-          <div className="flex items-baseline justify-between my-0.5">
-            <span className="text-2xl sm:text-3xl font-black font-mono text-red-300 tracking-wider drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]">
+          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-red-950 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black font-mono text-red-300 tracking-wider drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] whitespace-nowrap">
               {stateCount.toLocaleString('pt-BR')}
             </span>
-            <span className="text-[8px] font-bold text-red-500 uppercase">focos</span>
+            <span className="text-[9px] font-bold text-red-400 uppercase tracking-wider ml-1">focos</span>
           </div>
 
-          <div className="flex items-center justify-between text-[9px] text-red-300 font-bold bg-red-950/60 px-1.5 py-0.5 rounded border border-red-800/60">
-            <span className="truncate">{BRAZIL_STATES[selectedState]?.name.split(' (')[0] || selectedState}</span>
-            <ChevronDown size={11} className={`text-red-400 transition-transform ${openDropdown === 'state' ? 'rotate-180' : ''}`} />
+          <div className="flex items-center justify-between text-[10px] text-red-200 font-bold bg-red-950/80 px-2 py-1 rounded-lg border border-red-800/80 whitespace-nowrap gap-1">
+            <span className="truncate max-w-[130px]">
+              {BRAZIL_STATES[selectedState]?.name.split(' (')[0] || selectedState}
+            </span>
+            <ChevronDown size={12} className={`text-red-400 transition-transform shrink-0 ${openDropdown === 'state' ? 'rotate-180' : ''}`} />
           </div>
         </div>
 
         {/* Dropdown de Estados Flutuante com z-index Máximo */}
         {openDropdown === 'state' && (
-          <div className="absolute top-full right-0 mt-2 w-64 max-h-68 overflow-y-auto bg-slate-950 border-2 border-red-500 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] p-1.5 z-[2500] backdrop-blur-2xl">
-            <div className="px-2.5 py-1 text-[9px] text-red-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
+          <div className="absolute top-full right-0 mt-2.5 w-68 max-h-72 overflow-y-auto bg-slate-950 border-2 border-red-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3000] backdrop-blur-2xl">
+            <div className="px-2.5 py-1 text-[9.5px] text-red-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
               <span>Estados (UFs)</span>
               <span>Focos</span>
             </div>
@@ -405,15 +409,19 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
                 <button
                   key={st}
                   onClick={(e) => handleSelectState(st, e)}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left text-xs transition cursor-pointer my-0.5 ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
                     selectedState === st ? 'bg-red-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="w-7 font-black text-white shrink-0">{meta.uf}</span>
-                    <span className="truncate text-slate-300">{meta.name.split(' (')[0]}</span>
+                  <div className="flex items-center gap-2.5 truncate">
+                    <span className="w-8 font-black text-white shrink-0 text-xs bg-slate-900 px-1 py-0.5 rounded text-center border border-slate-700">
+                      {meta.uf}
+                    </span>
+                    <span className="truncate text-slate-200 font-medium">
+                      {meta.name.split(' (')[0]}
+                    </span>
                   </div>
-                  <span className={`text-xs font-mono font-black shrink-0 ml-1 ${
+                  <span className={`text-xs font-mono font-black shrink-0 ml-2 ${
                     (stateCounts[st] || 0) > 50 ? 'text-red-400' : 'text-amber-400'
                   }`}>
                     {stateCounts[st] || 0}

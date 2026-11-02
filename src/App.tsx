@@ -1516,7 +1516,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* 5. HUD Tático Hierárquico: Mundo -> País -> Bioma -> Estado */}
-      <div className="absolute top-12 sm:top-13 left-1/2 transform -translate-x-1/2 z-[1200] pointer-events-auto">
+      <div className="absolute top-12 sm:top-14 left-1/2 transform -translate-x-1/2 z-[1200] pointer-events-auto w-full max-w-fit px-2 flex justify-center">
         <HierarchicalTelemetryHUD
           fireSpots={activeTemporalSpots}
           onFlyToLocation={(center, zoom, label) => {
