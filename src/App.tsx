@@ -36,7 +36,7 @@ import { goes16Manager } from './services/goes16PollingService';
 import { upsertFireSpots } from './services/spotUpsertService';
 import { geofence24hMonitor, GeofenceIncident } from './services/geofence24hMonitorService';
 import { GeofenceIncidentsModal } from './components/GeofenceIncidentsModal';
-import { Flame, ShieldAlert, Radio, Satellite, Globe, MessageSquare, Clock, Calendar, BarChart2, Layers, Truck, Droplets, Zap, CheckCircle2, Wind, Bot, BellRing, Plus, Trash2 } from 'lucide-react';
+import { Flame, ShieldAlert, Radio, Satellite, Globe, MessageSquare, Clock, Calendar, BarChart2, Layers, Truck, Droplets, Zap, CheckCircle2, Wind, Bot, BellRing, Plus, Trash2, X } from 'lucide-react';
 import { findNearestInfrastructure } from './data/emergencyInfrastructure';
 import { calculateAirQuality } from './data/airQuality';
 import { GoogleEarth3DWindow } from './components/GoogleEarth3DWindow';
@@ -157,6 +157,7 @@ const AppContent: React.FC = () => {
     return null;
   });
   const [isEditingGeofence, setIsEditingGeofence] = useState<boolean>(false);
+  const [isGeofenceBarOpen, setIsGeofenceBarOpen] = useState<boolean>(false);
   const [geofenceIncidents, setGeofenceIncidents] = useState<GeofenceIncident[]>(() =>
     geofence24hMonitor.getIncidents()
   );
@@ -518,6 +519,7 @@ const AppContent: React.FC = () => {
 
     setActiveGeofence(newGeofence);
     setIsEditingGeofence(true);
+    setIsGeofenceBarOpen(true);
     try {
       localStorage.setItem('afw_active_geofence', JSON.stringify(newGeofence));
     } catch {}
@@ -758,14 +760,35 @@ const AppContent: React.FC = () => {
     handleUpdateGeofence(updated);
   };
 
+  const handleSaveAndCloseGeofence = () => {
+    setIsEditingGeofence(false);
+    setIsGeofenceBarOpen(false);
+    try {
+      if (activeGeofence) {
+        localStorage.setItem('afw_active_geofence', JSON.stringify(activeGeofence));
+      }
+    } catch {}
+  };
+
+  const handleToggleEditGeofence = () => {
+    if (isEditingGeofence || isGeofenceBarOpen) {
+      handleSaveAndCloseGeofence();
+    } else {
+      setIsEditingGeofence(true);
+      setIsGeofenceBarOpen(true);
+    }
+  };
+
   const handleCreateNewGeofence = () => {
     // Ativa o modo intuitivo: clique em um ponto do mapa, segure e arraste até o tamanho desejado!
     setTriggerDrawGeofence(Date.now());
+    setIsGeofenceBarOpen(true);
   };
 
   const handleClearGeofence = () => {
     setActiveGeofence(null);
     setIsEditingGeofence(false);
+    setIsGeofenceBarOpen(false);
     try {
       localStorage.removeItem('afw_active_geofence');
     } catch {}
@@ -866,7 +889,7 @@ const AppContent: React.FC = () => {
             fireSpots={displayFireSpots}
             activeGeofence={activeGeofence}
             isEditingGeofence={isEditingGeofence}
-            onToggleEditGeofence={() => setIsEditingGeofence(!isEditingGeofence)}
+            onToggleEditGeofence={handleToggleEditGeofence}
             onUpdateGeofence={handleUpdateGeofence}
             onClearGeofence={handleClearGeofence}
             onOpenFloorPlan={handleOpenFloorPlan}
@@ -1058,22 +1081,36 @@ const AppContent: React.FC = () => {
 
           {/* Botão ROI / Cerca Virtual 24h (Definição Instantânea por Clique-e-Arrasto) */}
           <button
-            onClick={() => setTriggerDrawGeofence(Date.now())}
+            onClick={() => {
+              if (activeGeofence && !isGeofenceBarOpen) {
+                setIsGeofenceBarOpen(true);
+                setIsEditingGeofence(true);
+              } else if (activeGeofence && isGeofenceBarOpen) {
+                handleSaveAndCloseGeofence();
+              } else {
+                setTriggerDrawGeofence(Date.now());
+                setIsGeofenceBarOpen(true);
+              }
+            }}
             className={`h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border transition-all shadow-sm cursor-pointer shrink-0 ${
               triggerDrawGeofence > 0
                 ? 'bg-cyan-600 text-white border-white animate-pulse'
                 : activeGeofence
-                ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-500/70'
+                ? isGeofenceBarOpen
+                  ? 'bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border-emerald-500 shadow-sm'
+                  : 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-500/70'
                 : 'bg-cyan-950 hover:bg-cyan-900 text-cyan-200 border-cyan-400 animate-pulse hover:animate-none'
             }`}
-            title="Definir Região de Interesse (ROI): Clique em um ponto, segure e arraste o retângulo no mapa. Solte para fixar. (Atalho: Segure Shift e arraste no mapa)"
+            title="Definir ou gerenciar Região de Interesse (ROI). Clique para abrir/fechar a barra de controle."
           >
-            <ShieldAlert size={12} className="text-cyan-400 shrink-0" />
+            <ShieldAlert size={12} className={activeGeofence && isGeofenceBarOpen ? 'text-emerald-400' : 'text-cyan-400'} />
             <span className="hidden sm:inline">
               {triggerDrawGeofence > 0
                 ? '✏️ Arraste a ROI no Mapa'
                 : activeGeofence
-                ? '📐 Redefinir ROI'
+                ? isGeofenceBarOpen
+                  ? '🔒 Fechar Painel ROI'
+                  : '🔒 ROI Ativa (Gerenciar)'
                 : '🛰️ Definir ROI'}
             </span>
           </button>
@@ -1133,8 +1170,8 @@ const AppContent: React.FC = () => {
       </header>
 
       {/* Faixa Indicadora de Cerca Virtual Ativa (Isolamento Geográfico da IA com Edição Total) */}
-      {activeGeofence && (
-        <div className="absolute top-11 left-0 right-0 z-[1140] bg-cyan-950/95 border-b-2 border-cyan-400 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-cyan-200 pointer-events-auto backdrop-blur-md shadow-2xl flex-wrap gap-2">
+      {activeGeofence && isGeofenceBarOpen && (
+        <div className="absolute top-11 left-0 right-0 z-[1140] bg-cyan-950/95 border-b-2 border-cyan-400 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-cyan-200 pointer-events-auto backdrop-blur-md shadow-2xl flex-wrap gap-2 animate-fade-in">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
             <span className="font-bold text-white text-xs flex items-center gap-1.5">
@@ -1210,15 +1247,15 @@ const AppContent: React.FC = () => {
               <span>Violações ({geofenceIncidents.length})</span>
             </button>
 
-            {/* Botão de Salvar e Sair / Ajustar ROI */}
+            {/* Botão de Salvar e Fechar / Ajustar ROI */}
             <button
-              onClick={() => setIsEditingGeofence(!isEditingGeofence)}
+              onClick={handleToggleEditGeofence}
               className={`px-3 py-1 rounded text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md ${
                 isEditingGeofence
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-300 ring-2 ring-emerald-400/50 animate-pulse hover:animate-none'
                   : 'bg-cyan-800 hover:bg-cyan-700 text-white border border-cyan-400'
               }`}
-              title={isEditingGeofence ? 'Salvar alterações e sair do modo de ajuste da ROI' : 'Habilitar alças para mover e dimensionar a ROI'}
+              title={isEditingGeofence ? 'Salvar alterações e fechar a barra de ajuste da ROI' : 'Habilitar alças para mover e dimensionar a ROI'}
             >
               {isEditingGeofence ? <span>💾 Salvar e Fechar</span> : <span>✏️ Ajustar ROI</span>}
             </button>
@@ -1310,6 +1347,15 @@ const AppContent: React.FC = () => {
             >
               <Trash2 size={11} className="text-red-400" />
               <span>Excluir</span>
+            </button>
+
+            {/* Botão Fechar Barra Superior */}
+            <button
+              onClick={handleSaveAndCloseGeofence}
+              className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-600 text-xs transition cursor-pointer ml-1"
+              title="Fechar barra superior da cerca (o monitoramento 24h continua ativo)"
+            >
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -1773,19 +1819,21 @@ const AppContent: React.FC = () => {
           }
           if (id === 'geofence') {
             if (activeGeofence) {
-              const nextEdit = !isEditingGeofence;
-              setIsEditingGeofence(nextEdit);
+              const nextOpen = !isGeofenceBarOpen;
+              setIsGeofenceBarOpen(nextOpen);
+              setIsEditingGeofence(nextOpen);
               const centroid = getPolygonCentroid(normalizeGeofenceToPolygon(activeGeofence));
               setTargetMapLocation({ center: centroid, zoom: 16, trigger: Date.now() });
             } else {
               handleCreateNewGeofence();
+              setIsGeofenceBarOpen(true);
               setIsEditingGeofence(true);
             }
             return;
           }
           toggleWindow(id);
         }}
-        isGeofenceActive={Boolean(activeGeofence)}
+        isGeofenceActive={Boolean(activeGeofence && isGeofenceBarOpen)}
       />
 
       {/* 11. Modal de Planta Baixa Estrutural e Mapeamento Térmico Dinâmico (Lazy) */}
