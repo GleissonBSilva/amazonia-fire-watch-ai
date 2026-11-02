@@ -44,89 +44,10 @@ export async function fetchNationalFires(simulation: boolean = true): Promise<Fi
     // Backend offline ou rodando em produção (Vercel)
   }
   
-  // 2. No Modo Real: Tenta consulta direta ao GeoServer WFS Oficial do INPE BDQueimadas (Inclui GOES-16, GOES-19, NOAA-20 e AQUA)
-  if (!simulation) {
-    try {
-      const inpeWfsUrl = 'https://terrabrasilis.dpi.inpe.br/geoserver/bdqueimadas/wfs?service=wfs&version=2.0.0&request=GetFeature&typeNames=bdqueimadas:focos_24h&outputFormat=application/json';
-      const inpeRes = await fetchWithTimeout(inpeWfsUrl, {}, 3500);
-      if (inpeRes.ok) {
-        const geojson = await inpeRes.json();
-        const features = geojson?.features;
-        if (Array.isArray(features) && features.length > 0) {
-          const now = Date.now();
-          const inpeSpots: FireSpot[] = features.map((feat: any, idx: number) => {
-            const coords = feat.geometry?.coordinates || [0, 0];
-            const props = feat.properties || {};
-            const rawSat = String(props.satelite || 'INPE').trim().toUpperCase();
-            const isGoes = rawSat.includes('GOES');
-            const satLabel = (
-              rawSat.includes('GOES-16') ? 'GOES-16 ABI (East)'
-              : rawSat.includes('GOES-19') ? 'GOES-19 ABI (Next-Gen)'
-              : rawSat.includes('GOES-18') ? 'GOES-18 ABI (West)'
-              : isGoes ? `GOES ABI (${rawSat})`
-              : rawSat.includes('NOAA-20') || rawSat.includes('NOAA20') ? 'NOAA-20 (VIIRS 375m)'
-              : rawSat.includes('NPP') ? 'Suomi-NPP (VIIRS 375m)'
-              : rawSat.includes('AQUA') ? 'Aqua (MODIS 1km)'
-              : rawSat.includes('TERRA') ? 'Terra (MODIS 1km)'
-              : `${rawSat} (INPE)`
-            );
-            const frp = parseFloat(props.frp) || (isGoes ? 55.0 : 25.0);
-            const brightTi4 = isGoes ? 370.0 : 335.0;
-            const dataHora = String(props.data_hora_gmt || '');
-            const muni = props.municipio || 'Área sob Monitoramento';
-            const estado = props.estado || 'AM';
-
-            return {
-              id: `INPE-LIVE-${idx}-${now}`,
-              latitude: Number(coords[1]),
-              longitude: Number(coords[0]),
-              is_brazil: true,
-              country_code: 'BR',
-              country_name: 'Brasil',
-              continent: 'América do Sul',
-              biome: props.bioma || 'Amazônia',
-              state: estado,
-              municipality: muni,
-              address: `Detecção ${satLabel} • ${muni} (${estado})`,
-              satellite: satLabel,
-              frp_mw: frp,
-              bright_ti4_k: brightTi4,
-              confidence: isGoes ? 0.94 : 0.90,
-              detected_at: dataHora ? `${dataHora} UTC` : 'Tempo Real',
-              detected_iso: dataHora ? new Date(dataHora).toISOString() : new Date().toISOString(),
-              has_video: false,
-              is_arson_cluster: false,
-              is_recurrent: false,
-              is_simulated: false,
-              is_new_outbreak: true,
-              minutes_ago: isGoes ? 10 : 60,
-              status: 'PENDENTE',
-              aqi: Math.min(500, Math.round(frp * 2.8 + 40)),
-              pm25: parseFloat((frp * 1.4 + 18).toFixed(1)),
-              air_quality_level: frp > 80 ? 'PERIGOSA' : 'MUITO INADEQUADA',
-              is_estimated_aqi: true,
-              detection_type: isGoes ? 'PRELIMINAR_GEOESTACIONARIO' : 'CONFIRMADO_POLAR',
-              is_geostationary_preliminary: isGoes,
-            };
-          });
-
-          if (inpeSpots.length > 0) {
-            try {
-              localStorage.setItem(cacheKey, JSON.stringify(inpeSpots));
-            } catch {}
-            return inpeSpots;
-          }
-        }
-      }
-    } catch {
-      // Falha ou CORS no navegador, prossegue para o cache sincronizado de satélite
-    }
-  }
-
-  // 3. Fallback sincronizado idêntico entre Local e Vercel (servido em <5ms)
+  // 2. Carregamento do feed planetário consolidado (NASA FIRMS Global 360° + INPE BDQueimadas)
   const targetFile = simulation ? '/simulation_fires.json' : '/real_firms_cache.json';
   try {
-    const cacheRes = await fetchWithTimeout(targetFile, {}, 2500);
+    const cacheRes = await fetchWithTimeout(targetFile, {}, 3000);
     if (cacheRes.ok) {
       const cachedSpots: FireSpot[] = await cacheRes.json();
       if (Array.isArray(cachedSpots) && cachedSpots.length > 0) {
