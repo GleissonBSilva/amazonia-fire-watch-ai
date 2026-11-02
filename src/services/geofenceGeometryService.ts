@@ -11,8 +11,8 @@
 /**
  * Calculates real-world surface area of a geographic polygon in km².
  */
-export function calculatePolygonAreaKm2(coords: [number, number][]): number {
-  if (!coords || coords.length < 3) return 0;
+export function calculatePolygonAreaKm2(coords?: [number, number][]): number {
+  if (!coords || !Array.isArray(coords) || coords.length < 3) return 0;
   let total = 0;
   const R = 6378.137; // Raio equatorial da Terra em km
   const len = coords.length;
@@ -20,6 +20,7 @@ export function calculatePolygonAreaKm2(coords: [number, number][]): number {
   for (let i = 0; i < len; i++) {
     const p1 = coords[i];
     const p2 = coords[(i + 1) % len];
+    if (!p1 || !p2 || isNaN(p1[0]) || isNaN(p1[1]) || isNaN(p2[0]) || isNaN(p2[1])) continue;
     const lat1 = (p1[0] * Math.PI) / 180;
     const lat2 = (p2[0] * Math.PI) / 180;
     const dLng = ((p2[1] - p1[1]) * Math.PI) / 180;
@@ -27,48 +28,86 @@ export function calculatePolygonAreaKm2(coords: [number, number][]): number {
   }
 
   const areaKm2 = Math.abs((total * R * R) / 2.0);
-  return parseFloat(areaKm2.toFixed(4));
+  return isNaN(areaKm2) ? 0 : parseFloat(areaKm2.toFixed(4));
 }
 
 /**
  * Calculates centroid [lat, lng] of a polygon.
  */
-export function getPolygonCentroid(coords: [number, number][]): [number, number] {
-  if (!coords || coords.length === 0) return [0, 0];
+export function getPolygonCentroid(coords?: [number, number][]): [number, number] {
+  if (!coords || !Array.isArray(coords) || coords.length === 0) return [-3.1019, -60.0250];
   let sumLat = 0;
   let sumLng = 0;
-  coords.forEach(([lat, lng]) => {
-    sumLat += lat;
-    sumLng += lng;
+  let validCount = 0;
+  coords.forEach((pt) => {
+    if (Array.isArray(pt) && pt.length >= 2) {
+      const lat = Number(pt[0]);
+      const lng = Number(pt[1]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        sumLat += lat;
+        sumLng += lng;
+        validCount++;
+      }
+    }
   });
-  return [sumLat / coords.length, sumLng / coords.length];
+  if (validCount === 0) return [-3.1019, -60.0250];
+  return [sumLat / validCount, sumLng / validCount];
 }
 
 /**
  * Ensures any geofence (with bounds or polygon) is converted into a full editable polygon vertex list.
  */
-export function normalizeGeofenceToPolygon(geofence: {
-  bounds?: [[number, number], [number, number]];
-  polygon?: [number, number][];
-}): [number, number][] {
-  if (geofence.polygon && geofence.polygon.length >= 3) {
-    return geofence.polygon.map(([lat, lng]) => [lat, lng]);
+export function normalizeGeofenceToPolygon(geofence?: {
+  bounds?: [[number, number], [number, number]] | any;
+  polygon?: [number, number][] | any;
+} | null): [number, number][] {
+  if (!geofence) return [];
+
+  // 1. Tenta extrair vértices de polygon
+  if (geofence.polygon && Array.isArray(geofence.polygon) && geofence.polygon.length >= 3) {
+    const validPts = geofence.polygon
+      .map((pt: any) => {
+        if (Array.isArray(pt) && pt.length >= 2) {
+          const lat = Number(pt[0]);
+          const lng = Number(pt[1]);
+          if (!isNaN(lat) && !isNaN(lng)) return [lat, lng] as [number, number];
+        } else if (pt && typeof pt === 'object' && 'lat' in pt && 'lng' in pt) {
+          const lat = Number(pt.lat);
+          const lng = Number(pt.lng);
+          if (!isNaN(lat) && !isNaN(lng)) return [lat, lng] as [number, number];
+        }
+        return null;
+      })
+      .filter((pt): pt is [number, number] => pt !== null);
+
+    if (validPts.length >= 3) {
+      return validPts;
+    }
   }
 
-  if (geofence.bounds) {
-    const [sw, ne] = geofence.bounds;
-    const minLat = Math.min(sw[0], ne[0]);
-    const maxLat = Math.max(sw[0], ne[0]);
-    const minLng = Math.min(sw[1], ne[1]);
-    const maxLng = Math.max(sw[1], ne[1]);
+  // 2. Tenta extrair vértices a partir de bounds
+  if (geofence.bounds && Array.isArray(geofence.bounds) && geofence.bounds.length >= 2) {
+    const sw = geofence.bounds[0];
+    const ne = geofence.bounds[1];
+    const lat1 = Array.isArray(sw) ? Number(sw[0]) : Number(sw?.lat);
+    const lng1 = Array.isArray(sw) ? Number(sw[1]) : Number(sw?.lng);
+    const lat2 = Array.isArray(ne) ? Number(ne[0]) : Number(ne?.lat);
+    const lng2 = Array.isArray(ne) ? Number(ne[1]) : Number(ne?.lng);
 
-    // 4 vértices no sentido horário
-    return [
-      [maxLat, minLng], // Noroeste
-      [maxLat, maxLng], // Nordeste
-      [minLat, maxLng], // Sudeste
-      [minLat, minLng], // Sudoeste
-    ];
+    if (!isNaN(lat1) && !isNaN(lng1) && !isNaN(lat2) && !isNaN(lng2)) {
+      const minLat = Math.min(lat1, lat2);
+      const maxLat = Math.max(lat1, lat2);
+      const minLng = Math.min(lng1, lng2);
+      const maxLng = Math.max(lng1, lng2);
+
+      // 4 vértices no sentido horário
+      return [
+        [maxLat, minLng], // Noroeste
+        [maxLat, maxLng], // Nordeste
+        [minLat, maxLng], // Sudeste
+        [minLat, minLng], // Sudoeste
+      ];
+    }
   }
 
   return [];
@@ -230,19 +269,31 @@ export function isPointInPolygon(point: [number, number], polygon: [number, numb
 }
 
 /**
- * Computes bounding box [[minLat, minLng], [maxLat, maxLng]] of a polygon.
+ * Computes bounding box [[minLat, minLng], [maxLat, maxLng]] of a polygon safely.
  */
-export function getPolygonBoundingBox(polygon: [number, number][]): [[number, number], [number, number]] {
-  if (!polygon || polygon.length === 0) {
-    return [[0, 0], [0, 0]];
+export function getPolygonBoundingBox(polygon?: [number, number][]): [[number, number], [number, number]] {
+  if (!polygon || !Array.isArray(polygon) || polygon.length === 0) {
+    return [[-3.15, -60.05], [-3.05, -59.95]];
   }
   let minLat = Infinity, maxLat = -Infinity;
   let minLng = Infinity, maxLng = -Infinity;
-  polygon.forEach(([lat, lng]) => {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
+  let count = 0;
+  polygon.forEach((pt) => {
+    if (Array.isArray(pt) && pt.length >= 2) {
+      const lat = Number(pt[0]);
+      const lng = Number(pt[1]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+        count++;
+      }
+    }
   });
+
+  if (count === 0 || !isFinite(minLat) || !isFinite(maxLat) || !isFinite(minLng) || !isFinite(maxLng)) {
+    return [[-3.15, -60.05], [-3.05, -59.95]];
+  }
   return [[minLat, minLng], [maxLat, maxLng]];
 }

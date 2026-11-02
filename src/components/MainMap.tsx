@@ -135,6 +135,9 @@ const RoiNativeSelector: React.FC<{
       container.style.cursor = '';
     }
 
+    let currentMoveHandler: ((e: MouseEvent) => void) | null = null;
+    let currentUpHandler: ((e: MouseEvent) => void) | null = null;
+
     const handleMouseDown = (e: MouseEvent) => {
       // Dispara se o modo ROI estiver ativado OU se o operador segurar a tecla Shift no mapa!
       const shouldDraw = isActive || e.shiftKey;
@@ -227,19 +230,25 @@ const RoiNativeSelector: React.FC<{
       const handleMouseUp = (upEvt: MouseEvent) => {
         if (!isDrawingRef.current) return;
         isDrawingRef.current = false;
-        map.dragging.enable();
+        try {
+          map.dragging.enable();
+        } catch {}
 
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
+        currentMoveHandler = null;
+        currentUpHandler = null;
 
-        if (previewRectRef.current && map.hasLayer(previewRectRef.current)) {
-          map.removeLayer(previewRectRef.current);
-          previewRectRef.current = null;
-        }
-        if (hudMarkerRef.current && map.hasLayer(hudMarkerRef.current)) {
-          map.removeLayer(hudMarkerRef.current);
-          hudMarkerRef.current = null;
-        }
+        try {
+          if (previewRectRef.current && map.hasLayer(previewRectRef.current)) {
+            map.removeLayer(previewRectRef.current);
+            previewRectRef.current = null;
+          }
+          if (hudMarkerRef.current && map.hasLayer(hudMarkerRef.current)) {
+            map.removeLayer(hudMarkerRef.current);
+            hudMarkerRef.current = null;
+          }
+        } catch {}
 
         if (!startLatLngRef.current) return;
         const endLatLng = map.mouseEventToLatLng(upEvt);
@@ -273,6 +282,8 @@ const RoiNativeSelector: React.FC<{
         startLatLngRef.current = null;
       };
 
+      currentMoveHandler = handleMouseMove;
+      currentUpHandler = handleMouseUp;
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     };
@@ -281,13 +292,17 @@ const RoiNativeSelector: React.FC<{
 
     return () => {
       container.removeEventListener('mousedown', handleMouseDown);
-      container.style.cursor = '';
-      if (previewRectRef.current && map.hasLayer(previewRectRef.current)) {
-        map.removeLayer(previewRectRef.current);
-      }
-      if (hudMarkerRef.current && map.hasLayer(hudMarkerRef.current)) {
-        map.removeLayer(hudMarkerRef.current);
-      }
+      if (currentMoveHandler) window.removeEventListener('mousemove', currentMoveHandler);
+      if (currentUpHandler) window.removeEventListener('mouseup', currentUpHandler);
+      try {
+        container.style.cursor = '';
+        if (previewRectRef.current && map.hasLayer(previewRectRef.current)) {
+          map.removeLayer(previewRectRef.current);
+        }
+        if (hudMarkerRef.current && map.hasLayer(hudMarkerRef.current)) {
+          map.removeLayer(hudMarkerRef.current);
+        }
+      } catch {}
     };
   }, [isActive, map, onAreaSelected, onDrawCompleted]);
 
@@ -1653,7 +1668,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
             <div className="font-bold text-emerald-400 text-[12px] flex items-center gap-2">
               <span>ROI EM MODO DE AJUSTE</span>
               <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-600 px-2 py-0.2 rounded font-bold">
-                {(activeGeofence.areaKm2 * 100).toFixed(1)} ha ({activeGeofence.areaKm2.toFixed(2)} km²)
+                {((activeGeofence.areaKm2 || 0) * 100).toFixed(1)} ha ({(activeGeofence.areaKm2 || 0).toFixed(2)} km²)
               </span>
             </div>
             <div className="text-slate-300 text-[10px]">

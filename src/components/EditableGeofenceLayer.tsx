@@ -446,7 +446,11 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
     if (onToggleEdit) {
       onToggleEdit();
     }
-    map.closePopup();
+    try {
+      if (map && typeof map.closePopup === 'function') {
+        map.closePopup();
+      }
+    } catch {}
   };
 
   // Escala rápida pelos botões
@@ -556,19 +560,19 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                 </div>
               )}
               <div className="text-[9px] text-slate-500 pt-0.5 border-t border-slate-200">
-                Coordenadas: {centroid[0].toFixed(5)}°, {centroid[1].toFixed(5)}°
+                Coordenadas: {centroid[0] ? centroid[0].toFixed(5) : '-3.10190'}°, {centroid[1] ? centroid[1].toFixed(5) : '-60.02500'}°
               </div>
             </div>
 
             <div className="text-[11px] text-slate-700 space-y-0.5 mb-2">
               <div>
-                Área: <strong>{geofence.areaKm2.toFixed(3)} km²</strong> ({(geofence.areaKm2 * 100).toFixed(1)} ha)
+                Área: <strong>{(geofence.areaKm2 || 0).toFixed(3)} km²</strong> ({((geofence.areaKm2 || 0) * 100).toFixed(1)} ha)
               </div>
               <div>
-                Eixo X (Largura): <strong>{dimensions.widthKm.toFixed(2)} km</strong>
+                Eixo X (Largura): <strong>{(dimensions?.widthKm || 0).toFixed(2)} km</strong>
               </div>
               <div>
-                Eixo Y (Altura): <strong>{dimensions.heightKm.toFixed(2)} km</strong>
+                Eixo Y (Altura): <strong>{(dimensions?.heightKm || 0).toFixed(2)} km</strong>
               </div>
               <div>Vértices: <strong>{polygon.length} pontos</strong></div>
             </div>
@@ -667,6 +671,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
           <Marker
             position={centroid}
             icon={createSaveCloseIcon()}
+            zIndexOffset={1000}
             eventHandlers={{
               click: handleSaveAndClose,
             }}

@@ -152,8 +152,18 @@ const AppContent: React.FC = () => {
   const [activeGeofence, setActiveGeofence] = useState<ActiveGeofenceState | null>(() => {
     try {
       const saved = localStorage.getItem('afw_active_geofence');
-      if (saved) return JSON.parse(saved);
-    } catch {}
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && (parsed.polygon || parsed.bounds)) {
+          if (typeof parsed.areaKm2 !== 'number' || isNaN(parsed.areaKm2)) {
+            parsed.areaKm2 = 0;
+          }
+          return parsed;
+        }
+      }
+    } catch {
+      try { localStorage.removeItem('afw_active_geofence'); } catch {}
+    }
     return null;
   });
   const [isEditingGeofence, setIsEditingGeofence] = useState<boolean>(false);
@@ -1194,7 +1204,7 @@ const AppContent: React.FC = () => {
             )}
             <span className="text-slate-500">|</span>
             <span className="text-slate-300">
-              Área: <strong className="text-white">{activeGeofence.areaKm2.toFixed(3)} km²</strong> ({(activeGeofence.areaKm2 * 100).toFixed(1)} ha)
+              Área: <strong className="text-white">{(activeGeofence.areaKm2 || 0).toFixed(3)} km²</strong> ({((activeGeofence.areaKm2 || 0) * 100).toFixed(1)} ha)
             </span>
             <span className="text-slate-500">|</span>
             <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-950 border border-emerald-500 text-emerald-300 flex items-center gap-1">
