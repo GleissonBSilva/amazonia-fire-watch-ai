@@ -26,6 +26,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
     { id: 'googleEarth', label: 'Google Earth 3D', icon: Globe, color: 'text-sky-300' },
     { id: 'bdqueimadas', label: 'INPE BDQueimadas', icon: Flame, color: 'text-orange-400' },
     { id: 'reports', label: 'Relatórios & Estatísticas', icon: FileText, color: 'text-purple-400' },
+    { id: 'geoDistribution', label: 'Estados & Mundo', icon: Globe, color: 'text-amber-400' },
     { id: 'settings', label: 'Configurações', icon: Settings, color: 'text-slate-300' },
     { id: 'whatsappAlert', label: 'Alerta WhatsApp', icon: MessageSquare, color: 'text-emerald-400' },
   ];

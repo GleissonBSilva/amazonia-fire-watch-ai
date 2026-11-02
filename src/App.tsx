@@ -58,6 +58,9 @@ const AreaInspectionModal = React.lazy(() =>
 const ReportsModal = React.lazy(() =>
   import('./components/ReportsModal').then((m) => ({ default: m.ReportsModal }))
 );
+const GeographicDistributionModal = React.lazy(() =>
+  import('./components/GeographicDistributionModal').then((m) => ({ default: m.GeographicDistributionModal }))
+);
 
 // Encapsulated Tactical Clock Component to prevent full App / Leaflet re-renders every 1s
 const TacticalClock: React.FC = () => {
@@ -96,6 +99,7 @@ const AppContent: React.FC = () => {
   const [temporalMode, setTemporalMode] = useState<TemporalMode>('24h');
   const [isAreaInspectionOpen, setIsAreaInspectionOpen] = useState<boolean>(false);
   const [isReportsOpen, setIsReportsOpen] = useState<boolean>(false);
+  const [isGeoDistributionOpen, setIsGeoDistributionOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'landing'>(() => {
     return (localStorage.getItem('afw_current_view') as any) || 'dashboard';
@@ -451,6 +455,10 @@ const AppContent: React.FC = () => {
         setSelectedSpot(fireSpots[0]);
       }
       setIsWhatsAppModalOpen(true);
+      return;
+    }
+    if (id === 'geoDistribution') {
+      setIsGeoDistributionOpen(prev => !prev);
       return;
     }
     if (id === 'spotDetail') {
@@ -1105,6 +1113,19 @@ const AppContent: React.FC = () => {
               </span>
             </button>
           </div>
+
+          {/* Botão Tático: Estados & Mundo Todo (Ranking Geográfico em Tempo Real) */}
+          <button
+            onClick={() => setIsGeoDistributionOpen(true)}
+            className="h-7 px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition-all flex items-center gap-1.5 border shrink-0 cursor-pointer bg-gradient-to-r from-orange-950/80 to-amber-950/80 text-orange-200 border-orange-500/80 hover:border-orange-400 hover:text-white shadow-sm"
+            title="Ver Queimadas por Estado (PA, AM, etc.) e no Mundo Todo (NASA FIRMS 85.870 focos)"
+          >
+            <Globe2 size={13} className="text-orange-400" />
+            <span className="whitespace-nowrap hidden lg:inline">Estados &amp; Mundo</span>
+            <span className="px-1 py-0.2 bg-black/50 rounded text-[9px] text-amber-300 font-bold">
+              PA 277 • AM 44 | 🌐 85k
+            </span>
+          </button>
         </div>
 
         {/* Lado Direito: Ações Operacionais, Alternância de Modo & Login */}
@@ -1968,6 +1989,17 @@ const AppContent: React.FC = () => {
           selectedArea={selectedArea}
           onSelectLocation={(lat, lng) => {
             setTargetMapLocation({ center: [lat, lng], zoom: 13, trigger: Date.now() });
+          }}
+        />
+        <GeographicDistributionModal
+          isOpen={isGeoDistributionOpen}
+          onClose={() => setIsGeoDistributionOpen(false)}
+          fireSpots={activeTemporalSpots}
+          onFlyToLocation={(center, zoom, label) => {
+            setTargetMapLocation({ center, zoom, trigger: Date.now() });
+          }}
+          onEnableNasaFirmsGlobal={() => {
+            setActiveOverlays(prev => ({ ...prev, nasaFirms: true }));
           }}
         />
       </React.Suspense>
