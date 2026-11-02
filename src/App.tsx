@@ -17,6 +17,8 @@ import { LandingPage } from './components/LandingPage';
 import { Globe2 } from 'lucide-react';
 import { LayerNavigationBar } from './components/LayerNavigationBar';
 import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LAYERS, ActiveOverlaysState, ActiveGeofenceState } from './types';
+import { filterSpotsByTemporal, TemporalStats } from './services/temporalFilterService';
+import { TimeFilterBar } from './components/TimeFilterBar';
 import {
   normalizeGeofenceToPolygon,
   isPointInPolygon,
@@ -113,7 +115,9 @@ const AppContent: React.FC = () => {
       return DEFAULT_CONFIG;
     }
   });
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [startMonth, setStartMonth] = useState<number>(6); // Default: Junho (início do pico das queimadas)
+  const [endMonth, setEndMonth] = useState<number>(10); // Default: Outubro (auge da estiagem amazônica)
   const [currentLayer, setCurrentLayer] = useState<MapLayerType>('google_hybrid');
   const [showHeatmapOverlay, setShowHeatmapOverlay] = useState<boolean>(false);
   const [activeOverlays, setActiveOverlays] = useState<ActiveOverlaysState>({
@@ -121,7 +125,7 @@ const AppContent: React.FC = () => {
     googleEarth3d: false,
     inpeBdqueimadas: false,
     goes16: false,
-    smokePlume: false,
+    smokePlume: true, // HABILITADO POR PADRÃO: Monitoramento de Fumaça e Qualidade do Ar (AQI/PM2.5)
     thermalMask: false,
     rainRadar: false,
     heatmap: false,
@@ -885,13 +889,30 @@ const AppContent: React.FC = () => {
           displayFireSpots = displayFireSpots.filter(f => f.is_new_outbreak);
         }
 
+        // 4. Filtro Temporal Preciso:
+        // - '24h': Hoje em tempo real
+        // - 'month': Hoje + todo o mês corrente acumulado
+        // - 'year': Hoje + tudo detectado desde 1º de Janeiro do ano corrente
+        // - 'historical': Anos anteriores (2020-2026) e intervalo customizado entre meses
+        const temporalResult = filterSpotsByTemporal(
+          displayFireSpots,
+          temporalMode,
+          selectedYear,
+          startMonth,
+          endMonth
+        );
+        const activeTemporalSpots = temporalResult.spots;
+        const activeTemporalHeatmap = temporalResult.heatmapSpots.length > 0
+          ? temporalResult.heatmapSpots
+          : heatmapSpots;
+
         return (
           <MainMap
             onAreaSelected={handleAreaSelected}
             onClearArea={() => setSelectedArea(null)}
             onMapCenterChange={(c) => setCurrentMapCenter(c)}
             onInspectMapPoint={handleInspectMapPoint}
-            fireSpots={displayFireSpots}
+            fireSpots={activeTemporalSpots}
             activeGeofence={activeGeofence}
             isEditingGeofence={isEditingGeofence}
             onToggleEditGeofence={handleToggleEditGeofence}
@@ -903,7 +924,7 @@ const AppContent: React.FC = () => {
             isSimulation={isSimulation}
             triggerDrawGeofence={triggerDrawGeofence}
             onDrawCompleted={() => setTriggerDrawGeofence(0)}
-        heatmapSpots={heatmapSpots}
+            heatmapSpots={activeTemporalHeatmap}
         osintAlerts={osintAlerts}
         onOsintClick={(alert) => {
           setOpenWindows(prev => ({ ...prev, osintFeed: true }));
@@ -1015,38 +1036,59 @@ const AppContent: React.FC = () => {
             <span className="whitespace-nowrap hidden sm:inline">Copiloto IA</span>
           </button>
 
-          {/* Filtro Temporal Compacto */}
+          {/* Filtro Temporal Estruturado: Hoje, Mês, Ano e Intervalo */}
           <div className="hidden sm:flex items-center space-x-0.5 bg-slate-950/80 border border-slate-800 rounded-md p-0.5 text-xs font-mono shrink-0">
+            {/* HOJE */}
             <button
               onClick={() => setTemporalMode('24h')}
-              className={`h-7 px-1.5 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-7 px-2 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
                 temporalMode === '24h'
                   ? 'bg-red-950 text-red-300 border border-red-700 font-bold shadow'
                   : 'text-slate-400 hover:text-white'
               }`}
+              title="Tempo Real: Ativos nas últimas 24 horas"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
               <span>Hoje</span>
             </button>
+
+            {/* MÊS */}
             <button
               onClick={() => setTemporalMode('month')}
-              className={`h-7 px-1.5 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-7 px-2 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
                 temporalMode === 'month'
                   ? 'bg-amber-950 text-amber-300 border border-amber-700 font-bold shadow'
                   : 'text-slate-400 hover:text-white'
               }`}
+              title="Hoje + Acumulado do Mês Vigente"
             >
               <span>Mês</span>
             </button>
+
+            {/* ANO */}
+            <button
+              onClick={() => setTemporalMode('year')}
+              className={`h-7 px-2 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
+                temporalMode === 'year'
+                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Hoje + Tudo Detectado Desde o Início do Ano Vigente"
+            >
+              <span>Ano</span>
+            </button>
+
+            {/* INTERVALO / HISTÓRICO */}
             <button
               onClick={() => setTemporalMode('historical')}
-              className={`h-7 px-1.5 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-7 px-2 py-0.5 rounded text-[10.5px] transition-all flex items-center gap-1 cursor-pointer ${
                 temporalMode === 'historical'
                   ? 'bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold shadow'
                   : 'text-slate-400 hover:text-white'
               }`}
+              title="Filtro de Anos Anteriores e Intervalo entre Meses"
             >
-              <span>Anual</span>
+              <span>Intervalo</span>
             </button>
           </div>
         </div>
@@ -1437,21 +1479,20 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* 6. Slider Temporal para Modo Histórico */}
+      {/* 6. Barra e Painel Avançado para Modo Histórico & Intervalo de Meses */}
       {temporalMode === 'historical' && (
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-[950] bg-slate-900/95 backdrop-blur-md border border-cyan-500/60 rounded-xl p-3 shadow-2xl font-mono text-xs text-white flex items-center gap-4 min-w-[420px] pointer-events-auto">
-          <div className="font-bold text-cyan-300">LINHA TEMPORAL HISTÓRICA:</div>
-          <input
-            type="range"
-            min="2020"
-            max="2026"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="flex-1 cursor-pointer"
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-[950] pointer-events-auto">
+          <TimeFilterBar
+            temporalMode={temporalMode}
+            setTemporalMode={setTemporalMode}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            startMonth={startMonth}
+            setStartMonth={setStartMonth}
+            endMonth={endMonth}
+            setEndMonth={setEndMonth}
+            totalSpotsCount={fireSpots.length}
           />
-          <div className="bg-cyan-950 px-2.5 py-1 rounded border border-cyan-700 text-cyan-300 font-bold text-sm">
-            {selectedYear}
-          </div>
         </div>
       )}
 

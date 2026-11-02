@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { MapContainer, TileLayer, WMSTileLayer, Circle, Marker, Popup, Polygon, Rectangle, useMap, useMapEvents } from 'react-leaflet';
 import { INDUSTRIAL_FACILITIES, Facility } from '../data/facilityFloorPlans';
 import { fetchLatestRainViewerRadar } from '../services/weatherService';
 import { classifyFireAuthenticity, SmokeColorKey } from '../services/fireClassificationService';
 import { KNOWN_LAND_PARCELS } from '../services/landRegistryService';
 import { calculatePlumeVector } from '../services/plumeDispersionService';
+import { fetchManausAirQuality, ManausAirQualityData, MANAUS_METROPOLITAN_SMOKE_POLYGON } from '../services/manausAirQualityService';
 import { EditableGeofenceLayer } from './EditableGeofenceLayer';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -879,12 +880,33 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
     };
   }, [fireSpots, filterOnlyRealFires, smokeColorFilter, isSimulation]);
 
+  // Telemetria Atmosférica e Qualidade do Ar em Tempo Real de Manaus (Fumaça & AQI)
+  const [manausAqi, setManausAqi] = useState<ManausAirQualityData | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchManausAirQuality().then((data) => {
+      if (isMounted) setManausAqi(data);
+    }).catch(() => {});
+
+    const interval = setInterval(() => {
+      fetchManausAirQuality().then((data) => {
+        if (isMounted) setManausAqi(data);
+      }).catch(() => {});
+    }, 180000); // 3 minutos
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Consolidated Overlays State
   const overlays: ActiveOverlaysState = activeOverlays || {
     nasaFirms: false,
     googleEarth3d: false,
     inpeBdqueimadas: false,
-    smokePlume: false,
+    smokePlume: true,
     thermalMask: false,
     heatmap: showHeatmapOverlay || false,
     clustering: true,
@@ -1096,16 +1118,64 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           </>
         )}
 
-        {/* OVERLAY: Pluma de Fumaça (Aerossol / Dispersão Atmosférica via NASA GIBS WMS) */}
+        {/* OVERLAY: Pluma de Fumaça (Aerossol / Dispersão Atmosférica via NASA GIBS WMS & Open-Meteo Manaus) */}
         {overlays.smokePlume && (
-          <WMSTileLayer
-            key="overlay-smoke-plume-wms"
-            url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
-            params={STATIC_WMS_CONFIG.smokePlume}
-            attribution="&copy; NASA GIBS &mdash; MODIS Aerosol Optical Depth (Smoke Plume)"
-            opacity={0.78}
-            zIndex={8}
-          />
+          <>
+            <WMSTileLayer
+              key="overlay-smoke-plume-wms"
+              url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
+              params={STATIC_WMS_CONFIG.smokePlume}
+              attribution="&copy; NASA GIBS &mdash; MODIS Aerosol Optical Depth (Smoke Plume)"
+              opacity={0.78}
+              zIndex={8}
+            />
+
+            {/* CAMADA VETORIAL ATMOSFÉRICA: NÉVOA DE FUMAÇA METROPOLITANA DE MANAUS & ENTORNO */}
+            <Polygon
+              positions={MANAUS_METROPOLITAN_SMOKE_POLYGON}
+              pathOptions={{
+                color: manausAqi?.color || '#f97316',
+                weight: 2,
+                dashArray: '5, 5',
+                fillColor: manausAqi?.color || '#ea580c',
+                fillOpacity: manausAqi?.smokeHazeActive ? 0.32 : 0.16,
+              }}
+            >
+              <Popup>
+                <div className="font-mono text-xs p-1.5 text-white bg-slate-950 rounded-lg max-w-[270px] border border-amber-600/60 shadow-xl">
+                  <div className="font-bold text-amber-400 border-b border-amber-900/60 pb-1 mb-1.5 flex items-center gap-1.5">
+                    <Wind size={13} className="text-amber-400" />
+                    <span>MANAUS & RMM • FUMAÇA DE QUEIMADAS</span>
+                  </div>
+                  <div className="space-y-1 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Qualidade do Ar:</span>
+                      <strong style={{ color: manausAqi?.color || '#f97316' }}>{manausAqi?.level || 'RUIM'} (AQI {manausAqi?.aqi || 92})</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Material Fino (PM2.5):</span>
+                      <strong className="text-orange-400">{manausAqi?.pm25 || 43.7} µg/m³</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Material Inalável (PM10):</span>
+                      <strong className="text-amber-300">{manausAqi?.pm10 || 46.3} µg/m³</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Profundidade Óptica (AOD):</span>
+                      <strong className="text-purple-300">{manausAqi?.aod || 0.78}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Transporte dos Ventos:</span>
+                      <span className="text-slate-200 text-[10px]">{manausAqi?.windDirectionText || 'Sudeste (Careiro/Autazes)'}</span>
+                    </div>
+                    <div className="bg-amber-950/70 border border-amber-800/60 rounded p-1.5 text-[9.5px] text-amber-200 leading-snug mt-1.5">
+                      ⚠️ <strong>Alerta Sanitário:</strong> {manausAqi?.healthAdvice || 'Presença de fumaça na capital. Grupos de risco devem evitar esforço ao ar livre.'}
+                    </div>
+                  </div>
+                </div>
+              </Popup>
+            </Polygon>
+          </>
         )}
 
         {/* OVERLAY: Máscara Térmica (Land Surface Temp - LST Day via NASA GIBS WMS) */}
@@ -1221,21 +1291,27 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
             />
           ))}
 
-        {/* OVERLAY: Heatmap de Densidade Térmica */}
-        {(overlays.heatmap || showHeatmapOverlay || temporalMode === 'month') &&
-          heatmapSpots.map((spot, idx) => (
-            <Circle
-              key={`heat-overlay-${idx}`}
-              center={[spot.latitude, spot.longitude]}
-              radius={20000}
-              pathOptions={{
-                color: '#ff5500',
-                fillColor: '#ff2200',
-                fillOpacity: 0.22,
-                weight: 0,
-              }}
-            />
-          ))}
+        {/* OVERLAY: Heatmap de Densidade Térmica (Suporta Mês, Ano e Intervalo Histórico) */}
+        {(overlays.heatmap || showHeatmapOverlay || temporalMode === 'month' || temporalMode === 'year' || temporalMode === 'historical') &&
+          heatmapSpots.map((spot, idx) => {
+            const lat = Array.isArray(spot) ? spot[0] : (spot.latitude ?? spot.lat);
+            const lng = Array.isArray(spot) ? spot[1] : (spot.longitude ?? spot.lng);
+            const intensity = Array.isArray(spot) ? (spot[2] ?? 0.5) : (spot.intensity ?? 0.5);
+            if (lat === undefined || lng === undefined || isNaN(lat) || isNaN(lng)) return null;
+            return (
+              <Circle
+                key={`heat-overlay-${idx}`}
+                center={[lat, lng]}
+                radius={24000}
+                pathOptions={{
+                  color: intensity > 0.7 ? '#ef4444' : '#ff5500',
+                  fillColor: intensity > 0.7 ? '#b91c1c' : '#ff2200',
+                  fillOpacity: Math.min(0.42, Math.max(0.18, intensity * 0.38)),
+                  weight: 0,
+                }}
+              />
+            );
+          })}
 
         {/* Marcador Tático de Pesquisa de Local */}
         {searchMarker && (
@@ -1716,6 +1792,48 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
               <span className="text-yellow-400">50 (Alerta)</span>
               <span className="text-purple-400">300+ (Perigosa)</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* HUD: Painel Dinâmico de Telemetria de Fumaça & AQI de Manaus */}
+      {overlays.smokePlume && manausAqi && (
+        <div className="absolute top-16 right-4 z-[900] bg-slate-950/95 backdrop-blur-md border border-amber-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">
+          <div className="flex items-center justify-between border-b border-amber-900/50 pb-1 mb-1.5">
+            <span className="text-[10.5px] font-bold text-amber-300 flex items-center gap-1.5">
+              <Wind size={13} className="text-amber-400 animate-pulse" /> FUMAÇA & AQI • MANAUS
+            </span>
+            <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-bold border ${manausAqi.badgeBg} ${manausAqi.badgeText} ${manausAqi.badgeBorder}`}>
+              {manausAqi.level} (AQI {manausAqi.aqi})
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1 text-center my-1.5 bg-slate-900/80 p-1.5 rounded border border-slate-800 text-[10px]">
+            <div>
+              <div className="text-[8.5px] text-slate-400">PM2.5</div>
+              <div className="font-bold text-orange-400">{manausAqi.pm25} µg/m³</div>
+            </div>
+            <div>
+              <div className="text-[8.5px] text-slate-400">PM10</div>
+              <div className="font-bold text-amber-300">{manausAqi.pm10} µg/m³</div>
+            </div>
+            <div>
+              <div className="text-[8.5px] text-slate-400">AOD Óptico</div>
+              <div className="font-bold text-purple-300">{manausAqi.aod}</div>
+            </div>
+          </div>
+
+          <div className="text-[9.5px] text-slate-300 leading-tight mb-1">
+            💨 <strong>Ventos:</strong> {manausAqi.windDirectionText}
+          </div>
+
+          <div className="text-[9px] text-amber-200 bg-amber-950/70 border border-amber-800/60 rounded p-1.5 leading-snug">
+            ⚠️ <strong>Recomendação:</strong> {manausAqi.healthAdvice}
+          </div>
+
+          <div className="text-[8px] text-slate-500 mt-1 flex justify-between">
+            <span>Open-Meteo & INPE</span>
+            <span>Atualizado: {manausAqi.lastUpdated}</span>
           </div>
         </div>
       )}

@@ -171,7 +171,7 @@ export interface WindowState {
   defaultSize: { width: number; height: number };
 }
 
-export type TemporalMode = '24h' | 'month' | 'historical' | 'recent_3h';
+export type TemporalMode = '24h' | 'month' | 'year' | 'historical' | 'recent_3h';
 
 export type MapLayerType =
   | 'google_hybrid'
