@@ -191,3 +191,4 @@ https.get(url, (res) => {
     console.log('Successfully written to public/real_firms_cache.json and backend/real_firms_cache.json!');
   });
 }).on('error', e => console.log('HTTP error:', e.message));
+

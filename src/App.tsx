@@ -47,6 +47,7 @@ import { NewFireAlertBanner } from './components/NewFireAlertBanner';
 import { TacticalEvidenceWindow } from './components/TacticalEvidenceWindow';
 import { AutoEmergencyCountdown } from './components/AutoEmergencyCountdown';
 import { INDUSTRIAL_FACILITIES, Facility } from './data/facilityFloorPlans';
+import { HierarchicalTelemetryHUD } from './components/HierarchicalTelemetryHUD';
 
 // Dynamic Code-Splitting para Modais sob Demanda (Redução drástica do Bundle inicial)
 const FloorPlanModal = React.lazy(() =>
@@ -1514,9 +1515,22 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
+      {/* 5. HUD Tático Hierárquico: Mundo -> País -> Bioma -> Estado */}
+      <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-[1000] pointer-events-auto">
+        <HierarchicalTelemetryHUD
+          fireSpots={activeTemporalSpots}
+          onFlyToLocation={(center, zoom, label) => {
+            setTargetMapLocation({ center, zoom, trigger: Date.now() });
+          }}
+          onEnableNasaFirmsGlobal={() => {
+            setActiveOverlays(prev => ({ ...prev, nasaFirms: true }));
+          }}
+        />
+      </div>
+
       {/* 6. Barra e Painel Avançado para Modo Histórico & Intervalo de Meses */}
       {temporalMode === 'historical' && (
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-[950] pointer-events-auto">
+        <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-[950] pointer-events-auto">
           <TimeFilterBar
             temporalMode={temporalMode}
             setTemporalMode={setTemporalMode}
