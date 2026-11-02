@@ -839,18 +839,13 @@ const AppContent: React.FC = () => {
       {/* 1. Telão Master Fullscreen GIS (Cobertura Nacional Brasil) */}
       {(() => {
         // Filtragem estrita: no Modo Real, exclui terminantemente qualquer dado simulado
+        // Todos os focos do Brasil e da Amazônia permanecem 100% visíveis no mapa
         let displayFireSpots = isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated);
-        if (activeGeofence) {
-          const poly = normalizeGeofenceToPolygon(activeGeofence);
-          if (poly.length >= 3) {
-            displayFireSpots = displayFireSpots.filter((s) =>
-              isPointInPolygon([s.latitude, s.longitude], poly)
-            );
-          }
 
-          // Se a instalação fabril tiver incidente, simulação estiver ativa e o filtro estiver vazio, injetar ponto térmico
+        // Se uma instalação fabril tiver incidente e simulação estiver ativa, garante o ponto térmico visível
+        if (activeGeofence && isSimulation) {
           const matchedFacility = INDUSTRIAL_FACILITIES.find(f => f.id === activeGeofence.facilityId);
-          if (isSimulation && matchedFacility && matchedFacility.activeIncident && displayFireSpots.length === 0) {
+          if (matchedFacility && matchedFacility.activeIncident && !displayFireSpots.some(s => s.id === matchedFacility.activeIncident!.id)) {
             displayFireSpots = [{
               id: matchedFacility.activeIncident.id,
               latitude: matchedFacility.coordinates.lat,
@@ -871,7 +866,7 @@ const AppContent: React.FC = () => {
               is_recurrent: false,
               is_arson_cluster: false,
               is_simulated: true
-            }];
+            }, ...displayFireSpots];
           }
         }
 
