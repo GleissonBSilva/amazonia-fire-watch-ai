@@ -1,7 +1,13 @@
 import os
 import json
-import shapely
-from shapely.geometry import shape, Point
+try:
+    import shapely
+    import shapely.geometry
+    from shapely.geometry import shape, Point
+    HAS_SHAPELY = True
+except ImportError:
+    shapely = None
+    HAS_SHAPELY = False
 
 # Path to the official IBGE simplified boundary GeoJSON
 GEOJSON_PATH = os.path.join(os.path.dirname(__file__), "ibge_brazil_boundary.geojson")
@@ -13,7 +19,7 @@ def _get_brazil_geometry():
     if _brazil_geometry is not None:
         return _brazil_geometry
 
-    if os.path.exists(GEOJSON_PATH):
+    if HAS_SHAPELY and os.path.exists(GEOJSON_PATH):
         try:
             with open(GEOJSON_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -49,7 +55,10 @@ def _get_brazil_geometry():
         (-59.0, 4.0), (-58.5, 2.0), (-56.0, 2.0), (-54.5, 2.5),
         (-52.5, 2.5), (-51.8, 3.8), (-51.6, 4.4)
     ]
-    _brazil_geometry = shapely.geometry.Polygon(coords)
+    if HAS_SHAPELY:
+        _brazil_geometry = shapely.geometry.Polygon(coords)
+    else:
+        _brazil_geometry = coords
     return _brazil_geometry
 
 def is_within_brazil(lat: float, lng: float) -> bool:
@@ -58,8 +67,20 @@ def is_within_brazil(lat: float, lng: float) -> bool:
     if not (-34.2 <= lat <= 5.5 and -74.2 <= lng <= -34.5):
         return False
     geom = _get_brazil_geometry()
-    pt = Point(lng, lat)
-    return bool(geom.contains(pt))
+    if HAS_SHAPELY and hasattr(geom, "contains"):
+        pt = Point(lng, lat)
+        return bool(geom.contains(pt))
+    elif isinstance(geom, list):
+        # Ray casting algorithm
+        inside = False
+        n = len(geom)
+        for i in range(n):
+            x1, y1 = geom[i]
+            x2, y2 = geom[(i + 1) % n]
+            if ((y1 > lat) != (y2 > lat)) and (lng < (x2 - x1) * (lat - y1) / (y2 - y1) + x1):
+                inside = not inside
+        return inside
+    return True
 
 def identify_neighbor_country(lat: float, lng: float) -> tuple:
     """Identifica país sul-americano vizinho caso o ponto esteja fora do Brasil."""

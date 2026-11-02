@@ -10,11 +10,24 @@ echo   ORQUESTRADOR TÁTICO FULL-STACK (LOCAL)
 echo ========================================================
 echo.
 
+set "PYTHON_EXE="
+if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" (
+    set "PYTHON_EXE=%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
+) else if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
+    set "PYTHON_EXE=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+) else (
+    py -V >nul 2>&1 && (
+        set "PYTHON_EXE=py"
+    ) || (
+        set "PYTHON_EXE=python"
+    )
+)
+
 echo [1/3] Verificando Backend FastAPI (Porta 8000)...
 netstat -ano | findstr :8000 >nul
 if %errorlevel% neq 0 (
     echo Iniciando Backend FastAPI...
-    start "AMAZONIA-BACKEND-8000" cmd /k "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
+    start "AMAZONIA-BACKEND-8000" cmd /k "cd /d ""%~dp0"" && ""%PYTHON_EXE%"" -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
     timeout /t 2 /nobreak >nul
 ) else (
     echo Backend ja em execucao.

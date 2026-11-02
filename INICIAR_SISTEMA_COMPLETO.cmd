@@ -25,10 +25,10 @@ echo ========================================================
 echo.
 
 echo [1/3] Verificando dependencias essenciais do backend...
-"%PYTHON_EXE%" -c "import fastapi, uvicorn" >nul 2>&1
+"%PYTHON_EXE%" -c "import fastapi, uvicorn, shapely" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Instalando FastAPI e Uvicorn...
-    "%PYTHON_EXE%" -m pip install fastapi uvicorn httpx pydantic python-multipart gTTS
+    echo Instalando dependencias essenciais do backend...
+    "%PYTHON_EXE%" -m pip install fastapi uvicorn httpx pydantic python-multipart gTTS shapely
 )
 
 echo Iniciando Backend FastAPI (Visao em Memoria e WhatsApp)...

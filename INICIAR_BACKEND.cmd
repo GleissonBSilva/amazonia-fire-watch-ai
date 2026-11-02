@@ -24,10 +24,10 @@ echo   BACKEND FASTAPI - PIPELINE DE VISAO EM MEMORIA (ZERO-DISK)
 echo ========================================================
 echo.
 echo [1/2] Verificando dependencias essenciais do FastAPI...
-"%PYTHON_EXE%" -c "import fastapi, uvicorn" >nul 2>&1
+"%PYTHON_EXE%" -c "import fastapi, uvicorn, shapely" >nul 2>&1
 if %errorlevel% neq 0 (
     echo Instalando dependencias essenciais do servidor...
-    "%PYTHON_EXE%" -m pip install fastapi uvicorn httpx pydantic python-multipart gTTS
+    "%PYTHON_EXE%" -m pip install fastapi uvicorn httpx pydantic python-multipart gTTS shapely
 )
 
 echo.
