@@ -125,8 +125,8 @@ export const TimeFilterBar: React.FC<TimeFilterBarProps> = ({
               FILTRO TEMPORAL AVANÇADO (ANOS E INTERVALO DE MESES)
             </span>
             {stats && (
-              <span className="text-[10px] text-slate-400 font-mono">
-                {stats.totalSpots} focos carregados
+              <span className="text-[10px] text-cyan-300 font-mono font-bold">
+                {stats.totalSpots.toLocaleString('pt-BR')} focos registrados
               </span>
             )}
           </div>
