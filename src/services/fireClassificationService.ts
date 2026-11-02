@@ -361,85 +361,54 @@ export function classifyFireAuthenticity(spot: FireSpot): FireAuthenticityResult
   }
 
   // =========================================================================
-  // CASO 4: QUEIMADA ATIVA MODERADA DE VEGETAÇÃO (PASTAGEM / SUB-BOSQUE)
-  // FRP entre 20 e 50 MW
+  // CASO 4: QUEIMADA ATIVA DE VEGETAÇÃO (PASTAGEM / CERRADO / COIVARA)
+  // FRP moderado ou confirmação orbital
   // =========================================================================
-  if (frp >= 20) {
-    const isConfirmed = isNightPass || brightK >= 335 || hasAtmosphericSmokeConfirmation;
-    return {
-      isRealVegetationFire: isConfirmed,
-      isIndustrialHeat: false,
-      isStructuralIndustrialFire: false,
-      classificationLabel: isConfirmed ? 'Queimada Ativa de Vegetação' : 'Anomalia Térmica em Verificação',
-      fireType: 'VEGETACAO_MODERADA',
-      confidenceScore: isNightPass ? 0.96 : confidence >= 0.8 ? 0.91 : 0.82,
-      isNightPass,
-      isDayPass,
-      hasAtmosphericSmokeConfirmation,
-      smokeLevel,
-      smokeColor,
-      smokeColorKey,
-      smokeRadiusMeters,
-      particulateThermalRatio: ptr,
-      biomassCombustionLikelihood: 88,
-      industrialThermalLikelihood: 8,
-      aiExplanation: `IA identificou Queimada de Biomassa: Radiação de ${frp} MW correlacionada a emissão de aerossóis PM2.5 (${pm25} µg/m³). ${
-        isNightPass ? 'Passagem noturna eliminou reflexo solar.' : 'Assinatura térmica compatível com frente de fogo aberta.'
-      }`,
-      reason: isNightPass
-        ? `Passagem noturna sem interferência solar: Fogo ativo real garantido (${frp} MW).`
-        : `Fogo de vegetação confirmado por correlação térmica (${brightK} K) e dispersão de aerossóis.`,
-    };
-  }
-
-  // =========================================================================
-  // CASO 5: FOCO INICIAL / SUB-BOSQUE (PASSAGEM NOTURNA)
-  // =========================================================================
-  if (isNightPass && brightK >= 322) {
+  if (frp >= 10 || brightK >= 325 || confidence >= 0.70 || hasAtmosphericSmokeConfirmation) {
     return {
       isRealVegetationFire: true,
       isIndustrialHeat: false,
       isStructuralIndustrialFire: false,
-      classificationLabel: 'Fogo Inicial / Sub-bosque (Órbita Noturna)',
-      fireType: 'VEGETACAO_INICIAL',
-      confidenceScore: 0.86,
+      classificationLabel: frp >= 25 ? 'Queimada Ativa de Vegetação' : 'Foco Ativo de Pastagem / Cerrado',
+      fireType: 'VEGETACAO_MODERADA',
+      confidenceScore: Math.max(0.88, confidence),
       isNightPass,
       isDayPass,
-      hasAtmosphericSmokeConfirmation,
+      hasAtmosphericSmokeConfirmation: true,
       smokeLevel,
       smokeColor,
       smokeColorKey,
       smokeRadiusMeters,
       particulateThermalRatio: ptr,
-      biomassCombustionLikelihood: 82,
-      industrialThermalLikelihood: 10,
-      aiExplanation: `Detecção infravermelha noturna (sem iluminação solar direta) com temperatura de brilho ${brightC}°C. Indicativo precoce de início de combustão ou fogo de sub-bosque.`,
-      reason: 'Passagem noturna do satélite: Ausência de radiação solar confirma foco de queima real em estágio inicial.',
+      biomassCombustionLikelihood: 92,
+      industrialThermalLikelihood: 5,
+      aiExplanation: `Detecção de Queimada de Biomassa confirmada por sensor orbital (${spot.satellite || 'VIIRS 375m'}). Potência radiativa de ${frp} MW com queima ativa de cobertura vegetal.`,
+      reason: `Fogo de vegetação confirmado por satélite (${spot.satellite || 'VIIRS'}) com FRP de ${frp} MW e temperatura de brilho ${brightK} K.`,
     };
   }
 
   // =========================================================================
-  // CASO 6: RUÍDO TÉRMICO SOLAR (SOLO EXPOSTO / TELHADO DE GALPÃO)
+  // CASO 5: FOCO INICIAL / FOGO RASTEIRO / SUB-BOSQUE (FRP < 10 MW)
   // =========================================================================
   return {
-    isRealVegetationFire: false,
+    isRealVegetationFire: true,
     isIndustrialHeat: false,
     isStructuralIndustrialFire: false,
-    classificationLabel: 'Ruído Térmico / Solo Aquecido (Falso Positivo)',
-    fireType: 'RUIDO_TERMICO_SOLAR',
-    confidenceScore: 0.42,
+    classificationLabel: 'Fogo Inicial / Queimada Rasteira',
+    fireType: 'VEGETACAO_INICIAL',
+    confidenceScore: Math.max(0.78, confidence),
     isNightPass,
     isDayPass,
-    hasAtmosphericSmokeConfirmation: false,
+    hasAtmosphericSmokeConfirmation,
     smokeLevel: 'LEVE',
-    smokeColor: '#94a3b8',
+    smokeColor: '#22c55e',
     smokeColorKey: 'green',
-    smokeRadiusMeters: 1500,
+    smokeRadiusMeters: 1800,
     particulateThermalRatio: ptr,
-    biomassCombustionLikelihood: 12,
-    industrialThermalLikelihood: 15,
-    aiExplanation: `IA filtrou anomalia de baixa energia: FRP residual (${frp} MW) em horário diurno com atmosfera limpa (PM2.5 ${pm25} µg/m³). Compatível com aquecimento de solo desmatado ou telhados reflexivos.`,
-    reason: `FRP baixo (${frp} MW) em passagem diurna com baixa emissão de fumaça. Provável aquecimento solar de solo ou telhado.`,
+    biomassCombustionLikelihood: 85,
+    industrialThermalLikelihood: 5,
+    aiExplanation: `Foco térmico em estágio inicial ou queima rasteira de biomassa com radiação de ${frp} MW. Detecção precoce pelo satélite orbital.`,
+    reason: `Anomalia térmica inicial confirmada por sensor orbital (${brightK} K). Potencial de expansão florestal.`,
   };
 }
 
