@@ -3,7 +3,10 @@ setlocal
 chcp 65001 >nul
 title AMAZONIA FIRE-WATCH AI - BACKEND FASTAPI
 cls
-cd /d "%~dp0"
+
+set "PROJ_DIR=%~dp0"
+if "%PROJ_DIR:~-1%"=="\" set "PROJ_DIR=%PROJ_DIR:~0,-1%"
+cd /d "%PROJ_DIR%"
 
 set "PYTHON_EXE="
 if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" (

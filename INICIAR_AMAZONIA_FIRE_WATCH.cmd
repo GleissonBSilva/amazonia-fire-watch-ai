@@ -1,8 +1,12 @@
 @echo off
 setlocal
-title AMAZONIA FIRE-WATCH AI - CBMAM / CIOPS
 chcp 65001 >nul
+title AMAZONIA FIRE-WATCH AI - CBMAM / CIOPS
 cls
+
+set "PROJ_DIR=%~dp0"
+if "%PROJ_DIR:~-1%"=="\" set "PROJ_DIR=%PROJ_DIR:~0,-1%"
+cd /d "%PROJ_DIR%"
 
 echo ========================================================
 echo   AMAZONIA FIRE-WATCH AI - CBMAM / CIOPS
@@ -27,7 +31,7 @@ echo [1/3] Verificando Backend FastAPI (Porta 8000)...
 netstat -ano | findstr :8000 >nul
 if %errorlevel% neq 0 (
     echo Iniciando Backend FastAPI...
-    start "AMAZONIA-BACKEND-8000" cmd /k "cd /d ""%~dp0"" && ""%PYTHON_EXE%"" -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
+    start "AMAZONIA-BACKEND-8000" cmd /k "cd /d "%PROJ_DIR%" && "%PYTHON_EXE%" -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
     timeout /t 2 /nobreak >nul
 ) else (
     echo Backend ja em execucao.
@@ -37,7 +41,7 @@ echo [2/3] Verificando Frontend Vite (Porta 3000)...
 netstat -ano | findstr :3000 >nul
 if %errorlevel% neq 0 (
     echo Iniciando Frontend Vite...
-    start "AMAZONIA-FRONTEND-3000" cmd /k "npm run dev"
+    start "AMAZONIA-FRONTEND-3000" cmd /k "cd /d "%PROJ_DIR%" && npm run dev"
     timeout /t 3 /nobreak >nul
 ) else (
     echo Frontend ja em execucao.

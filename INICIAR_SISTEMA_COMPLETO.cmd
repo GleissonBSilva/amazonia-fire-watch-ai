@@ -3,7 +3,10 @@ setlocal
 chcp 65001 >nul
 title AMAZONIA FIRE-WATCH AI - ORQUESTRADOR FULL-STACK
 cls
-cd /d "%~dp0"
+
+set "PROJ_DIR=%~dp0"
+if "%PROJ_DIR:~-1%"=="\" set "PROJ_DIR=%PROJ_DIR:~0,-1%"
+cd /d "%PROJ_DIR%"
 
 set "PYTHON_EXE="
 if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" (
@@ -32,13 +35,13 @@ if %errorlevel% neq 0 (
 )
 
 echo Iniciando Backend FastAPI (Visao em Memoria e WhatsApp)...
-start "AMAZONIA-BACKEND-8000" cmd /k "cd /d ""%~dp0"" && ""%PYTHON_EXE%"" -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
+start "AMAZONIA-BACKEND-8000" cmd /k "cd /d "%PROJ_DIR%" && "%PYTHON_EXE%" -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 echo [2/3] Aguardando inicializacao dos servicos...
 timeout /t 2 /nobreak >nul
 
 echo [3/3] Iniciando Frontend React / Vite (Porta 3000)...
-start "AMAZONIA-FRONTEND-3000" cmd /k "cd /d ""%~dp0"" && npm run dev"
+start "AMAZONIA-FRONTEND-3000" cmd /k "cd /d "%PROJ_DIR%" && npm run dev"
 
 echo.
 echo ========================================================
