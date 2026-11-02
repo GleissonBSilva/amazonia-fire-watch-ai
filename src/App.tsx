@@ -145,6 +145,7 @@ const AppContent: React.FC = () => {
   const [targetMapLocation, setTargetMapLocation] = useState<{ center: [number, number]; zoom: number; trigger?: number } | null>(null);
   const [currentMapCenter, setCurrentMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchMarker, setSearchMarker] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [triggerDrawGeofence, setTriggerDrawGeofence] = useState<number>(0);
   const geofenceEnrichTimeoutRef = useRef<any>(null);
 
   // Módulo de Cerca Virtual (Isolamento Geográfico Total: Mover e Dimensionar) & Planta Baixa
@@ -491,11 +492,45 @@ const AppContent: React.FC = () => {
 
   const handleAreaSelected = (data: DelimitedArea) => {
     setSelectedArea(data);
-    setIsAreaInspectionOpen(true);
+    setTriggerDrawGeofence(0);
+
+    // Converte diretamente a área demarcada por clique-e-arraste em Cerca Virtual 24h Ativa!
+    const ne = data.northEast;
+    const sw = data.southWest;
+    const polygon: [number, number][] = [
+      [sw.lat, sw.lng],
+      [ne.lat, sw.lng],
+      [ne.lat, ne.lng],
+      [sw.lat, ne.lng],
+    ];
+    const bounds: [[number, number], [number, number]] = [
+      [sw.lat, sw.lng],
+      [ne.lat, ne.lng],
+    ];
+
+    const newGeofence: ActiveGeofenceState = {
+      id: `cerca-tatica-${Date.now()}`,
+      name: `Cerca Tática (${data.center.lat.toFixed(4)}°, ${data.center.lng.toFixed(4)}°)`,
+      polygon,
+      bounds,
+      areaKm2: data.areaSqKm,
+    };
+
+    setActiveGeofence(newGeofence);
+    setIsEditingGeofence(true);
+    try {
+      localStorage.setItem('afw_active_geofence', JSON.stringify(newGeofence));
+    } catch {}
 
     reverseGeocode(data.center.lat, data.center.lng)
       .then((rev) => {
         const land = queryLandRegistry(data.center.lat, data.center.lng, rev.city, rev.state);
+        const placeLabel = rev.road
+          ? `${rev.road}${rev.neighborhood ? `, ${rev.neighborhood}` : ''} (${rev.city} - ${rev.state})`
+          : land.property_name && land.property_name !== 'Setor Territorial'
+          ? `${land.property_name} (${rev.city || 'AM'})`
+          : `${rev.city} - ${rev.state}`;
+
         setSelectedArea((prev) => {
           if (!prev) return null;
           return {
@@ -509,6 +544,26 @@ const AppContent: React.FC = () => {
             landPropertyName: land.property_name,
             carReceipt: land.car_receipt,
           };
+        });
+
+        setActiveGeofence((prev) => {
+          if (!prev || prev.id !== newGeofence.id) return prev;
+          const enriched: ActiveGeofenceState = {
+            ...prev,
+            name: placeLabel,
+            address: rev.fullAddress,
+            road: rev.road || rev.formattedStreet,
+            neighborhood: rev.neighborhood,
+            city: rev.city,
+            state: rev.state,
+            postcode: rev.postcode,
+            landPropertyName: land.property_name,
+            carReceipt: land.car_receipt,
+          };
+          try {
+            localStorage.setItem('afw_active_geofence', JSON.stringify(enriched));
+          } catch {}
+          return enriched;
         });
       })
       .catch((err) => {
@@ -704,35 +759,8 @@ const AppContent: React.FC = () => {
   };
 
   const handleCreateNewGeofence = () => {
-    const centerLat = currentMapCenter?.lat ?? (targetMapLocation?.center?.[0] || -3.1019);
-    const centerLng = currentMapCenter?.lng ?? (targetMapLocation?.center?.[1] || -60.0250);
-    const polygon = createGeofencePolygon(centerLat, centerLng, 2.0, 2.0);
-    const areaKm2 = calculatePolygonAreaKm2(polygon);
-    const bounds = getPolygonBoundingBox(polygon);
-
-    const initialName = `Cerca Tática (${centerLat.toFixed(4)}°, ${centerLng.toFixed(4)}°)`;
-
-    const newGeofence: ActiveGeofenceState = {
-      id: `cerca-tatica-${Date.now()}`,
-      name: initialName,
-      polygon,
-      bounds,
-      areaKm2,
-    };
-
-    setActiveGeofence(newGeofence);
-    setIsEditingGeofence(true);
-    try {
-      localStorage.setItem('afw_active_geofence', JSON.stringify(newGeofence));
-    } catch {}
-
-    setTargetMapLocation({
-      center: [centerLat, centerLng],
-      zoom: 15,
-      trigger: Date.now(),
-    });
-
-    enrichGeofencePlaceInfo(newGeofence, centerLat, centerLng);
+    // Ativa o modo intuitivo: clique em um ponto do mapa, segure e arraste até o tamanho desejado!
+    setTriggerDrawGeofence(Date.now());
   };
 
   const handleClearGeofence = () => {
@@ -845,6 +873,8 @@ const AppContent: React.FC = () => {
             onActivateGeofence={handleActivateGeofence}
             onTriggerAutoEmergency={handleTriggerAutoEmergency}
             isSimulation={isSimulation}
+            triggerDrawGeofence={triggerDrawGeofence}
+            onDrawCompleted={() => setTriggerDrawGeofence(0)}
         heatmapSpots={heatmapSpots}
         osintAlerts={osintAlerts}
         onOsintClick={(alert) => {
@@ -1026,18 +1056,20 @@ const AppContent: React.FC = () => {
             <span className="hidden lg:inline">Relatórios</span>
           </button>
 
-          {/* Botão Cerca Virtual 24h (Adicionar) */}
+          {/* Botão Cerca Virtual 24h (Desenhar por Clique-e-Arrasto) */}
           <button
-            onClick={handleCreateNewGeofence}
+            onClick={() => setTriggerDrawGeofence(Date.now())}
             className={`h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border transition-all shadow-sm cursor-pointer shrink-0 ${
-              activeGeofence
+              triggerDrawGeofence > 0
+                ? 'bg-cyan-600 text-white border-white animate-pulse'
+                : activeGeofence
                 ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-500/70'
                 : 'bg-cyan-950 hover:bg-cyan-900 text-cyan-200 border-cyan-400 animate-pulse hover:animate-none'
             }`}
-            title="Criar / Adicionar nova Cerca Virtual 24h no centro da visualização atual"
+            title="Clique e arraste no mapa para desenhar a cerca digital"
           >
             <ShieldAlert size={12} className="text-cyan-400 shrink-0" />
-            <span className="hidden sm:inline">{activeGeofence ? '+ Nova Cerca' : 'Cerca 24h'}</span>
+            <span className="hidden sm:inline">{triggerDrawGeofence > 0 ? '✏️ Arraste no Mapa' : activeGeofence ? '📐 Redesenhar Cerca' : '📐 Desenhar Cerca'}</span>
           </button>
 
           {/* Botão de Portal SaaS / Demonstração Comercial */}

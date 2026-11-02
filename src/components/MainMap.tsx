@@ -56,6 +56,8 @@ interface MainMapProps {
   onTriggerAutoEmergency?: (facility: Facility) => void;
   isSimulation?: boolean;
   onInspectMapPoint?: (lat: number, lng: number) => void;
+  triggerDrawGeofence?: number;
+  onDrawCompleted?: () => void;
 }
 
 // Quick Viewports for Brazilian Biomes
@@ -112,12 +114,45 @@ const MapViewNavigator: React.FC<{
 const LeafletDrawControl: React.FC<{
   onAreaSelected: (data: DelimitedArea) => void;
   onClearArea?: () => void;
+  triggerDrawGeofence?: number;
+  onDrawCompleted?: () => void;
 }> = ({
   onAreaSelected,
   onClearArea,
+  triggerDrawGeofence,
+  onDrawCompleted,
 }) => {
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
+  const activeDrawerRef = useRef<any>(null);
+
+  // Ativação programática do modo de desenho: clique e arraste no mapa
+  useEffect(() => {
+    if (!triggerDrawGeofence || triggerDrawGeofence <= 0 || !map) return;
+
+    if (activeDrawerRef.current && activeDrawerRef.current.enabled && activeDrawerRef.current.enabled()) {
+      activeDrawerRef.current.disable();
+    }
+
+    const drawer = new (L as any).Draw.Rectangle(map, {
+      shapeOptions: {
+        color: '#00f0ff',
+        fillColor: '#0891b2',
+        fillOpacity: 0.28,
+        weight: 3,
+        dashArray: '4, 4',
+      },
+    });
+
+    activeDrawerRef.current = drawer;
+    drawer.enable();
+
+    return () => {
+      if (drawer && drawer.enabled && drawer.enabled()) {
+        drawer.disable();
+      }
+    };
+  }, [triggerDrawGeofence, map]);
 
   useEffect(() => {
     // Localização completa para Português (Brasil) das ferramentas Leaflet Draw
@@ -242,6 +277,9 @@ const LeafletDrawControl: React.FC<{
       drawnItems.clearLayers();
       drawnItems.addLayer(layer);
       emitAreaFromLayer(layer);
+      if (onDrawCompleted) {
+        onDrawCompleted();
+      }
     };
 
     const handleEdited = (e: any) => {
@@ -256,18 +294,26 @@ const LeafletDrawControl: React.FC<{
       }
     };
 
+    const handleDrawStop = () => {
+      if (onDrawCompleted) {
+        onDrawCompleted();
+      }
+    };
+
     map.on(L.Draw.Event.CREATED, handleCreated);
     map.on(L.Draw.Event.EDITED, handleEdited);
     map.on(L.Draw.Event.DELETED, handleDeleted);
+    map.on(L.Draw.Event.DRAWSTOP, handleDrawStop);
 
     return () => {
       map.off(L.Draw.Event.CREATED, handleCreated);
       map.off(L.Draw.Event.EDITED, handleEdited);
       map.off(L.Draw.Event.DELETED, handleDeleted);
+      map.off(L.Draw.Event.DRAWSTOP, handleDrawStop);
       map.removeControl(drawControl);
       map.removeLayer(drawnItems);
     };
-  }, [map, onAreaSelected, onClearArea]);
+  }, [map, onAreaSelected, onClearArea, onDrawCompleted]);
 
   return null;
 };
@@ -617,6 +663,8 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   onTriggerAutoEmergency,
   isSimulation = true,
   onInspectMapPoint,
+  triggerDrawGeofence,
+  onDrawCompleted,
 }) => {
   const [currentView, setCurrentView] = React.useState<{
     center: [number, number];
@@ -1406,8 +1454,32 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         <MapViewportTracker onMapCenterChange={onMapCenterChange} />
 
         {/* Leaflet Draw Component - Delimitação por Retângulo / Polígono */}
-        <LeafletDrawControl onAreaSelected={onAreaSelected} onClearArea={onClearArea} />
+        <LeafletDrawControl
+          onAreaSelected={onAreaSelected}
+          onClearArea={onClearArea}
+          triggerDrawGeofence={triggerDrawGeofence}
+          onDrawCompleted={onDrawCompleted}
+        />
       </MapContainer>
+
+      {/* Banner Indicador de Modo de Desenho de Cerca (Clique e Arraste no Mapa) */}
+      {Boolean(triggerDrawGeofence && triggerDrawGeofence > 0) && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[1160] bg-cyan-950/95 border-2 border-cyan-400 text-cyan-200 px-5 py-2.5 rounded-xl shadow-[0_0_30px_rgba(0,240,255,0.7)] font-mono text-xs flex items-center gap-3 animate-pulse pointer-events-auto">
+          <span className="text-xl">📐</span>
+          <div>
+            <div className="font-bold text-white text-[12px]">MODO DESENHO DE CERCA ATIVO</div>
+            <div className="text-slate-300 text-[10px]">Clique em um ponto do mapa, segure e arraste até o tamanho desejado.</div>
+          </div>
+          {onDrawCompleted && (
+            <button
+              onClick={onDrawCompleted}
+              className="ml-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-600 cursor-pointer"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+      )}
 
       {/* HUD: Legenda Dinâmica de Poluição do Ar (AQI & Aerossóis MODIS) */}
       {overlays.smokePlume && (
