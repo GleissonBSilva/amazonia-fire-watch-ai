@@ -330,60 +330,75 @@ class NationalIngestionService:
                 pass
 
         try:
-            url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_America_24h.csv"
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url)
-                if resp.status_code == 200:
-                    content = resp.text
-                    reader = csv.DictReader(io.StringIO(content))
-                    real_spots = []
-                    uid = 20000
+            real_spots = []
+            uid = 20000
 
-                    for row in reader:
-                        try:
-                            lat = float(row["latitude"])
-                            lng = float(row["longitude"])
-                        except (ValueError, KeyError):
-                            continue
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                # 1. Ingestão Oficial INPE BDQueimadas (WFS GeoServer Oficial - Inclui GOES-16, GOES-19, NOAA-20 e AQUA)
+                try:
+                    inpe_wfs_url = "https://terrabrasilis.dpi.inpe.br/geoserver/bdqueimadas/wfs?service=wfs&version=2.0.0&request=GetFeature&typeNames=bdqueimadas:focos_24h&outputFormat=application/json"
+                    inpe_resp = await client.get(inpe_wfs_url)
+                    if inpe_resp.status_code == 200:
+                        inpe_geojson = inpe_resp.json()
+                        features = inpe_geojson.get("features", [])
+                        for feat in features:
+                            geom = feat.get("geometry") or {}
+                            coords = geom.get("coordinates")
+                            if not coords or len(coords) < 2:
+                                continue
+                            lng = float(coords[0])
+                            lat = float(coords[1])
+                            props = feat.get("properties") or {}
 
-                        # Strict Brazil bounding polygon
-                        if -34.0 <= lat <= 5.5 and -74.0 <= lng <= -34.0:
-                            frp = float(row.get("frp", 10.0))
-                            bright_ti4 = float(row.get("bright_ti4", 320.0))
-                            confidence_str = str(row.get("confidence", "nominal")).lower()
-                            confidence = 0.98 if "high" in confidence_str else 0.88 if "nominal" in confidence_str else 0.75
-                            acq_date = row.get("acq_date", "")
-                            acq_time = row.get("acq_time", "0000").zfill(4)
+                            raw_sat = str(props.get("satelite") or "INPE").strip().upper()
+                            is_goes = "GOES" in raw_sat
+                            sat_label = (
+                                "GOES-16 ABI (East)" if "GOES-16" in raw_sat
+                                else "GOES-19 ABI (Next-Gen)" if "GOES-19" in raw_sat
+                                else "GOES-18 ABI (West)" if "GOES-18" in raw_sat
+                                else f"GOES ABI ({raw_sat})" if is_goes
+                                else "NOAA-20 (VIIRS 375m)" if "NOAA-20" in raw_sat or "NOAA20" in raw_sat
+                                else "Suomi-NPP (VIIRS 375m)" if "NPP" in raw_sat
+                                else "Aqua (MODIS 1km)" if "AQUA" in raw_sat
+                                else "Terra (MODIS 1km)" if "TERRA" in raw_sat
+                                else f"{raw_sat} (INPE)"
+                            )
 
-                            # Calculate true elapsed time from satellite pass
+                            frp = float(props.get("frp") or (55.0 if is_goes else 25.0))
+                            bright_ti4 = 370.0 if is_goes else 335.0
+                            confidence = 0.94 if is_goes else 0.90
+
+                            data_hora_raw = str(props.get("data_hora_gmt") or "").strip()
                             try:
-                                det_dt = datetime.datetime.strptime(f"{acq_date} {acq_time}", "%Y-%m-%d %H%M").replace(tzinfo=datetime.timezone.utc)
+                                det_dt = datetime.datetime.strptime(data_hora_raw[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.timezone.utc)
                                 diff_min = max(1, int((now - det_dt).total_seconds() / 60))
                                 local_dt = det_dt.astimezone(datetime.timezone(datetime.timedelta(hours=-4)))
                                 det_str = local_dt.strftime("%d/%m/%Y às %H:%M:%S")
                                 iso_str = det_dt.isoformat()
                             except Exception:
-                                diff_min = 60
-                                det_str = f"{acq_date} {acq_time[:2]}:{acq_time[2:]}:00 UTC"
+                                diff_min = 15 if is_goes else 90
+                                det_str = f"{data_hora_raw} UTC"
                                 iso_str = now.isoformat()
 
+                            muni = str(props.get("municipio") or "").strip()
+                            est = str(props.get("estado") or "").strip()
                             loc = classify_location(lat, lng)
                             aq = compute_air_quality(frp)
                             thermal_ai = classify_thermal_anomaly_ai(lat, lng, frp, bright_ti4, aq["pm25"])
 
                             real_spots.append({
-                                "id": f"FIRMS-REAL-{uid}",
+                                "id": f"INPE-{raw_sat}-{uid}",
                                 "latitude": round(lat, 5),
                                 "longitude": round(lng, 5),
-                                "is_brazil": loc["is_brazil"],
-                                "country_code": loc["country_code"],
-                                "country_name": loc["country_name"],
-                                "continent": loc.get("continent", "América do Sul"),
-                                "biome": loc["biome"],
-                                "state": loc["state"],
-                                "municipality": loc["municipality"],
-                                "address": loc["address"],
-                                "satellite": "Suomi-NPP (VIIRS 375m)",
+                                "is_brazil": True,
+                                "country_code": "BR",
+                                "country_name": "Brasil",
+                                "continent": "América do Sul",
+                                "biome": str(props.get("bioma") or loc["biome"]),
+                                "state": est or loc["state"],
+                                "municipality": muni or loc["municipality"],
+                                "address": f"Detecção {sat_label} • {muni or loc['municipality']} ({est or loc['state']})",
+                                "satellite": sat_label,
                                 "frp_mw": round(frp, 1),
                                 "bright_ti4_k": round(bright_ti4, 1),
                                 "confidence": confidence,
@@ -403,28 +418,190 @@ class NationalIngestionService:
                                 "pm25": aq["pm25"],
                                 "air_quality_level": aq["air_quality_level"],
                                 "is_estimated_aqi": True,
+                                "detection_type": "PRELIMINAR_GEOESTACIONARIO" if is_goes else "PASSAGEM_POLAR",
+                                "is_geostationary_preliminary": is_goes,
                                 "is_industrial_heat": thermal_ai.get("is_industrial_heat", False),
                                 "fire_nature": thermal_ai.get("nature", "VEGETACAO_CRITICA"),
                                 "ptr": thermal_ai.get("ptr", 1.0),
                                 "ai_verdict": thermal_ai.get("ai_verdict", "")
                             })
                             uid += 1
+                except Exception as inpe_err:
+                    print("Aviso: Falha temporária no WFS INPE:", inpe_err)
 
-                    if real_spots:
-                        real_spots.sort(key=lambda x: x["frp_mw"], reverse=True)
-                        self._cache_real_24h = real_spots
-                        self._last_real_fetch = now
+                # 2. Ingestão Oficial NASA FIRMS VIIRS Suomi-NPP (375m)
+                try:
+                    suomi_url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_America_24h.csv"
+                    resp = await client.get(suomi_url)
+                    if resp.status_code == 200:
+                        reader = csv.DictReader(io.StringIO(resp.text))
+                        for row in reader:
+                            try:
+                                lat = float(row["latitude"])
+                                lng = float(row["longitude"])
+                            except (ValueError, KeyError):
+                                continue
 
-                        # Persist to disk cache
-                        try:
-                            with open(cache_file, "w", encoding="utf-8") as cf:
-                                json.dump(real_spots[:2000], cf)
-                        except Exception:
-                            pass
+                            if -34.0 <= lat <= 5.5 and -74.0 <= lng <= -34.0:
+                                frp = float(row.get("frp", 10.0))
+                                bright_ti4 = float(row.get("bright_ti4", 320.0))
+                                confidence_str = str(row.get("confidence", "nominal")).lower()
+                                confidence = 0.98 if "high" in confidence_str else 0.88 if "nominal" in confidence_str else 0.75
+                                acq_date = row.get("acq_date", "")
+                                acq_time = row.get("acq_time", "0000").zfill(4)
 
-                        if filter_brazil_only:
-                            return [s for s in self._cache_real_24h if s.get("is_brazil", True)][:limit]
-                        return self._cache_real_24h[:limit]
+                                try:
+                                    det_dt = datetime.datetime.strptime(f"{acq_date} {acq_time}", "%Y-%m-%d %H%M").replace(tzinfo=datetime.timezone.utc)
+                                    diff_min = max(1, int((now - det_dt).total_seconds() / 60))
+                                    local_dt = det_dt.astimezone(datetime.timezone(datetime.timedelta(hours=-4)))
+                                    det_str = local_dt.strftime("%d/%m/%Y às %H:%M:%S")
+                                    iso_str = det_dt.isoformat()
+                                except Exception:
+                                    diff_min = 60
+                                    det_str = f"{acq_date} {acq_time[:2]}:{acq_time[2:]}:00 UTC"
+                                    iso_str = now.isoformat()
+
+                                loc = classify_location(lat, lng)
+                                aq = compute_air_quality(frp)
+                                thermal_ai = classify_thermal_anomaly_ai(lat, lng, frp, bright_ti4, aq["pm25"])
+
+                                real_spots.append({
+                                    "id": f"FIRMS-SNPP-{uid}",
+                                    "latitude": round(lat, 5),
+                                    "longitude": round(lng, 5),
+                                    "is_brazil": loc["is_brazil"],
+                                    "country_code": loc["country_code"],
+                                    "country_name": loc["country_name"],
+                                    "continent": loc.get("continent", "América do Sul"),
+                                    "biome": loc["biome"],
+                                    "state": loc["state"],
+                                    "municipality": loc["municipality"],
+                                    "address": loc["address"],
+                                    "satellite": "Suomi-NPP (VIIRS 375m)",
+                                    "frp_mw": round(frp, 1),
+                                    "bright_ti4_k": round(bright_ti4, 1),
+                                    "confidence": confidence,
+                                    "detected_at": det_str,
+                                    "detected_iso": iso_str,
+                                    "has_video": False,
+                                    "is_arson_cluster": False,
+                                    "is_recurrent": False,
+                                    "is_simulated": False,
+                                    "is_new_outbreak": (diff_min <= 180),
+                                    "minutes_ago": diff_min,
+                                    "status": "PENDENTE",
+                                    "dispatched_at": None,
+                                    "video_url": None,
+                                    "hover_thumbnail": None,
+                                    "aqi": aq["aqi"],
+                                    "pm25": aq["pm25"],
+                                    "air_quality_level": aq["air_quality_level"],
+                                    "is_estimated_aqi": True,
+                                    "detection_type": "PASSAGEM_POLAR",
+                                    "is_geostationary_preliminary": False,
+                                    "is_industrial_heat": thermal_ai.get("is_industrial_heat", False),
+                                    "fire_nature": thermal_ai.get("nature", "VEGETACAO_CRITICA"),
+                                    "ptr": thermal_ai.get("ptr", 1.0),
+                                    "ai_verdict": thermal_ai.get("ai_verdict", "")
+                                })
+                                uid += 1
+                except Exception as snpp_err:
+                    print("Aviso: Falha temporária no NASA FIRMS Suomi-NPP:", snpp_err)
+
+                # 3. Ingestão Oficial NASA FIRMS NOAA-20 (VIIRS 375m - JPSS-1)
+                try:
+                    noaa20_url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/noaa-20-viirs-c2/csv/J1_VIIRS_C2_South_America_24h.csv"
+                    resp = await client.get(noaa20_url)
+                    if resp.status_code == 200:
+                        reader = csv.DictReader(io.StringIO(resp.text))
+                        for row in reader:
+                            try:
+                                lat = float(row["latitude"])
+                                lng = float(row["longitude"])
+                            except (ValueError, KeyError):
+                                continue
+
+                            if -34.0 <= lat <= 5.5 and -74.0 <= lng <= -34.0:
+                                frp = float(row.get("frp", 10.0))
+                                bright_ti4 = float(row.get("bright_ti4", 320.0))
+                                confidence_str = str(row.get("confidence", "nominal")).lower()
+                                confidence = 0.98 if "high" in confidence_str else 0.88 if "nominal" in confidence_str else 0.75
+                                acq_date = row.get("acq_date", "")
+                                acq_time = row.get("acq_time", "0000").zfill(4)
+
+                                try:
+                                    det_dt = datetime.datetime.strptime(f"{acq_date} {acq_time}", "%Y-%m-%d %H%M").replace(tzinfo=datetime.timezone.utc)
+                                    diff_min = max(1, int((now - det_dt).total_seconds() / 60))
+                                    local_dt = det_dt.astimezone(datetime.timezone(datetime.timedelta(hours=-4)))
+                                    det_str = local_dt.strftime("%d/%m/%Y às %H:%M:%S")
+                                    iso_str = det_dt.isoformat()
+                                except Exception:
+                                    diff_min = 60
+                                    det_str = f"{acq_date} {acq_time[:2]}:{acq_time[2:]}:00 UTC"
+                                    iso_str = now.isoformat()
+
+                                loc = classify_location(lat, lng)
+                                aq = compute_air_quality(frp)
+                                thermal_ai = classify_thermal_anomaly_ai(lat, lng, frp, bright_ti4, aq["pm25"])
+
+                                real_spots.append({
+                                    "id": f"FIRMS-NOAA20-{uid}",
+                                    "latitude": round(lat, 5),
+                                    "longitude": round(lng, 5),
+                                    "is_brazil": loc["is_brazil"],
+                                    "country_code": loc["country_code"],
+                                    "country_name": loc["country_name"],
+                                    "continent": loc.get("continent", "América do Sul"),
+                                    "biome": loc["biome"],
+                                    "state": loc["state"],
+                                    "municipality": loc["municipality"],
+                                    "address": loc["address"],
+                                    "satellite": "NOAA-20 (VIIRS 375m)",
+                                    "frp_mw": round(frp, 1),
+                                    "bright_ti4_k": round(bright_ti4, 1),
+                                    "confidence": confidence,
+                                    "detected_at": det_str,
+                                    "detected_iso": iso_str,
+                                    "has_video": False,
+                                    "is_arson_cluster": False,
+                                    "is_recurrent": False,
+                                    "is_simulated": False,
+                                    "is_new_outbreak": (diff_min <= 180),
+                                    "minutes_ago": diff_min,
+                                    "status": "PENDENTE",
+                                    "dispatched_at": None,
+                                    "video_url": None,
+                                    "hover_thumbnail": None,
+                                    "aqi": aq["aqi"],
+                                    "pm25": aq["pm25"],
+                                    "air_quality_level": aq["air_quality_level"],
+                                    "is_estimated_aqi": True,
+                                    "detection_type": "PASSAGEM_POLAR",
+                                    "is_geostationary_preliminary": False,
+                                    "is_industrial_heat": thermal_ai.get("is_industrial_heat", False),
+                                    "fire_nature": thermal_ai.get("nature", "VEGETACAO_CRITICA"),
+                                    "ptr": thermal_ai.get("ptr", 1.0),
+                                    "ai_verdict": thermal_ai.get("ai_verdict", "")
+                                })
+                                uid += 1
+                except Exception as noaa20_err:
+                    print("Aviso: Falha temporária no NASA FIRMS NOAA-20:", noaa20_err)
+
+            if real_spots:
+                real_spots.sort(key=lambda x: x["frp_mw"], reverse=True)
+                self._cache_real_24h = real_spots
+                self._last_real_fetch = now
+
+                # Persist to disk cache
+                try:
+                    with open(cache_file, "w", encoding="utf-8") as cf:
+                        json.dump(real_spots[:2000], cf)
+                except Exception:
+                    pass
+
+                if filter_brazil_only:
+                    return [s for s in self._cache_real_24h if s.get("is_brazil", True)][:limit]
+                return self._cache_real_24h[:limit]
         except Exception as e:
             print("Erro ao consumir satélite real NASA FIRMS:", e)
 
