@@ -110,49 +110,202 @@ const MapViewNavigator: React.FC<{
   return null;
 };
 
-// Native Leaflet Draw Control (Zero react-leaflet-draw & Zero 403)
+// =========================================================================
+// Seletor Nativo de ROI (Region of Interest) por Clique-e-Arrasto Instantâneo
+// Suporta tanto o modo explícito quanto o atalho universal de GIS (Shift + Drag)
+// =========================================================================
+const RoiNativeSelector: React.FC<{
+  isActive: boolean;
+  onAreaSelected: (data: DelimitedArea) => void;
+  onDrawCompleted?: () => void;
+}> = ({ isActive, onAreaSelected, onDrawCompleted }) => {
+  const map = useMap();
+  const isDrawingRef = useRef(false);
+  const startLatLngRef = useRef<L.LatLng | null>(null);
+  const previewRectRef = useRef<L.Rectangle | null>(null);
+  const hudMarkerRef = useRef<L.Marker | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+    const container = map.getContainer();
+
+    if (isActive) {
+      container.style.cursor = 'crosshair';
+    } else {
+      container.style.cursor = '';
+    }
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Dispara se o modo ROI estiver ativado OU se o operador segurar a tecla Shift no mapa!
+      const shouldDraw = isActive || e.shiftKey;
+      if (!shouldDraw) return;
+
+      // Não intercepta se o clique foi em controles, popups, botões, inputs ou marcadores
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('.leaflet-control, .leaflet-popup, .leaflet-marker-icon, button, a, input, select')) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startLatLng = map.mouseEventToLatLng(e);
+      startLatLngRef.current = startLatLng;
+      isDrawingRef.current = true;
+      map.dragging.disable();
+
+      // Retângulo de pré-visualização em neon ciano aeroespacial
+      const rect = L.rectangle(L.latLngBounds(startLatLng, startLatLng), {
+        color: '#00f0ff',
+        weight: 2.5,
+        dashArray: '5, 5',
+        fillColor: '#06b6d4',
+        fillOpacity: 0.25,
+      }).addTo(map);
+      previewRectRef.current = rect;
+
+      // HUD de telemetria flutuante em tempo real
+      const hudDiv = document.createElement('div');
+      hudDiv.className = 'roi-drag-hud-badge';
+      hudDiv.innerHTML = `
+        <div style="
+          background: rgba(8, 20, 35, 0.95);
+          border: 1.5px solid #00f0ff;
+          border-radius: 8px;
+          padding: 4px 8px;
+          color: #ffffff;
+          font-family: monospace;
+          box-shadow: 0 0 18px rgba(0, 240, 255, 0.8), 0 4px 10px rgba(0, 0, 0, 0.8);
+          pointer-events: none;
+          white-space: nowrap;
+          text-align: center;
+        ">
+          <div style="font-weight: 900; color: #00f0ff; font-size: 10px; letter-spacing: 0.5px;">🛰️ DEFININDO ROI</div>
+          <div id="roi-hud-dims" style="font-weight: 700; color: #ffffff; font-size: 11px;">0.0 km × 0.0 km</div>
+          <div id="roi-hud-area" style="color: #38bdf8; font-size: 10.5px;">0 ha (0.00 km²)</div>
+          <div style="color: #94a3b8; font-size: 8.5px; margin-top: 1px;">Solte o mouse para fixar a ROI</div>
+        </div>
+      `;
+
+      const hudIcon = L.divIcon({
+        className: 'roi-hud-icon',
+        html: hudDiv,
+        iconSize: [160, 60],
+        iconAnchor: [80, 70],
+      });
+
+      const hudMarker = L.marker(startLatLng, { icon: hudIcon, interactive: false }).addTo(map);
+      hudMarkerRef.current = hudMarker;
+
+      const handleMouseMove = (moveEvt: MouseEvent) => {
+        if (!isDrawingRef.current || !startLatLngRef.current || !previewRectRef.current) return;
+        moveEvt.preventDefault();
+
+        const currentLatLng = map.mouseEventToLatLng(moveEvt);
+        const bounds = L.latLngBounds(startLatLngRef.current, currentLatLng);
+        previewRectRef.current.setBounds(bounds);
+
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const center = bounds.getCenter();
+
+        if (hudMarkerRef.current) {
+          hudMarkerRef.current.setLatLng([ne.lat, center.lng]);
+        }
+
+        const latDiffKm = Math.abs(ne.lat - sw.lat) * 111.0;
+        const lngDiffKm = Math.abs(ne.lng - sw.lng) * 111.0 * Math.cos(((ne.lat + sw.lat) / 2 * Math.PI) / 180);
+        const areaSqKm = parseFloat((latDiffKm * lngDiffKm).toFixed(2));
+        const areaHa = parseFloat((areaSqKm * 100).toFixed(1));
+
+        const dimsEl = document.getElementById('roi-hud-dims');
+        const areaEl = document.getElementById('roi-hud-area');
+        if (dimsEl) dimsEl.innerText = `${lngDiffKm.toFixed(1)} km × ${latDiffKm.toFixed(1)} km`;
+        if (areaEl) areaEl.innerText = `${areaHa.toLocaleString('pt-BR')} ha (${areaSqKm.toLocaleString('pt-BR')} km²)`;
+      };
+
+      const handleMouseUp = (upEvt: MouseEvent) => {
+        if (!isDrawingRef.current) return;
+        isDrawingRef.current = false;
+        map.dragging.enable();
+
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+
+        if (previewRectRef.current && map.hasLayer(previewRectRef.current)) {
+          map.removeLayer(previewRectRef.current);
+          previewRectRef.current = null;
+        }
+        if (hudMarkerRef.current && map.hasLayer(hudMarkerRef.current)) {
+          map.removeLayer(hudMarkerRef.current);
+          hudMarkerRef.current = null;
+        }
+
+        if (!startLatLngRef.current) return;
+        const endLatLng = map.mouseEventToLatLng(upEvt);
+        const bounds = L.latLngBounds(startLatLngRef.current, endLatLng);
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const center = bounds.getCenter();
+
+        const latDiffKm = Math.abs(ne.lat - sw.lat) * 111.0;
+        const lngDiffKm = Math.abs(ne.lng - sw.lng) * 111.0 * Math.cos((center.lat * Math.PI) / 180);
+
+        // Mínimo de 50 metros para evitar cliques acidentais
+        if (latDiffKm >= 0.05 && lngDiffKm >= 0.05) {
+          const areaSqKm = parseFloat((latDiffKm * lngDiffKm).toFixed(2));
+          const areaHa = parseFloat((areaSqKm * 100).toFixed(1));
+          const areaM2 = Math.round(areaSqKm * 1000000);
+
+          onAreaSelected({
+            northEast: ne,
+            southWest: sw,
+            center,
+            areaSqKm,
+            areaHa,
+            areaM2,
+          });
+
+          if (onDrawCompleted) {
+            onDrawCompleted();
+          }
+        }
+        startLatLngRef.current = null;
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.style.cursor = '';
+      if (previewRectRef.current && map.hasLayer(previewRectRef.current)) {
+        map.removeLayer(previewRectRef.current);
+      }
+      if (hudMarkerRef.current && map.hasLayer(hudMarkerRef.current)) {
+        map.removeLayer(hudMarkerRef.current);
+      }
+    };
+  }, [isActive, map, onAreaSelected, onDrawCompleted]);
+
+  return null;
+};
+
+// Native Leaflet Draw Control (para delimitação poligonal livre complementar)
 const LeafletDrawControl: React.FC<{
   onAreaSelected: (data: DelimitedArea) => void;
   onClearArea?: () => void;
-  triggerDrawGeofence?: number;
   onDrawCompleted?: () => void;
 }> = ({
   onAreaSelected,
   onClearArea,
-  triggerDrawGeofence,
   onDrawCompleted,
 }) => {
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
-  const activeDrawerRef = useRef<any>(null);
-
-  // Ativação programática do modo de desenho: clique e arraste no mapa
-  useEffect(() => {
-    if (!triggerDrawGeofence || triggerDrawGeofence <= 0 || !map) return;
-
-    if (activeDrawerRef.current && activeDrawerRef.current.enabled && activeDrawerRef.current.enabled()) {
-      activeDrawerRef.current.disable();
-    }
-
-    const drawer = new (L as any).Draw.Rectangle(map, {
-      shapeOptions: {
-        color: '#00f0ff',
-        fillColor: '#0891b2',
-        fillOpacity: 0.28,
-        weight: 3,
-        dashArray: '4, 4',
-      },
-    });
-
-    activeDrawerRef.current = drawer;
-    drawer.enable();
-
-    return () => {
-      if (drawer && drawer.enabled && drawer.enabled()) {
-        drawer.disable();
-      }
-    };
-  }, [triggerDrawGeofence, map]);
 
   useEffect(() => {
     // Localização completa para Português (Brasil) das ferramentas Leaflet Draw
@@ -1453,27 +1606,38 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         {/* Rastreamento Contínuo do Centro da Câmera do Operador */}
         <MapViewportTracker onMapCenterChange={onMapCenterChange} />
 
-        {/* Leaflet Draw Component - Delimitação por Retângulo / Polígono */}
+        {/* Seletor Nativo de ROI (Region of Interest) por Clique-e-Arrasto Instantâneo */}
+        <RoiNativeSelector
+          isActive={Boolean(triggerDrawGeofence && triggerDrawGeofence > 0)}
+          onAreaSelected={onAreaSelected}
+          onDrawCompleted={onDrawCompleted}
+        />
+
+        {/* Leaflet Draw Component - Delimitação por Polígono Livre */}
         <LeafletDrawControl
           onAreaSelected={onAreaSelected}
           onClearArea={onClearArea}
-          triggerDrawGeofence={triggerDrawGeofence}
           onDrawCompleted={onDrawCompleted}
         />
       </MapContainer>
 
-      {/* Banner Indicador de Modo de Desenho de Cerca (Clique e Arraste no Mapa) */}
+      {/* Banner Indicador de Modo de Definição de ROI (Region of Interest) */}
       {Boolean(triggerDrawGeofence && triggerDrawGeofence > 0) && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[1160] bg-cyan-950/95 border-2 border-cyan-400 text-cyan-200 px-5 py-2.5 rounded-xl shadow-[0_0_30px_rgba(0,240,255,0.7)] font-mono text-xs flex items-center gap-3 animate-pulse pointer-events-auto">
-          <span className="text-xl">📐</span>
+          <span className="text-xl">🛰️</span>
           <div>
-            <div className="font-bold text-white text-[12px]">MODO DESENHO DE CERCA ATIVO</div>
-            <div className="text-slate-300 text-[10px]">Clique em um ponto do mapa, segure e arraste até o tamanho desejado.</div>
+            <div className="font-bold text-white text-[12px]">MODO DEFINIÇÃO DE ROI ATIVO</div>
+            <div className="text-slate-300 text-[10px]">
+              Clique em um ponto do mapa, segure e arraste até o tamanho desejado. Ao soltar, a ROI será fixada.
+            </div>
+            <div className="text-cyan-400 text-[9px] font-semibold mt-0.5">
+              💡 Atalho GIS: Segure Shift e arraste no mapa a qualquer momento para desenhar uma ROI.
+            </div>
           </div>
           {onDrawCompleted && (
             <button
               onClick={onDrawCompleted}
-              className="ml-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-600 cursor-pointer"
+              className="ml-2 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-600 cursor-pointer"
             >
               Cancelar
             </button>

@@ -1056,7 +1056,7 @@ const AppContent: React.FC = () => {
             <span className="hidden lg:inline">Relatórios</span>
           </button>
 
-          {/* Botão Cerca Virtual 24h (Desenhar por Clique-e-Arrasto) */}
+          {/* Botão ROI / Cerca Virtual 24h (Definição Instantânea por Clique-e-Arrasto) */}
           <button
             onClick={() => setTriggerDrawGeofence(Date.now())}
             className={`h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border transition-all shadow-sm cursor-pointer shrink-0 ${
@@ -1066,10 +1066,16 @@ const AppContent: React.FC = () => {
                 ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-500/70'
                 : 'bg-cyan-950 hover:bg-cyan-900 text-cyan-200 border-cyan-400 animate-pulse hover:animate-none'
             }`}
-            title="Clique e arraste no mapa para desenhar a cerca digital"
+            title="Definir Região de Interesse (ROI): Clique em um ponto, segure e arraste o retângulo no mapa. Solte para fixar. (Atalho: Segure Shift e arraste no mapa)"
           >
             <ShieldAlert size={12} className="text-cyan-400 shrink-0" />
-            <span className="hidden sm:inline">{triggerDrawGeofence > 0 ? '✏️ Arraste no Mapa' : activeGeofence ? '📐 Redesenhar Cerca' : '📐 Desenhar Cerca'}</span>
+            <span className="hidden sm:inline">
+              {triggerDrawGeofence > 0
+                ? '✏️ Arraste a ROI no Mapa'
+                : activeGeofence
+                ? '📐 Redefinir ROI'
+                : '🛰️ Definir ROI'}
+            </span>
           </button>
 
           {/* Botão de Portal SaaS / Demonstração Comercial */}

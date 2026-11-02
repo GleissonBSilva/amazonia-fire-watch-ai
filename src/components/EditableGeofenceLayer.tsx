@@ -55,18 +55,18 @@ const createVertexIcon = (index: number) => {
   });
 };
 
-// 2. Alça Central de Movimentação
+// 2. Alça Central de Movimentação da ROI
 const createCenterMoveIcon = () => {
   return L.divIcon({
     className: 'geofence-center-icon-container',
     html: `
       <div style="
         width: 154px;
-        height: 40px;
-        background: linear-gradient(135deg, rgba(8, 145, 178, 0.96), rgba(6, 182, 212, 0.96));
-        border: 2.5px solid #ffffff;
-        border-radius: 20px;
-        box-shadow: 0 0 22px rgba(0, 240, 255, 0.95), 0 4px 14px rgba(0, 0, 0, 0.85);
+        height: 38px;
+        background: linear-gradient(135deg, rgba(8, 145, 178, 0.98), rgba(6, 182, 212, 0.98));
+        border: 2px solid #ffffff;
+        border-radius: 19px;
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.95), 0 4px 12px rgba(0, 0, 0, 0.85);
         color: #ffffff;
         font-size: 11px;
         font-weight: 900;
@@ -78,13 +78,13 @@ const createCenterMoveIcon = () => {
         cursor: grab;
         user-select: none;
         letter-spacing: 0.5px;
-      " onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
-        <span style="font-size: 16px;">✋</span>
-        <span>ARRASTAR CERCA</span>
+      " onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+        <span style="font-size: 15px;">✋</span>
+        <span>ARRASTAR ROI</span>
       </div>
     `,
-    iconSize: [154, 40],
-    iconAnchor: [77, 20],
+    iconSize: [154, 38],
+    iconAnchor: [77, 19],
   });
 };
 
@@ -233,7 +233,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
   const axisYPosition: [number, number] = [bbox[1][0], midLng];
 
   // -------------------------------------------------------------
-  // 1. ARRASTO DIRETO NO CORPO DA CERCA (CLICOU, SEGUROU E ARRASTOU)
+  // 1. ARRASTO DIRETO NO CORPO DA ROI (CLICOU, SEGUROU E ARRASTOU)
   // -------------------------------------------------------------
   const handlePolygonMouseDown = (e: L.LeafletMouseEvent) => {
     L.DomEvent.stopPropagation(e.originalEvent);
@@ -243,11 +243,12 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
     startDragPointRef.current = e.latlng;
     startDragPolygonRef.current = [...polygonRef.current];
 
-    const onMouseMove = (moveEvent: L.LeafletMouseEvent) => {
+    const onWindowMouseMove = (moveEvt: MouseEvent) => {
       if (!isDraggingBodyRef.current || !startDragPointRef.current || !startDragPolygonRef.current) return;
       
-      const deltaLat = moveEvent.latlng.lat - startDragPointRef.current.lat;
-      const deltaLng = moveEvent.latlng.lng - startDragPointRef.current.lng;
+      const currentLatLng = map.mouseEventToLatLng(moveEvt);
+      const deltaLat = currentLatLng.lat - startDragPointRef.current.lat;
+      const deltaLng = currentLatLng.lng - startDragPointRef.current.lng;
       
       if (Math.abs(deltaLat) > 0.00005 || Math.abs(deltaLng) > 0.00005) {
         hasMovedRef.current = true;
@@ -257,20 +258,20 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
       setPolygon(shifted);
     };
 
-    const onMouseUp = () => {
+    const onWindowMouseUp = () => {
       if (!isDraggingBodyRef.current) return;
       isDraggingBodyRef.current = false;
       map.dragging.enable();
-      map.off('mousemove', onMouseMove);
-      map.off('mouseup', onMouseUp);
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
 
       if (hasMovedRef.current) {
         handleCommit();
       }
     };
 
-    map.on('mousemove', onMouseMove);
-    map.on('mouseup', onMouseUp);
+    window.addEventListener('mousemove', onWindowMouseMove);
+    window.addEventListener('mouseup', onWindowMouseUp);
   };
 
   // -------------------------------------------------------------
@@ -471,15 +472,15 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
         }}
       >
         <Tooltip direction="center" permanent={false} opacity={0.95}>
-          <div className="font-mono text-[10.5px] font-bold text-cyan-950 bg-white/95 px-2 py-0.5 rounded shadow-lg border border-cyan-400 select-none">
-            ✋ Segure e arraste para mover • Quinas para redimensionar
+          <div className="font-mono text-[10.5px] font-bold text-cyan-950 bg-white/95 px-2.5 py-1 rounded shadow-lg border border-cyan-400 select-none">
+            🛰️ ROI: Segure e arraste no corpo para mover • Quinas para redimensionar
           </div>
         </Tooltip>
 
         <Popup>
           <div className="font-mono text-xs text-slate-900 min-w-[270px]">
             <div className="font-bold text-cyan-800 text-[12px] flex items-center justify-between border-b pb-1 mb-1.5">
-              <span className="truncate">🔒 {geofence.name}</span>
+              <span className="truncate">🛰️ ROI: {geofence.name}</span>
             </div>
 
             {/* Card de Informações Precisas do Lugar (Rua, Bairro, Cidade, CAR) */}
@@ -613,7 +614,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
         >
           <Tooltip direction="top" offset={[0, -15]} opacity={0.95}>
             <span className="font-mono text-[10.5px] font-bold">
-              ✋ Segure e arraste aqui para mover a cerca inteira
+              ✋ Segure e arraste aqui para mover a ROI inteira
             </span>
           </Tooltip>
         </Marker>
