@@ -1210,17 +1210,17 @@ const AppContent: React.FC = () => {
               <span>Violações ({geofenceIncidents.length})</span>
             </button>
 
-            {/* Botão de Ativar / Concluir Edição da Cerca Virtual */}
+            {/* Botão de Salvar e Sair / Ajustar ROI */}
             <button
               onClick={() => setIsEditingGeofence(!isEditingGeofence)}
-              className={`px-2.5 py-1 rounded text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer shadow-md ${
+              className={`px-3 py-1 rounded text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md ${
                 isEditingGeofence
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 ring-2 ring-emerald-400/50'
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-300 ring-2 ring-emerald-400/50 animate-pulse hover:animate-none'
                   : 'bg-cyan-800 hover:bg-cyan-700 text-white border border-cyan-400'
               }`}
-              title={isEditingGeofence ? 'Concluir edição e travar cerca' : 'Habilitar alças para mover e dimensionar a cerca'}
+              title={isEditingGeofence ? 'Salvar alterações e sair do modo de ajuste da ROI' : 'Habilitar alças para mover e dimensionar a ROI'}
             >
-              {isEditingGeofence ? <span>✓ Concluir Edição</span> : <span>✏️ Mover / Dimensionar</span>}
+              {isEditingGeofence ? <span>💾 Salvar e Sair</span> : <span>✏️ Ajustar ROI</span>}
             </button>
 
             {/* Controles de Dimensionamento X, Y e Escala */}

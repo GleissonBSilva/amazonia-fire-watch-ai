@@ -1645,6 +1645,41 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         </div>
       )}
 
+      {/* Banner Flutuante de Ajuste da ROI (Salvar e Sair ou Excluir) */}
+      {activeGeofence && isEditingGeofence && (!triggerDrawGeofence || triggerDrawGeofence <= 0) && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[1160] bg-slate-950/95 border-2 border-emerald-400 text-white px-5 py-2.5 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.55)] font-mono text-xs flex items-center gap-4 backdrop-blur-md pointer-events-auto">
+          <span className="text-xl animate-pulse">🛰️</span>
+          <div>
+            <div className="font-bold text-emerald-400 text-[12px] flex items-center gap-2">
+              <span>ROI EM MODO DE AJUSTE</span>
+              <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-600 px-2 py-0.2 rounded font-bold">
+                {(activeGeofence.areaKm2 * 100).toFixed(1)} ha ({activeGeofence.areaKm2.toFixed(2)} km²)
+              </span>
+            </div>
+            <div className="text-slate-300 text-[10px]">
+              Arraste pelo corpo ou quinas para ajustar. Ao concluir:
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-2">
+            <button
+              onClick={() => onToggleEditGeofence && onToggleEditGeofence()}
+              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-950 cursor-pointer transition transform hover:scale-105 active:scale-95"
+            >
+              <span>💾 Salvar e Sair</span>
+            </button>
+            {onClearGeofence && (
+              <button
+                onClick={onClearGeofence}
+                className="px-2.5 py-1.5 bg-slate-800 hover:bg-red-950 text-slate-300 hover:text-red-300 border border-slate-700 hover:border-red-600 text-[10.5px] font-bold rounded-xl cursor-pointer transition"
+                title="Descartar esta ROI"
+              >
+                <span>🗑️ Excluir</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* HUD: Legenda Dinâmica de Poluição do Ar (AQI & Aerossóis MODIS) */}
       {overlays.smokePlume && (
         <div className="absolute bottom-14 left-4 z-[800] bg-slate-950/95 backdrop-blur-md border border-purple-500/70 rounded-xl p-2.5 shadow-2xl font-mono text-white text-xs max-w-xs animate-fade-in pointer-events-auto">

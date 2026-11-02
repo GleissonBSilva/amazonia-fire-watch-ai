@@ -456,24 +456,26 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
 
   return (
     <>
-      {/* 1. POLÍGONO DA CERCA VIRTUAL (CLIQUE E ARRASTE DIRETO NO CORPO) */}
+      {/* 1. POLÍGONO DA CERCA VIRTUAL / ROI */}
       <Polygon
         positions={polygon}
         pathOptions={{
           color: isEditing ? '#00f0ff' : '#06b6d4',
           fillColor: '#0891b2',
-          fillOpacity: isEditing ? 0.32 : 0.22,
+          fillOpacity: isEditing ? 0.32 : 0.20,
           weight: isEditing ? 3.5 : 2.5,
           dashArray: isEditing ? '4, 4' : '8, 6',
-          className: 'cursor-grab active:cursor-grabbing',
+          className: isEditing ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
         }}
         eventHandlers={{
-          mousedown: handlePolygonMouseDown,
+          mousedown: isEditing ? handlePolygonMouseDown : undefined,
         }}
       >
         <Tooltip direction="center" permanent={false} opacity={0.95}>
           <div className="font-mono text-[10.5px] font-bold text-cyan-950 bg-white/95 px-2.5 py-1 rounded shadow-lg border border-cyan-400 select-none">
-            🛰️ ROI: Segure e arraste no corpo para mover • Quinas para redimensionar
+            {isEditing
+              ? '✋ Segure e arraste para mover • Quinas para redimensionar'
+              : `🛰️ ROI Ativa: ${(geofence.areaKm2 * 100).toFixed(0)} ha • Clique para opções`}
           </div>
         </Tooltip>
 
@@ -531,9 +533,13 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
               <button
                 type="button"
                 onClick={() => onToggleEdit && onToggleEdit()}
-                className="w-full py-1 px-2 rounded bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-[10.5px] text-center cursor-pointer transition shadow"
+                className={`w-full py-1.5 px-2 rounded font-bold text-[11px] text-center cursor-pointer transition shadow flex items-center justify-center gap-1.5 ${
+                  isEditing
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-cyan-700 hover:bg-cyan-600 text-white'
+                }`}
               >
-                {isEditing ? '✓ Ocultar Alças Extras' : '✏️ Exibir Alças de Ajuste Fino'}
+                {isEditing ? '💾 Salvar e Sair da Edição' : '✏️ Ajustar / Mover ROI'}
               </button>
 
               <div className="space-y-1 pt-1 border-t border-slate-200">
@@ -599,9 +605,10 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
         </Popup>
       </Polygon>
 
-      {/* 2. ALÇAS INTERATIVAS (SEMPRE PRONTAS PARA ARRASTO DIRETO) */}
-      <>
-        {/* Alça Central de Translação (Mover a cerca completa) */}
+      {/* 2. ALÇAS INTERATIVAS (VISÍVEIS APENAS NO MODO EDIÇÃO) */}
+      {isEditing && (
+        <>
+          {/* Alça Central de Translação (Mover a cerca completa) */}
         <Marker
           position={centroid}
           draggable={true}
@@ -722,7 +729,8 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
             </Marker>
           );
         })}
-      </>
+        </>
+      )}
     </>
   );
 };
