@@ -35,11 +35,23 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
 
   if (!isOpen || isMinimized) return null;
 
+  const storageKey = `afw_win_pos_${id}`;
+  const savedPos = (() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  })();
+
+  const posX = savedPos?.x ?? Math.max(10, Math.min(defaultPosition.x, window.innerWidth - Math.min(defaultSize.width, window.innerWidth - 30) - 20));
+  const posY = savedPos?.y ?? Math.max(10, Math.min(defaultPosition.y, window.innerHeight - Math.min(defaultSize.height, window.innerHeight - 40) - 20));
+
   return (
     <Rnd
       default={{
-        x: Math.max(10, Math.min(defaultPosition.x, window.innerWidth - Math.min(defaultSize.width, window.innerWidth - 30) - 20)),
-        y: Math.max(10, Math.min(defaultPosition.y, window.innerHeight - Math.min(defaultSize.height, window.innerHeight - 40) - 20)),
+        x: posX,
+        y: posY,
         width: Math.min(defaultSize.width, window.innerWidth - 30),
         height: Math.min(defaultSize.height, window.innerHeight - 40),
       }}
@@ -49,6 +61,11 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       dragHandleClassName="window-titlebar"
       enableResizing={!isMaximized}
       disableDragging={isMaximized}
+      onDragStop={(_e, d) => {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({ x: d.x, y: d.y }));
+        } catch {}
+      }}
       style={{ zIndex }}
       onMouseDown={() => onFocus(id)}
       className={`flex flex-col bg-slate-900/95 border border-slate-700/80 rounded-lg shadow-2xl overflow-hidden backdrop-blur-md transition-all ${

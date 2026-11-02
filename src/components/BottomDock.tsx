@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Radio, Globe, Satellite, MessageSquare, Flame, Compass, Layers, ShieldAlert, FileText, Settings } from 'lucide-react';
+import { Camera, Radio, Globe, Satellite, MessageSquare, Flame, Compass, Layers, ShieldAlert, FileText, Settings, Bot } from 'lucide-react';
 
 interface BottomDockProps {
   openWindows: { [id: string]: boolean };
@@ -17,6 +17,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({
   const dockItems = [
     { id: 'floorPlan', label: 'Planta Baixa (Térmica)', icon: Layers, color: 'text-amber-400' },
     { id: 'spotDetail', label: 'Evidência Tática', icon: Flame, color: 'text-red-500' },
+    { id: 'aiAssistant', label: 'Copiloto IA', icon: Bot, color: 'text-emerald-400' },
     { id: 'geofence', label: isGeofenceActive ? '🔒 Cerca Virtual (Ativa)' : 'Cerca Virtual (Isolar IA)', icon: ShieldAlert, color: isGeofenceActive ? 'text-cyan-300' : 'text-cyan-400' },
     { id: 'videoStream', label: 'Câmera Rua (YOLO)', icon: Camera, color: 'text-red-400' },
     { id: 'streetView', label: 'Visão da Rua (360°)', icon: Compass, color: 'text-cyan-300' },

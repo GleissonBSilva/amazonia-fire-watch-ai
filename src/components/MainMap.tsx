@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, WMSTileLayer, Circle, Marker, Popup, Polygon, Rectangle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, WMSTileLayer, Circle, Marker, Popup, Polygon, Rectangle, useMap, useMapEvents } from 'react-leaflet';
 import { INDUSTRIAL_FACILITIES, Facility } from '../data/facilityFloorPlans';
 import { fetchLatestRainViewerRadar } from '../services/weatherService';
 import { classifyFireAuthenticity, SmokeColorKey } from '../services/fireClassificationService';
 import { KNOWN_LAND_PARCELS } from '../services/landRegistryService';
+import { calculatePlumeVector } from '../services/plumeDispersionService';
+import { EditableGeofenceLayer } from './EditableGeofenceLayer';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -21,10 +23,13 @@ import {
   MapLayerType,
   MAP_LAYERS,
   ActiveOverlaysState,
+  ActiveGeofenceState,
 } from '../types';
 
 interface MainMapProps {
   onAreaSelected: (data: DelimitedArea) => void;
+  onClearArea?: () => void;
+  onMapCenterChange?: (center: { lat: number; lng: number }) => void;
   fireSpots: FireSpot[];
   heatmapSpots: any[];
   osintAlerts: OSINTAlert[];
@@ -41,14 +46,10 @@ interface MainMapProps {
   onLocationSelected?: (location: { lat: number; lng: number; label: string; address?: string }) => void;
   onOpenStreetView?: (location: { lat: number; lng: number; label: string; address?: string }) => void;
   onOpenEarth3D?: (lat: number, lng: number) => void;
-  activeGeofence?: {
-    id: string;
-    name: string;
-    bounds?: [[number, number], [number, number]];
-    polygon?: [number, number][];
-    areaKm2: number;
-    facilityId?: string;
-  } | null;
+  activeGeofence?: ActiveGeofenceState | null;
+  onUpdateGeofence?: (geofence: ActiveGeofenceState) => void;
+  isEditingGeofence?: boolean;
+  onToggleEditGeofence?: () => void;
   onClearGeofence?: () => void;
   onOpenFloorPlan?: (facilityId?: string) => void;
   onActivateGeofence?: (facility: Facility) => void;
@@ -108,13 +109,77 @@ const MapViewNavigator: React.FC<{
 };
 
 // Native Leaflet Draw Control (Zero react-leaflet-draw & Zero 403)
-const LeafletDrawControl: React.FC<{ onAreaSelected: (data: DelimitedArea) => void }> = ({
+const LeafletDrawControl: React.FC<{
+  onAreaSelected: (data: DelimitedArea) => void;
+  onClearArea?: () => void;
+}> = ({
   onAreaSelected,
+  onClearArea,
 }) => {
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
 
   useEffect(() => {
+    // Localização completa para Português (Brasil) das ferramentas Leaflet Draw
+    if ((L as any).drawLocal) {
+      const dl = (L as any).drawLocal;
+      if (dl.draw?.toolbar) {
+        dl.draw.toolbar.actions = { title: 'Cancelar delimitação', text: 'Cancelar' };
+        dl.draw.toolbar.finish = { title: 'Concluir desenho da área', text: 'Concluir' };
+        dl.draw.toolbar.undo = { title: 'Desfazer último vértice', text: 'Desfazer' };
+        dl.draw.toolbar.buttons = {
+          ...dl.draw.toolbar.buttons,
+          polygon: 'Desenhar Polígono Livre de Contenção',
+          rectangle: 'Desenhar Perímetro de Perícia (Hectares)',
+        };
+      }
+      if (dl.draw?.handlers) {
+        if (dl.draw.handlers.polygon?.tooltip) {
+          dl.draw.handlers.polygon.tooltip = {
+            start: 'Clique para iniciar o perímetro de contenção.',
+            cont: 'Clique para continuar delimitando a área.',
+            end: 'Clique no primeiro ponto para fechar o polígono.',
+          };
+        }
+        if (dl.draw.handlers.rectangle?.tooltip) {
+          dl.draw.handlers.rectangle.tooltip = {
+            start: 'Clique e arraste para desenhar o perímetro de perícia (em hectares).',
+          };
+        }
+        if (dl.draw.handlers.simpleshape?.tooltip) {
+          dl.draw.handlers.simpleshape.tooltip = {
+            end: 'Solte o botão do mouse para concluir a área delimitada.',
+          };
+        }
+      }
+      if (dl.edit?.toolbar) {
+        dl.edit.toolbar.actions = {
+          save: { title: 'Salvar perímetro de perícia', text: 'Salvar' },
+          cancel: { title: 'Cancelar alterações', text: 'Cancelar' },
+          clearAll: { title: 'Limpar todas as áreas delimitadas', text: 'Limpar Tudo' },
+        };
+        dl.edit.toolbar.buttons = {
+          edit: 'Editar / Ajustar Vértices da Área',
+          editDisabled: 'Nenhuma área para editar',
+          remove: 'Limpar Área Delimitada',
+          removeDisabled: 'Nenhuma área para limpar',
+        };
+      }
+      if (dl.edit?.handlers) {
+        if (dl.edit.handlers.edit?.tooltip) {
+          dl.edit.handlers.edit.tooltip = {
+            text: 'Arraste os vértices para ajustar a área delimitada.',
+            subtext: 'Clique em Cancelar para desfazer as alterações.',
+          };
+        }
+        if (dl.edit.handlers.remove?.tooltip) {
+          dl.edit.handlers.remove.tooltip = {
+            text: 'Clique na área para limpar ou excluir a delimitação.',
+          };
+        }
+      }
+    }
+
     const drawnItems = drawnItemsRef.current;
     map.addLayer(drawnItems);
 
@@ -148,11 +213,7 @@ const LeafletDrawControl: React.FC<{ onAreaSelected: (data: DelimitedArea) => vo
 
     map.addControl(drawControl);
 
-    const handleCreated = (e: any) => {
-      const layer = e.layer;
-      drawnItems.clearLayers();
-      drawnItems.addLayer(layer);
-
+    const emitAreaFromLayer = (layer: any) => {
       if (layer instanceof L.Rectangle || layer instanceof L.Polygon) {
         const bounds = layer.getBounds();
         const ne = bounds.getNorthEast();
@@ -176,14 +237,37 @@ const LeafletDrawControl: React.FC<{ onAreaSelected: (data: DelimitedArea) => vo
       }
     };
 
+    const handleCreated = (e: any) => {
+      const layer = e.layer;
+      drawnItems.clearLayers();
+      drawnItems.addLayer(layer);
+      emitAreaFromLayer(layer);
+    };
+
+    const handleEdited = (e: any) => {
+      e.layers.eachLayer((layer: any) => {
+        emitAreaFromLayer(layer);
+      });
+    };
+
+    const handleDeleted = () => {
+      if (onClearArea) {
+        onClearArea();
+      }
+    };
+
     map.on(L.Draw.Event.CREATED, handleCreated);
+    map.on(L.Draw.Event.EDITED, handleEdited);
+    map.on(L.Draw.Event.DELETED, handleDeleted);
 
     return () => {
       map.off(L.Draw.Event.CREATED, handleCreated);
+      map.off(L.Draw.Event.EDITED, handleEdited);
+      map.off(L.Draw.Event.DELETED, handleDeleted);
       map.removeControl(drawControl);
       map.removeLayer(drawnItems);
     };
-  }, [map, onAreaSelected]);
+  }, [map, onAreaSelected, onClearArea]);
 
   return null;
 };
@@ -207,6 +291,21 @@ const MapClickInspector: React.FC<{ onInspect?: (lat: number, lng: number) => vo
       map.off('click', handleClick);
     };
   }, [map, onInspect]);
+  return null;
+};
+
+// Rastreamento Contínuo do Centro do Mapa para criação precisa de Cerca Virtual
+const MapViewportTracker: React.FC<{ onMapCenterChange?: (center: { lat: number; lng: number }) => void }> = ({
+  onMapCenterChange,
+}) => {
+  useMapEvents({
+    moveend: (e) => {
+      if (onMapCenterChange) {
+        const c = e.target.getCenter();
+        onMapCenterChange({ lat: c.lat, lng: c.lng });
+      }
+    },
+  });
   return null;
 };
 
@@ -490,6 +589,8 @@ const TacticalClusterGroup: React.FC<TacticalClusterGroupProps> = ({
 
 export const MainMap: React.FC<MainMapProps> = React.memo(({
   onAreaSelected,
+  onClearArea,
+  onMapCenterChange,
   fireSpots,
   heatmapSpots,
   osintAlerts,
@@ -507,6 +608,9 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
   onOpenStreetView,
   onOpenEarth3D,
   activeGeofence = null,
+  onUpdateGeofence,
+  isEditingGeofence = false,
+  onToggleEditGeofence,
   onClearGeofence,
   onOpenFloorPlan,
   onActivateGeofence,
@@ -986,36 +1090,53 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
         {/* ========================================================
             3. MARCADORES TÁTICOS C2 & POPUP DE COMANDO AEROESPACIAL
             ======================================================== */}
-        {/* DISPERSÃO EM TEMPO REAL DA NUVEM DE FUMAÇA SEPARADA POR CORES (CONAMA / EPA) */}
+        {/* DISPERSÃO EM TEMPO REAL DA NUVEM DE FUMAÇA: SIMULAÇÃO VETORIAL DO VENTO (GAUSSIANA/CÔNICA) */}
         {Boolean(overlays.smokePlume) &&
           filteredDisplaySpots.map((spot) => {
             const auth = classifyFireAuthenticity(spot);
             const radiusM = auth.smokeRadiusMeters;
             const color = auth.smokeColor;
+            const plume = calculatePlumeVector(
+              spot.latitude,
+              spot.longitude,
+              radiusM,
+              spot.weather?.wind_speed_kmh,
+              spot.weather?.wind_direction_deg
+            );
 
             return (
               <React.Fragment key={`smoke-cloud-group-${spot.id}`}>
-                {/* 1. Pluma Externa Translúcida de Dispersão Atmosférica */}
-                <Circle
-                  center={[spot.latitude, spot.longitude]}
-                  radius={radiusM}
+                {/* 1. Pluma Vetorial Externa Translúcida a Favor do Vento */}
+                <Polygon
+                  positions={plume.outerPolygon}
                   pathOptions={{
                     color: color,
                     fillColor: color,
-                    fillOpacity: 0.12,
-                    weight: 1,
-                    dashArray: '3, 4',
+                    fillOpacity: 0.16,
+                    weight: 1.2,
+                    dashArray: '4, 4',
                   }}
                 />
 
-                {/* 2. Núcleo Denso de Fumaça e Fuligem */}
-                <Circle
-                  center={[spot.latitude, spot.longitude]}
-                  radius={Math.round(radiusM * 0.45)}
+                {/* 2. Núcleo Denso de Fumaça e Fuligem (Zona Imediata) */}
+                <Polygon
+                  positions={plume.innerPolygon}
                   pathOptions={{
                     color: color,
                     fillColor: color,
-                    fillOpacity: 0.28,
+                    fillOpacity: 0.38,
+                    weight: 1.5,
+                  }}
+                />
+
+                {/* 3. Ponto de Ignição / Fonte Térmica */}
+                <Circle
+                  center={[spot.latitude, spot.longitude]}
+                  radius={Math.min(300, Math.max(80, radiusM * 0.12))}
+                  pathOptions={{
+                    color: '#ff4400',
+                    fillColor: '#ff2200',
+                    fillOpacity: 0.8,
                     weight: 1.5,
                   }}
                 />
@@ -1179,31 +1300,15 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
 
         
         {/* ========================================================
-            CERCA VIRTUAL / GEOFENCE ATIVA (POLÍGONO NEON ILUMINADO)
+            CERCA VIRTUAL / GEOFENCE ATIVA (TOTALMENTE EDITÁVEL: MOVER E DIMENSIONAR)
             ======================================================== */}
-        {activeGeofence && activeGeofence.polygon && (
-          <Polygon
-            positions={activeGeofence.polygon}
-            pathOptions={{
-              color: '#06b6d4',
-              fillColor: '#0891b2',
-              fillOpacity: 0.16,
-              weight: 3,
-              dashArray: '8, 6',
-            }}
-          />
-        )}
-
-        {activeGeofence && !activeGeofence.polygon && activeGeofence.bounds && (
-          <Rectangle
-            bounds={activeGeofence.bounds}
-            pathOptions={{
-              color: '#06b6d4',
-              fillColor: '#0891b2',
-              fillOpacity: 0.16,
-              weight: 3,
-              dashArray: '8, 6',
-            }}
+        {activeGeofence && (
+          <EditableGeofenceLayer
+            geofence={activeGeofence}
+            isEditing={isEditingGeofence || false}
+            onUpdateGeofence={onUpdateGeofence || (() => {})}
+            onToggleEdit={onToggleEditGeofence}
+            onDeleteGeofence={onClearGeofence}
           />
         )}
 
@@ -1297,8 +1402,11 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
           );
         })}
 
+        {/* Rastreamento Contínuo do Centro da Câmera do Operador */}
+        <MapViewportTracker onMapCenterChange={onMapCenterChange} />
+
         {/* Leaflet Draw Component - Delimitação por Retângulo / Polígono */}
-        <LeafletDrawControl onAreaSelected={onAreaSelected} />
+        <LeafletDrawControl onAreaSelected={onAreaSelected} onClearArea={onClearArea} />
       </MapContainer>
 
       {/* HUD: Legenda Dinâmica de Poluição do Ar (AQI & Aerossóis MODIS) */}

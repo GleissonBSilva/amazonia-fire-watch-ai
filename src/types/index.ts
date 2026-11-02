@@ -7,6 +7,14 @@ export interface DelimitedArea {
   areaSqKm: number;
   areaHa: number;
   areaM2: number;
+  address?: string;
+  road?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  landPropertyName?: string;
+  carReceipt?: string;
 }
 
 export type FireSpotStatus = 'PENDENTE' | 'ACIONADO_SIMULACAO' | 'EQUIPE_DESIGNADA' | 'COMBATE_ATIVO';
@@ -131,6 +139,24 @@ export interface VideoDetectionStatus {
   expansion_rate: number;
   has_snapshot: boolean;
   snapshot_base64?: string;
+}
+
+export interface ActiveGeofenceState {
+  id: string;
+  name: string;
+  bounds?: [[number, number], [number, number]];
+  polygon?: [number, number][];
+  areaKm2: number;
+  facilityId?: string;
+  isEditing?: boolean;
+  address?: string;
+  road?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  landPropertyName?: string;
+  carReceipt?: string;
 }
 
 export interface WindowState {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FloatingWindow } from './FloatingWindow';
 import { FireSpot, LandRegistryMatch } from '../types';
 import { calculateAirQuality } from '../data/airQuality';
@@ -7,6 +7,7 @@ import { sendWhatsAppFireAlert } from '../services/alertService';
 import { queryLandRegistry } from '../services/landRegistryService';
 import { PreliminaryInfractionModal } from './PreliminaryInfractionModal';
 import { classifyFireAuthenticity } from '../services/fireClassificationService';
+import { reverseGeocode, ReverseGeocodingResult } from '../services/geocodingService';
 import {
   Satellite,
   Wind,
@@ -31,7 +32,8 @@ import {
   TrendingUp,
   TrendingDown,
   Activity,
-  History
+  History,
+  Navigation
 } from 'lucide-react';
 
 export interface TacticalEvidenceWindowProps {
@@ -60,6 +62,21 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
   const [isDispatching, setIsDispatching] = useState(false);
   const [isInfractionModalOpen, setIsInfractionModalOpen] = useState(false);
   const [copiedCar, setCopiedCar] = useState(false);
+  const [resolvedAddress, setResolvedAddress] = useState<ReverseGeocodingResult | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    if (spot) {
+      reverseGeocode(spot.latitude, spot.longitude).then((res) => {
+        if (!isCancelled && res) {
+          setResolvedAddress(res);
+        }
+      });
+    }
+    return () => {
+      isCancelled = true;
+    };
+  }, [spot?.latitude, spot?.longitude]);
 
   // Cruzamento fundiário imediato (CAR / SICAR / SIGEF)
   const landRegistry: LandRegistryMatch = useMemo(() => {
@@ -374,6 +391,27 @@ export const TacticalEvidenceWindow: React.FC<TacticalEvidenceWindowProps> = ({
                 ? `${spot.latitude.toFixed(4)}°, ${spot.longitude.toFixed(4)}°`
                 : 'N/A'}
             </div>
+          </div>
+
+          {/* LOCALIZAÇÃO DETALHADA: LOGRADOURO / RODOVIA / BAIRRO VIA MALHA VIÁRIA */}
+          <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800 text-[10px] space-y-1 flex-shrink-0">
+            <div className="flex items-start justify-between gap-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-slate-200 min-w-0">
+                <Navigation size={12} className="text-amber-400 shrink-0" />
+                <span className="truncate">{resolvedAddress?.road || spot.address || `${spot.municipality} - ${spot.state}`}</span>
+              </div>
+              <span className="text-[7.5px] font-black uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                {resolvedAddress?.road
+                  ? (resolvedAddress.road.toLowerCase().includes('rodovia') || resolvedAddress.road.toLowerCase().includes('br-') || resolvedAddress.road.toLowerCase().includes('am-') || resolvedAddress.road.toLowerCase().includes('pa-') || resolvedAddress.road.toLowerCase().includes('mt-') ? 'RODOVIA' : 'LOGRADOURO')
+                  : (isBrazil ? 'ÁREA RURAL' : 'INTERNACIONAL')}
+              </span>
+            </div>
+            {resolvedAddress && (resolvedAddress.neighbourhood || resolvedAddress.suburb || resolvedAddress.postcode) && (
+              <div className="text-[8.5px] text-slate-400 pl-4 truncate">
+                {resolvedAddress.neighbourhood || resolvedAddress.suburb ? `Bairro/Distrito: ${resolvedAddress.neighbourhood || resolvedAddress.suburb}` : ''}
+                {resolvedAddress.postcode ? ` • CEP ${resolvedAddress.postcode}` : ''}
+              </div>
+            )}
           </div>
 
           {/* PAINEL DE CONTROLE DE CICLO DE VIDA (UPSERT DIRETO NO MESMO REGISTRO) */}

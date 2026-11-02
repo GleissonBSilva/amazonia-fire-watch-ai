@@ -3,6 +3,7 @@ import { Rnd } from 'react-rnd';
 import { DelimitedArea, FireSpot, FireWeatherInfo, LandRegistryMatch } from '../types';
 import { fetchRealWeather } from '../services/weatherService';
 import { queryLandRegistryForArea } from '../services/landRegistryService';
+import { reverseGeocode, ReverseGeocodingResult } from '../services/geocodingService';
 import { PreliminaryInfractionModal } from './PreliminaryInfractionModal';
 import {
   X,
@@ -50,6 +51,25 @@ export const AreaInspectionModal: React.FC<AreaInspectionModalProps> = ({
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const [selectedInfraction, setSelectedInfraction] = useState<{ parcel: LandRegistryMatch; spot: FireSpot } | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [placeInfo, setPlaceInfo] = useState<ReverseGeocodingResult | null>(null);
+  const [isLoadingPlace, setIsLoadingPlace] = useState<boolean>(true);
+  const [isCopiedAddress, setIsCopiedAddress] = useState<boolean>(false);
+
+  // Consulta em tempo real de Geocodificação Reversa (Logradouro, Bairro, CEP e Município)
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsLoadingPlace(true);
+    reverseGeocode(area.center.lat, area.center.lng)
+      .then((info) => {
+        setPlaceInfo(info);
+      })
+      .catch((err) => {
+        console.warn('Erro ao obter dados precisos do logradouro:', err);
+      })
+      .finally(() => {
+        setIsLoadingPlace(false);
+      });
+  }, [isOpen, area.center.lat, area.center.lng]);
 
   // Filtra todos os focos reais contidos nos limites da área delimitada
   const firesInArea = useMemo(() => {
@@ -176,6 +196,80 @@ export const AreaInspectionModal: React.FC<AreaInspectionModalProps> = ({
 
         {/* Conteúdo com Scroll */}
         <div className="p-3 sm:p-4 space-y-3.5 overflow-y-auto flex-1 text-xs text-slate-200">
+          {/* 0. Identificação Precisa do Logradouro & Malha Viária (OSM / IBGE / CAR) */}
+          <div className="p-3 rounded-lg bg-slate-950/95 border border-amber-500/70 space-y-2 shadow-lg">
+            <div className="flex items-center justify-between border-b border-amber-900/50 pb-1.5">
+              <span className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px]">
+                <MapPin size={13} className="text-amber-400" />
+                LOCALIZAÇÃO PRECISA DO LUGAR (LOGRADOURO & MALHA VIÁRIA)
+              </span>
+              <span className="text-[8.5px] text-amber-300 bg-amber-950 px-2 py-0.5 rounded border border-amber-700 font-bold">
+                OSM / GEOCODING V2
+              </span>
+            </div>
+
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-slate-400 text-[10px]">Logradouro / Rodovia:</span>
+                <strong className="text-white text-xs text-right truncate">
+                  {placeInfo?.road || area.road || (isLoadingPlace ? 'Identificando logradouro...' : 'Área Florestal / Setor Vicinal')}
+                </strong>
+              </div>
+
+              {(placeInfo?.neighborhood || area.neighborhood) && (
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-slate-400 text-[10px]">Bairro / Setor:</span>
+                  <span className="text-slate-200 font-semibold text-right">
+                    {placeInfo?.neighborhood || area.neighborhood}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-slate-400 text-[10px]">Município &amp; UF:</span>
+                <span className="text-emerald-300 font-bold text-right">
+                  {placeInfo?.city || area.city || 'Amazônia Ocidental'} - {placeInfo?.state || area.state || 'AM'}
+                </span>
+              </div>
+
+              {(placeInfo?.postcode || area.postcode) && (
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-slate-400 text-[10px]">Código Postal (CEP):</span>
+                  <span className="text-cyan-300 font-mono font-bold text-right">
+                    {placeInfo?.postcode || area.postcode}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-800 text-[9.5px]">
+                <span className="text-slate-400">Endereço Completo:</span>
+                <span className="text-slate-300 text-right truncate max-w-[420px]" title={placeInfo?.fullAddress || area.address}>
+                  {placeInfo?.fullAddress || area.address || `Lat: ${area.center.lat.toFixed(5)}, Lng: ${area.center.lng.toFixed(5)}`}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <span className="text-[9px] text-slate-400 font-mono">
+                  WGS84: {area.center.lat.toFixed(6)}°, {area.center.lng.toFixed(6)}°
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const full = placeInfo?.fullAddress || `${area.center.lat.toFixed(5)}, ${area.center.lng.toFixed(5)}`;
+                    navigator.clipboard.writeText(full);
+                    setIsCopiedAddress(true);
+                    setTimeout(() => setIsCopiedAddress(false), 2000);
+                  }}
+                  className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1 text-[9px] font-bold transition cursor-pointer"
+                  title="Copiar endereço e coordenadas da área"
+                >
+                  {isCopiedAddress ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                  <span>{isCopiedAddress ? 'Copiado!' : 'Copiar Endereço'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* 1. Métricas Espaciais da Área */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800">

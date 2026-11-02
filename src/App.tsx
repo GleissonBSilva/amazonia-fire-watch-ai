@@ -9,8 +9,6 @@ import { FiresDrawer } from './components/FiresDrawer';
 import { WhatsAppConfirmModal } from './components/WhatsAppConfirmModal';
 import L from 'leaflet';
 import { BottomDock } from './components/BottomDock';
-import { AreaInspectionModal } from './components/AreaInspectionModal';
-import { ReportsModal } from './components/ReportsModal';
 import { SettingsModal, DEFAULT_CONFIG, SystemConfigState } from './components/SettingsModal';
 import { Settings, Compass, User as UserIcon, LogOut, UserCheck } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -18,21 +16,46 @@ import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
 import { Globe2 } from 'lucide-react';
 import { LayerNavigationBar } from './components/LayerNavigationBar';
-import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LAYERS, ActiveOverlaysState } from './types';
+import { DelimitedArea, OSINTAlert, FireSpot, TemporalMode, MapLayerType, MAP_LAYERS, ActiveOverlaysState, ActiveGeofenceState } from './types';
+import {
+  normalizeGeofenceToPolygon,
+  isPointInPolygon,
+  scalePolygon,
+  scalePolygonXY,
+  getPolygonDimensionsKm,
+  createGeofencePolygon,
+  calculatePolygonAreaKm2,
+  getPolygonBoundingBox,
+  getPolygonCentroid,
+} from './services/geofenceGeometryService';
 import { fetchNationalFires, fetchHeatmapData, fetchTimelineData, fetchOsintAlerts } from './services/api';
+import { reverseGeocode } from './services/geocodingService';
+import { queryLandRegistry } from './services/landRegistryService';
 import { sendWhatsAppFireAlert } from './services/alertService';
 import { goes16Manager } from './services/goes16PollingService';
 import { upsertFireSpots } from './services/spotUpsertService';
-import { Flame, ShieldAlert, Radio, Satellite, Globe, MessageSquare, Clock, Calendar, BarChart2, Layers, Truck, Droplets, Zap, CheckCircle2, Wind } from 'lucide-react';
+import { geofence24hMonitor, GeofenceIncident } from './services/geofence24hMonitorService';
+import { GeofenceIncidentsModal } from './components/GeofenceIncidentsModal';
+import { Flame, ShieldAlert, Radio, Satellite, Globe, MessageSquare, Clock, Calendar, BarChart2, Layers, Truck, Droplets, Zap, CheckCircle2, Wind, Bot, BellRing, Plus, Trash2 } from 'lucide-react';
 import { findNearestInfrastructure } from './data/emergencyInfrastructure';
 import { calculateAirQuality } from './data/airQuality';
 import { GoogleEarth3DWindow } from './components/GoogleEarth3DWindow';
 import { StreetViewWindow } from './components/StreetViewWindow';
 import { NewFireAlertBanner } from './components/NewFireAlertBanner';
 import { TacticalEvidenceWindow } from './components/TacticalEvidenceWindow';
-import { FloorPlanModal } from './components/FloorPlanModal';
 import { AutoEmergencyCountdown } from './components/AutoEmergencyCountdown';
 import { INDUSTRIAL_FACILITIES, Facility } from './data/facilityFloorPlans';
+
+// Dynamic Code-Splitting para Modais sob Demanda (Redução drástica do Bundle inicial)
+const FloorPlanModal = React.lazy(() =>
+  import('./components/FloorPlanModal').then((m) => ({ default: m.FloorPlanModal }))
+);
+const AreaInspectionModal = React.lazy(() =>
+  import('./components/AreaInspectionModal').then((m) => ({ default: m.AreaInspectionModal }))
+);
+const ReportsModal = React.lazy(() =>
+  import('./components/ReportsModal').then((m) => ({ default: m.ReportsModal }))
+);
 
 // Encapsulated Tactical Clock Component to prevent full App / Leaflet re-renders every 1s
 const TacticalClock: React.FC = () => {
@@ -120,16 +143,29 @@ const AppContent: React.FC = () => {
 
   // Map Interactive Target & Search Marker
   const [targetMapLocation, setTargetMapLocation] = useState<{ center: [number, number]; zoom: number; trigger?: number } | null>(null);
+  const [currentMapCenter, setCurrentMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchMarker, setSearchMarker] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const geofenceEnrichTimeoutRef = useRef<any>(null);
 
-  // Módulo de Cerca Virtual (Isolamento Geográfico) & Planta Baixa
-  const [activeGeofence, setActiveGeofence] = useState<{
-    id: string;
-    name: string;
-    bounds?: [[number, number], [number, number]];
-    polygon?: [number, number][];
-    areaKm2: number;
-    facilityId?: string;
+  // Módulo de Cerca Virtual (Isolamento Geográfico Total: Mover e Dimensionar) & Planta Baixa
+  const [activeGeofence, setActiveGeofence] = useState<ActiveGeofenceState | null>(() => {
+    try {
+      const saved = localStorage.getItem('afw_active_geofence');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+  const [isEditingGeofence, setIsEditingGeofence] = useState<boolean>(false);
+  const [geofenceIncidents, setGeofenceIncidents] = useState<GeofenceIncident[]>(() =>
+    geofence24hMonitor.getIncidents()
+  );
+  const [isIncidentsModalOpen, setIsIncidentsModalOpen] = useState<boolean>(false);
+  const [isAutoReportActive, setIsAutoReportActive] = useState<boolean>(() =>
+    geofence24hMonitor.isAutoReportActive()
+  );
+  const [perimeterBreachAlert, setPerimeterBreachAlert] = useState<{
+    incident: GeofenceIncident;
+    spot: FireSpot;
   } | null>(null);
   const [isFloorPlanOpen, setIsFloorPlanOpen] = useState<boolean>(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>('samsung-manaus');
@@ -147,6 +183,7 @@ const AppContent: React.FC = () => {
   const [topZ, setTopZ] = useState<number>(100);
   const [windowZ, setWindowZ] = useState<{ [id: string]: number }>({
     videoStream: 105,
+    aiAssistant: 110,
     osintFeed: 104,
     firms: 101,
     googleEarth: 102,
@@ -155,27 +192,53 @@ const AppContent: React.FC = () => {
     streetView: 108
   });
 
-  const [openWindows, setOpenWindows] = useState<{ [id: string]: boolean }>({
-    videoStream: false,
-    osintFeed: false,
-    firms: false,
-    googleEarth: false,
-    bdqueimadas: false,
-    whatsappAlert: false,
-    spotDetail: false,
-    streetView: false
+  const [openWindows, setOpenWindows] = useState<{ [id: string]: boolean }>(() => {
+    try {
+      const saved = localStorage.getItem('afw_open_windows');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      aiAssistant: true,
+      videoStream: false,
+      osintFeed: false,
+      firms: false,
+      googleEarth: false,
+      bdqueimadas: false,
+      whatsappAlert: false,
+      spotDetail: false,
+      streetView: false,
+    };
   });
 
-  const [minimizedWindows, setMinimizedWindows] = useState<{ [id: string]: boolean }>({
-    videoStream: false,
-    osintFeed: false,
-    firms: false,
-    googleEarth: false,
-    bdqueimadas: false,
-    whatsappAlert: false,
-    spotDetail: false,
-    streetView: false
+  const [minimizedWindows, setMinimizedWindows] = useState<{ [id: string]: boolean }>(() => {
+    try {
+      const saved = localStorage.getItem('afw_min_windows');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      aiAssistant: false,
+      videoStream: false,
+      osintFeed: false,
+      firms: false,
+      googleEarth: false,
+      bdqueimadas: false,
+      whatsappAlert: false,
+      spotDetail: false,
+      streetView: false,
+    };
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('afw_open_windows', JSON.stringify(openWindows));
+    } catch {}
+  }, [openWindows]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('afw_min_windows', JSON.stringify(minimizedWindows));
+    } catch {}
+  }, [minimizedWindows]);
 
   const [isSimulation, setIsSimulation] = useState<boolean>(() => {
     const saved = localStorage.getItem('isSimulation');
@@ -316,7 +379,34 @@ const AppContent: React.FC = () => {
     };
   }, [isSimulation]);
 
-  // Mantém o foco ativo inspecionado pelo operador (selectedSpot) atualizado em tempo real com o Upsert
+  // Varredura Automática Contínua 24h de Anomalias na Cerca Virtual
+  useEffect(() => {
+    if (!activeGeofence || fireSpots.length === 0) return;
+    geofence24hMonitor.scanGeofenceForAnomalies(activeGeofence, fireSpots, isSimulation);
+  }, [activeGeofence, fireSpots, isSimulation]);
+
+  // Inscrição no serviço 24h e captura de violações de perímetro
+  useEffect(() => {
+    const unsub = geofence24hMonitor.subscribe(setGeofenceIncidents);
+    const unsubAlert = geofence24hMonitor.onPerimeterBreach((incident, spot) => {
+      setPerimeterBreachAlert({ incident, spot });
+      setSelectedSpot(spot);
+      setIsBannerVisible(true);
+    });
+    return () => {
+      unsub();
+      unsubAlert();
+    };
+  }, []);
+
+  // Auto-dismiss do aviso de violação após 9 segundos
+  useEffect(() => {
+    if (!perimeterBreachAlert) return;
+    const timer = setTimeout(() => {
+      setPerimeterBreachAlert(null);
+    }, 9000);
+    return () => clearTimeout(timer);
+  }, [perimeterBreachAlert]);
   useEffect(() => {
     if (selectedSpot) {
       const fresh = fireSpots.find(s => s.id === selectedSpot.id);
@@ -402,6 +492,28 @@ const AppContent: React.FC = () => {
   const handleAreaSelected = (data: DelimitedArea) => {
     setSelectedArea(data);
     setIsAreaInspectionOpen(true);
+
+    reverseGeocode(data.center.lat, data.center.lng)
+      .then((rev) => {
+        const land = queryLandRegistry(data.center.lat, data.center.lng, rev.city, rev.state);
+        setSelectedArea((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            address: rev.fullAddress,
+            road: rev.road || rev.formattedStreet,
+            neighborhood: rev.neighborhood,
+            city: rev.city,
+            state: rev.state,
+            postcode: rev.postcode,
+            landPropertyName: land.property_name,
+            carReceipt: land.car_receipt,
+          };
+        });
+      })
+      .catch((err) => {
+        console.warn('Erro ao enriquecer dados do lugar para área delimitada:', err);
+      });
   };
 
   const handleInspectMapPoint = (lat: number, lng: number) => {
@@ -423,8 +535,7 @@ const AppContent: React.FC = () => {
       areaHa,
       areaM2,
     };
-    setSelectedArea(inspectedArea);
-    setIsAreaInspectionOpen(true);
+    handleAreaSelected(inspectedArea);
   };
 
   const handleSpotClick = useCallback((spot: FireSpot) => {
@@ -444,25 +555,192 @@ const AppContent: React.FC = () => {
     setHoveredSpot(null);
   }, []);
 
-  const handleActivateGeofence = (facility: Facility) => {
-    setActiveGeofence({
-      id: facility.id,
-      name: facility.name,
-      bounds: facility.bounds,
-      polygon: facility.polygon,
-      areaKm2: facility.areaKm2,
-      facilityId: facility.id,
-    });
-    setSelectedFacilityId(facility.id);
+  // Enriquecimento e Geocodificação Reversa Automática para a Cerca Virtual Ativa
+  const enrichGeofencePlaceInfo = async (geofence: ActiveGeofenceState, centerLat: number, centerLng: number) => {
+    try {
+      const rev = await reverseGeocode(centerLat, centerLng);
+      const land = queryLandRegistry(centerLat, centerLng, rev.city, rev.state);
+
+      const placeLabel = rev.road
+        ? `${rev.road}${rev.neighborhood ? `, ${rev.neighborhood}` : ''} (${rev.city} - ${rev.state})`
+        : land.property_name && land.property_name !== 'Setor Territorial'
+        ? `${land.property_name} (${rev.city || 'AM'})`
+        : `${rev.city} - ${rev.state}`;
+
+      setActiveGeofence((prev) => {
+        if (!prev || prev.id !== geofence.id) return prev;
+        const enriched: ActiveGeofenceState = {
+          ...prev,
+          name: placeLabel,
+          address: rev.fullAddress,
+          road: rev.road || rev.formattedStreet,
+          neighborhood: rev.neighborhood,
+          city: rev.city,
+          state: rev.state,
+          postcode: rev.postcode,
+          landPropertyName: land.property_name,
+          carReceipt: land.car_receipt,
+        };
+        try {
+          localStorage.setItem('afw_active_geofence', JSON.stringify(enriched));
+        } catch {}
+        return enriched;
+      });
+    } catch (e) {
+      console.warn('Erro ao enriquecer dados do lugar para a cerca virtual:', e);
+    }
+  };
+
+  const enrichGeofencePlaceInfoDebounced = (geofence: ActiveGeofenceState, centerLat: number, centerLng: number) => {
+    if (geofenceEnrichTimeoutRef.current) {
+      clearTimeout(geofenceEnrichTimeoutRef.current);
+    }
+    geofenceEnrichTimeoutRef.current = setTimeout(() => {
+      enrichGeofencePlaceInfo(geofence, centerLat, centerLng);
+    }, 450);
+  };
+
+  const handleActivateGeofence = (target: Facility | DelimitedArea | any) => {
+    let id = target.id || `cerca-tatica-${Date.now()}`;
+    let name = target.name || target.road || target.landPropertyName || `Cerca Tática ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    let polygon: [number, number][] = [];
+    let bounds: [[number, number], [number, number]] | undefined = undefined;
+    let facilityId = target.facilityId || (target.coordinates ? target.id : undefined);
+    let centerLat = -3.1019;
+    let centerLng = -60.0250;
+
+    // Se for DelimitedArea (com northEast e southWest)
+    if (target.northEast && target.southWest) {
+      const sw = target.southWest;
+      const ne = target.northEast;
+      bounds = [[sw.lat, sw.lng], [ne.lat, ne.lng]];
+      polygon = [
+        [sw.lat, sw.lng],
+        [ne.lat, sw.lng],
+        [ne.lat, ne.lng],
+        [sw.lat, ne.lng],
+      ];
+      centerLat = target.center ? target.center.lat : (sw.lat + ne.lat) / 2;
+      centerLng = target.center ? target.center.lng : (sw.lng + ne.lng) / 2;
+    } else if (target.polygon && target.polygon.length >= 3) {
+      polygon = target.polygon;
+      bounds = target.bounds || getPolygonBoundingBox(polygon);
+      const c = getPolygonCentroid(polygon);
+      centerLat = c[0];
+      centerLng = c[1];
+    } else if (target.coordinates) {
+      centerLat = target.coordinates.lat;
+      centerLng = target.coordinates.lng;
+      polygon = createGeofencePolygon(centerLat, centerLng, 1.5, 1.5);
+      bounds = getPolygonBoundingBox(polygon);
+    } else if (target.center) {
+      centerLat = target.center.lat || target.center[0];
+      centerLng = target.center.lng || target.center[1];
+      polygon = createGeofencePolygon(centerLat, centerLng, 1.5, 1.5);
+      bounds = getPolygonBoundingBox(polygon);
+    }
+
+    const calculatedArea = calculatePolygonAreaKm2(polygon);
+
+    const newGeofence: ActiveGeofenceState = {
+      id,
+      name,
+      bounds,
+      polygon,
+      areaKm2: calculatedArea > 0 ? calculatedArea : (target.areaKm2 || target.areaSqKm || 1.45),
+      facilityId,
+      address: target.address,
+      road: target.road,
+      neighborhood: target.neighborhood,
+      city: target.city,
+      state: target.state,
+      postcode: target.postcode,
+      landPropertyName: target.landPropertyName,
+    };
+
+    setActiveGeofence(newGeofence);
+    try {
+      localStorage.setItem('afw_active_geofence', JSON.stringify(newGeofence));
+    } catch {}
+
     setTargetMapLocation({
-      center: [facility.coordinates.lat, facility.coordinates.lng],
-      zoom: 17,
+      center: [centerLat, centerLng],
+      zoom: 16,
       trigger: Date.now(),
     });
+
+    enrichGeofencePlaceInfo(newGeofence, centerLat, centerLng);
+  };
+
+  const handleUpdateGeofence = (updated: ActiveGeofenceState) => {
+    setActiveGeofence(updated);
+    try {
+      localStorage.setItem('afw_active_geofence', JSON.stringify(updated));
+    } catch {}
+
+    if (updated.polygon && updated.polygon.length >= 3) {
+      const c = getPolygonCentroid(updated.polygon);
+      enrichGeofencePlaceInfoDebounced(updated, c[0], c[1]);
+    }
+  };
+
+  const handleScaleGeofence = (factor: number) => {
+    handleScaleGeofenceXY(factor, factor);
+  };
+
+  const handleScaleGeofenceXY = (factorX: number, factorY: number) => {
+    if (!activeGeofence) return;
+    const poly = normalizeGeofenceToPolygon(activeGeofence);
+    const scaled = scalePolygonXY(poly, factorX, factorY);
+    const newAreaKm2 = calculatePolygonAreaKm2(scaled);
+    const newBounds = getPolygonBoundingBox(scaled);
+    const updated: ActiveGeofenceState = {
+      ...activeGeofence,
+      polygon: scaled,
+      bounds: newBounds,
+      areaKm2: newAreaKm2,
+    };
+    handleUpdateGeofence(updated);
+  };
+
+  const handleCreateNewGeofence = () => {
+    const centerLat = currentMapCenter?.lat ?? (targetMapLocation?.center?.[0] || -3.1019);
+    const centerLng = currentMapCenter?.lng ?? (targetMapLocation?.center?.[1] || -60.0250);
+    const polygon = createGeofencePolygon(centerLat, centerLng, 2.0, 2.0);
+    const areaKm2 = calculatePolygonAreaKm2(polygon);
+    const bounds = getPolygonBoundingBox(polygon);
+
+    const initialName = `Cerca Tática (${centerLat.toFixed(4)}°, ${centerLng.toFixed(4)}°)`;
+
+    const newGeofence: ActiveGeofenceState = {
+      id: `cerca-tatica-${Date.now()}`,
+      name: initialName,
+      polygon,
+      bounds,
+      areaKm2,
+    };
+
+    setActiveGeofence(newGeofence);
+    setIsEditingGeofence(true);
+    try {
+      localStorage.setItem('afw_active_geofence', JSON.stringify(newGeofence));
+    } catch {}
+
+    setTargetMapLocation({
+      center: [centerLat, centerLng],
+      zoom: 15,
+      trigger: Date.now(),
+    });
+
+    enrichGeofencePlaceInfo(newGeofence, centerLat, centerLng);
   };
 
   const handleClearGeofence = () => {
     setActiveGeofence(null);
+    setIsEditingGeofence(false);
+    try {
+      localStorage.removeItem('afw_active_geofence');
+    } catch {}
   };
 
   const handleOpenFloorPlan = (facilityId?: string) => {
@@ -512,17 +790,12 @@ const AppContent: React.FC = () => {
         // Filtragem estrita: no Modo Real, exclui terminantemente qualquer dado simulado
         let displayFireSpots = isSimulation ? fireSpots : fireSpots.filter(s => !s.is_simulated);
         if (activeGeofence) {
-          displayFireSpots = displayFireSpots.filter((s) => {
-            if (activeGeofence.bounds) {
-              const [sw, ne] = activeGeofence.bounds;
-              const minLat = Math.min(sw[0], ne[0]);
-              const maxLat = Math.max(sw[0], ne[0]);
-              const minLng = Math.min(sw[1], ne[1]);
-              const maxLng = Math.max(sw[1], ne[1]);
-              return s.latitude >= minLat && s.latitude <= maxLat && s.longitude >= minLng && s.longitude <= maxLng;
-            }
-            return true;
-          });
+          const poly = normalizeGeofenceToPolygon(activeGeofence);
+          if (poly.length >= 3) {
+            displayFireSpots = displayFireSpots.filter((s) =>
+              isPointInPolygon([s.latitude, s.longitude], poly)
+            );
+          }
 
           // Se a instalação fabril tiver incidente, simulação estiver ativa e o filtro estiver vazio, injetar ponto térmico
           const matchedFacility = INDUSTRIAL_FACILITIES.find(f => f.id === activeGeofence.facilityId);
@@ -559,9 +832,14 @@ const AppContent: React.FC = () => {
         return (
           <MainMap
             onAreaSelected={handleAreaSelected}
+            onClearArea={() => setSelectedArea(null)}
+            onMapCenterChange={(c) => setCurrentMapCenter(c)}
             onInspectMapPoint={handleInspectMapPoint}
             fireSpots={displayFireSpots}
             activeGeofence={activeGeofence}
+            isEditingGeofence={isEditingGeofence}
+            onToggleEditGeofence={() => setIsEditingGeofence(!isEditingGeofence)}
+            onUpdateGeofence={handleUpdateGeofence}
             onClearGeofence={handleClearGeofence}
             onOpenFloorPlan={handleOpenFloorPlan}
             onActivateGeofence={handleActivateGeofence}
@@ -664,6 +942,20 @@ const AppContent: React.FC = () => {
             <span className="whitespace-nowrap hidden sm:inline">Novos &lt;3h</span>
           </button>
 
+          {/* Botão de Alternar Copiloto Tático IA */}
+          <button
+            onClick={() => toggleWindow('aiAssistant')}
+            className={`h-7 px-1.5 sm:px-2 py-0.5 rounded-md text-[10.5px] font-mono font-medium transition-all flex items-center gap-1 border shrink-0 cursor-pointer ${
+              openWindows.aiAssistant && !minimizedWindows.aiAssistant
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500 font-bold shadow-sm'
+                : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white'
+            }`}
+            title="Abrir / Ocultar Copiloto Tático de Inteligência Artificial"
+          >
+            <Bot size={13} className="text-emerald-400" />
+            <span className="whitespace-nowrap hidden sm:inline">Copiloto IA</span>
+          </button>
+
           {/* Filtro Temporal Compacto */}
           <div className="hidden sm:flex items-center space-x-0.5 bg-slate-950/80 border border-slate-800 rounded-md p-0.5 text-xs font-mono shrink-0">
             <button
@@ -734,6 +1026,20 @@ const AppContent: React.FC = () => {
             <span className="hidden lg:inline">Relatórios</span>
           </button>
 
+          {/* Botão Cerca Virtual 24h (Adicionar) */}
+          <button
+            onClick={handleCreateNewGeofence}
+            className={`h-7 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold flex items-center gap-1 border transition-all shadow-sm cursor-pointer shrink-0 ${
+              activeGeofence
+                ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-500/70'
+                : 'bg-cyan-950 hover:bg-cyan-900 text-cyan-200 border-cyan-400 animate-pulse hover:animate-none'
+            }`}
+            title="Criar / Adicionar nova Cerca Virtual 24h no centro da visualização atual"
+          >
+            <ShieldAlert size={12} className="text-cyan-400 shrink-0" />
+            <span className="hidden sm:inline">{activeGeofence ? '+ Nova Cerca' : 'Cerca 24h'}</span>
+          </button>
+
           {/* Botão de Portal SaaS / Demonstração Comercial */}
           <button
             onClick={() => handleSwitchView('landing')}
@@ -788,38 +1094,184 @@ const AppContent: React.FC = () => {
         </div>
       </header>
 
-      {/* Faixa Indicadora de Cerca Virtual Ativa (Isolamento Geográfico da IA) */}
+      {/* Faixa Indicadora de Cerca Virtual Ativa (Isolamento Geográfico da IA com Edição Total) */}
       {activeGeofence && (
-        <div className="absolute top-11 left-0 right-0 z-[1140] bg-cyan-950/95 border-b-2 border-cyan-400 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-cyan-200 pointer-events-auto backdrop-blur-md shadow-2xl">
-          <div className="flex items-center gap-2">
+        <div className="absolute top-11 left-0 right-0 z-[1140] bg-cyan-950/95 border-b-2 border-cyan-400 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-cyan-200 pointer-events-auto backdrop-blur-md shadow-2xl flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-            <span className="font-bold text-white text-xs">
-              🔒 CERCA VIRTUAL ATIVA: <span className="text-cyan-300">{activeGeofence.name}</span>
+            <span className="font-bold text-white text-xs flex items-center gap-1.5">
+              <span>🔒 CERCA VIRTUAL:</span>
+              <span className="text-cyan-300 font-bold">{activeGeofence.name}</span>
             </span>
+            {(activeGeofence.road || activeGeofence.city) && (
+              <>
+                <span className="text-slate-500">|</span>
+                <span className="text-amber-300 font-semibold flex items-center gap-1 text-[11px]" title={activeGeofence.address || activeGeofence.road}>
+                  <span>📍</span>
+                  <span className="truncate max-w-[280px] lg:max-w-[420px]">
+                    {[activeGeofence.road, activeGeofence.neighborhood, `${activeGeofence.city || ''}${activeGeofence.state ? ` - ${activeGeofence.state}` : ''}`].filter(Boolean).join(' • ')}
+                  </span>
+                </span>
+              </>
+            )}
+            {activeGeofence.landPropertyName && (
+              <>
+                <span className="text-slate-500">|</span>
+                <span className="text-emerald-300 text-[10.5px] truncate max-w-[180px]" title={`Imóvel CAR: ${activeGeofence.landPropertyName}`}>
+                  🏛️ {activeGeofence.landPropertyName}
+                </span>
+              </>
+            )}
             <span className="text-slate-500">|</span>
             <span className="text-slate-300">
               Área: <strong className="text-white">{activeGeofence.areaKm2.toFixed(3)} km²</strong> ({(activeGeofence.areaKm2 * 100).toFixed(1)} ha)
             </span>
             <span className="text-slate-500">|</span>
-            <span className="text-amber-300 font-bold hidden md:inline">
-              ⚡ Ecossistema IA focado e isolado exclusivamente nesta zona
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-950 border border-emerald-500 text-emerald-300 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>24H VIGILÂNCIA ATIVA</span>
+            </span>
+            <span className="text-slate-500">|</span>
+            <span className={`font-bold text-[11px] flex items-center gap-1 ${isEditingGeofence ? 'text-emerald-300 animate-pulse' : 'text-amber-300 hidden md:inline'}`}>
+              {isEditingGeofence
+                ? '✏️ MODO EDIÇÃO ATIVO: Arraste os vértices (1, 2, 3...) para dimensionar ou o centro ✋ para mover a cerca'
+                : '⚡ Monitoramento contínuo 24h com disparo automático'}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Toggle de Reporte Automático 24h */}
+            <button
+              onClick={() => {
+                const nextVal = !isAutoReportActive;
+                setIsAutoReportActive(nextVal);
+                geofence24hMonitor.setAutoReportActive(nextVal);
+              }}
+              className={`px-2 py-1 rounded text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer ${
+                isAutoReportActive
+                  ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-sm'
+                  : 'bg-slate-900 text-slate-400 border-slate-700'
+              }`}
+              title={isAutoReportActive ? 'Reporte automático ativado: Voz e WhatsApp automáticos em caso de invasão' : 'Reporte automático pausado'}
+            >
+              <Zap size={11} className={isAutoReportActive ? 'text-emerald-400' : 'text-slate-500'} />
+              <span>Reporte Automático: {isAutoReportActive ? 'LIGADO' : 'OFF'}</span>
+            </button>
+
+            {/* Histórico de Violações 24h */}
+            <button
+              onClick={() => setIsIncidentsModalOpen(true)}
+              className={`px-2 py-1 rounded text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer ${
+                geofenceIncidents.length > 0
+                  ? 'bg-red-950 text-red-200 border-red-500 shadow-sm'
+                  : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-white'
+              }`}
+              title="Abrir auditoria e histórico de ocorrências 24h da cerca virtual"
+            >
+              <BellRing size={11} className={geofenceIncidents.length > 0 ? 'text-red-400 animate-bounce' : 'text-cyan-400'} />
+              <span>Violações ({geofenceIncidents.length})</span>
+            </button>
+
+            {/* Botão de Ativar / Concluir Edição da Cerca Virtual */}
+            <button
+              onClick={() => setIsEditingGeofence(!isEditingGeofence)}
+              className={`px-2.5 py-1 rounded text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer shadow-md ${
+                isEditingGeofence
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 ring-2 ring-emerald-400/50'
+                  : 'bg-cyan-800 hover:bg-cyan-700 text-white border border-cyan-400'
+              }`}
+              title={isEditingGeofence ? 'Concluir edição e travar cerca' : 'Habilitar alças para mover e dimensionar a cerca'}
+            >
+              {isEditingGeofence ? <span>✓ Concluir Edição</span> : <span>✏️ Mover / Dimensionar</span>}
+            </button>
+
+            {/* Controles de Dimensionamento X, Y e Escala */}
+            <div className="flex items-center gap-1 bg-slate-900/90 border border-cyan-700/70 rounded px-1.5 py-0.5">
+              {/* Eixo X: Largura */}
+              <div className="flex items-center gap-0.5 border-r border-slate-700 pr-1.5 mr-0.5">
+                <span className="text-[9px] text-amber-300 font-bold px-0.5" title="Dimensionar Largura (Eixo X / Leste-Oeste)">↔️ X:</span>
+                <button
+                  onClick={() => handleScaleGeofenceXY(0.90, 1.0)}
+                  className="px-1.5 py-0.5 rounded bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-600/60 text-[9.5px] font-bold transition cursor-pointer"
+                  title="Reduzir Largura (Eixo X) em 10%"
+                >
+                  -10%
+                </button>
+                <button
+                  onClick={() => handleScaleGeofenceXY(1.10, 1.0)}
+                  className="px-1.5 py-0.5 rounded bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-600/60 text-[9.5px] font-bold transition cursor-pointer"
+                  title="Aumentar Largura (Eixo X) em 10%"
+                >
+                  +10%
+                </button>
+              </div>
+
+              {/* Eixo Y: Altura */}
+              <div className="flex items-center gap-0.5 border-r border-slate-700 pr-1.5 mr-0.5">
+                <span className="text-[9px] text-purple-300 font-bold px-0.5" title="Dimensionar Altura (Eixo Y / Norte-Sul)">↕️ Y:</span>
+                <button
+                  onClick={() => handleScaleGeofenceXY(1.0, 0.90)}
+                  className="px-1.5 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-600/60 text-[9.5px] font-bold transition cursor-pointer"
+                  title="Reduzir Altura (Eixo Y) em 10%"
+                >
+                  -10%
+                </button>
+                <button
+                  onClick={() => handleScaleGeofenceXY(1.0, 1.10)}
+                  className="px-1.5 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-600/60 text-[9.5px] font-bold transition cursor-pointer"
+                  title="Aumentar Altura (Eixo Y) em 10%"
+                >
+                  +10%
+                </button>
+              </div>
+
+              {/* Proporcional */}
+              <div className="flex items-center gap-0.5">
+                <span className="text-[9px] text-cyan-300 font-bold px-0.5" title="Dimensionar Ambos os Eixos (Proporcional)">🔲:</span>
+                <button
+                  onClick={() => handleScaleGeofence(0.90)}
+                  className="px-1.5 py-0.5 rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-600/60 text-[9.5px] font-bold transition cursor-pointer"
+                  title="Reduzir perímetro total em 10%"
+                >
+                  -10%
+                </button>
+                <button
+                  onClick={() => handleScaleGeofence(1.10)}
+                  className="px-1.5 py-0.5 rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-600/60 text-[9.5px] font-bold transition cursor-pointer"
+                  title="Aumentar perímetro total em 10%"
+                >
+                  +10%
+                </button>
+              </div>
+            </div>
+
+            {/* Adicionar / Nova Cerca */}
+            <button
+              onClick={handleCreateNewGeofence}
+              className="px-2 py-1 rounded bg-slate-800 hover:bg-cyan-950 text-cyan-300 border border-slate-700 hover:border-cyan-500 text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer"
+              title="Criar / Reposicionar uma nova cerca virtual no centro da visualização"
+            >
+              <Plus size={11} className="text-cyan-400" />
+              <span>Nova</span>
+            </button>
+
             {activeGeofence.facilityId && (
               <button
                 onClick={() => handleOpenFloorPlan(activeGeofence.facilityId)}
-                className="px-2.5 py-1 rounded bg-cyan-800 hover:bg-cyan-700 text-white border border-cyan-400 text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer shadow-md"
+                className="px-2 py-1 rounded bg-slate-800 hover:bg-cyan-950 text-cyan-200 border border-slate-700 text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer"
               >
-                <span>🏢 Planta Baixa</span>
+                <span>🏢 Planta</span>
               </button>
             )}
+
+            {/* Excluir Cerca Virtual */}
             <button
               onClick={handleClearGeofence}
-              className="px-2.5 py-1 rounded bg-slate-800 hover:bg-red-900/90 text-slate-300 hover:text-white border border-slate-700 text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer"
+              className="px-2 py-1 rounded bg-slate-800 hover:bg-red-900/90 text-red-300 hover:text-white border border-slate-700 hover:border-red-600 text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer"
+              title="Excluir cerca virtual ativa"
             >
-              <span>✕ Desativar Isolamento</span>
+              <Trash2 size={11} className="text-red-400" />
+              <span>Excluir</span>
             </button>
           </div>
         </div>
@@ -853,9 +1305,28 @@ const AppContent: React.FC = () => {
             <span className="text-white text-sm font-bold">~{selectedArea.areaSqKm} km²</span>
           </div>
           <div className="text-[11px] text-slate-300 space-y-1 mb-3">
-            <div>Hectares: <span className="text-amber-400 font-bold">{selectedArea.areaHa} ha</span></div>
-            <div>Metros²: <span className="text-cyan-400 font-bold">{selectedArea.areaM2.toLocaleString('pt-BR')} m²</span></div>
-            <div className="truncate">Centro: {selectedArea.center.lat.toFixed(5)}, {selectedArea.center.lng.toFixed(5)}</div>
+            {selectedArea.road && (
+              <div className="text-amber-300 font-bold flex items-start gap-1">
+                <span>📍</span>
+                <span className="truncate">{selectedArea.road}</span>
+              </div>
+            )}
+            {selectedArea.city && (
+              <div className="text-slate-300 text-[10.5px]">
+                {selectedArea.neighborhood ? `${selectedArea.neighborhood}, ` : ''}{selectedArea.city} - {selectedArea.state || 'AM'}
+                {selectedArea.postcode ? ` • CEP: ${selectedArea.postcode}` : ''}
+              </div>
+            )}
+            {selectedArea.landPropertyName && (
+              <div className="text-emerald-400 text-[10px] font-semibold truncate">
+                🏛️ CAR: {selectedArea.landPropertyName}
+              </div>
+            )}
+            <div className="pt-1 border-t border-slate-800 text-[10.5px] flex justify-between">
+              <span>Hectares: <strong className="text-amber-400">{selectedArea.areaHa} ha</strong></span>
+              <span>Área: <strong className="text-cyan-400">{selectedArea.areaSqKm} km²</strong></span>
+            </div>
+            <div className="truncate text-[9.5px] text-slate-400">Coord: {selectedArea.center.lat.toFixed(5)}, {selectedArea.center.lng.toFixed(5)}</div>
           </div>
           <div className="flex flex-col gap-1.5">
             <button
@@ -894,9 +1365,35 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* 7. Co-piloto de IA Integrado (Grounded no Estado do Mapa & Cerca Virtual) */}
+      {/* 7. Co-piloto de IA Integrado (Grounded no Estado do Mapa & Cerca Virtual - Draggable e Fechável) */}
       <AIAssistantPanel
-        fires={activeGeofence ? fireSpots.filter(s => s.latitude >= -3.15 && s.latitude <= -3.05) : fireSpots}
+        isOpen={openWindows.aiAssistant !== false}
+        isMinimized={minimizedWindows.aiAssistant === true}
+        zIndex={windowZ.aiAssistant || 110}
+        onFocus={() => bringToFront('aiAssistant')}
+        onClose={() => closeWindow('aiAssistant')}
+        onMinimize={() => minimizeWindow('aiAssistant')}
+        fires={
+          activeGeofence
+            ? fireSpots.filter((s) => {
+                const poly = normalizeGeofenceToPolygon(activeGeofence);
+                return poly.length >= 3 && isPointInPolygon([s.latitude, s.longitude], poly);
+              })
+            : selectedArea
+            ? fireSpots.filter((s) => {
+                const minLat = Math.min(selectedArea.northEast.lat, selectedArea.southWest.lat);
+                const maxLat = Math.max(selectedArea.northEast.lat, selectedArea.southWest.lat);
+                const minLng = Math.min(selectedArea.northEast.lng, selectedArea.southWest.lng);
+                const maxLng = Math.max(selectedArea.northEast.lng, selectedArea.southWest.lng);
+                return (
+                  s.latitude >= minLat &&
+                  s.latitude <= maxLat &&
+                  s.longitude >= minLng &&
+                  s.longitude <= maxLng
+                );
+              })
+            : fireSpots
+        }
         selectedArea={selectedArea}
         geofence={activeGeofence}
         activeFacility={selectedFacilityId}
@@ -1058,9 +1555,13 @@ const AppContent: React.FC = () => {
           }
           if (id === 'geofence') {
             if (activeGeofence) {
-              setActiveGeofence(null);
+              const nextEdit = !isEditingGeofence;
+              setIsEditingGeofence(nextEdit);
+              const centroid = getPolygonCentroid(normalizeGeofenceToPolygon(activeGeofence));
+              setTargetMapLocation({ center: centroid, zoom: 16, trigger: Date.now() });
             } else {
               handleActivateGeofence(INDUSTRIAL_FACILITIES[0]);
+              setIsEditingGeofence(true);
             }
             return;
           }
@@ -1069,22 +1570,24 @@ const AppContent: React.FC = () => {
         isGeofenceActive={Boolean(activeGeofence)}
       />
 
-      {/* 11. Modal de Planta Baixa Estrutural e Mapeamento Térmico Dinâmico */}
-      <FloorPlanModal
-        isOpen={isFloorPlanOpen}
-        onClose={() => setIsFloorPlanOpen(false)}
-        selectedFacilityId={selectedFacilityId}
-        isSimulation={isSimulation}
-        onActivateGeofence={(fac) => {
-          handleActivateGeofence(fac);
-        }}
-        onTriggerAutoEmergency={(fac) => {
-          handleTriggerAutoEmergency(fac);
-        }}
-        onFlyToFacility={(lat, lng) => {
-          setTargetMapLocation({ center: [lat, lng], zoom: 17, trigger: Date.now() });
-        }}
-      />
+      {/* 11. Modal de Planta Baixa Estrutural e Mapeamento Térmico Dinâmico (Lazy) */}
+      <React.Suspense fallback={null}>
+        <FloorPlanModal
+          isOpen={isFloorPlanOpen}
+          onClose={() => setIsFloorPlanOpen(false)}
+          selectedFacilityId={selectedFacilityId}
+          isSimulation={isSimulation}
+          onActivateGeofence={(fac) => {
+            handleActivateGeofence(fac);
+          }}
+          onTriggerAutoEmergency={(fac) => {
+            handleTriggerAutoEmergency(fac);
+          }}
+          onFlyToFacility={(lat, lng) => {
+            setTargetMapLocation({ center: [lat, lng], zoom: 17, trigger: Date.now() });
+          }}
+        />
+      </React.Suspense>
 
       {/* 12. Modal de Protocolo Automatizado de Emergência (30s) */}
       <AutoEmergencyCountdown
@@ -1095,46 +1598,50 @@ const AppContent: React.FC = () => {
         defaultCountdownSeconds={30}
       />
 
-      {/* 13. Modal de Informações Detalhadas da Área Clicada / Delimitada */}
+      {/* 13. Modal de Informações Detalhadas da Área Clicada / Delimitada (Lazy) */}
       {selectedArea && (
-        <AreaInspectionModal
-          isOpen={isAreaInspectionOpen}
-          onClose={() => setIsAreaInspectionOpen(false)}
-          area={selectedArea}
-          allFires={fireSpots}
-          onOpenReport={() => {
-            setIsReportsOpen(true);
-          }}
-          onDispatchWhatsApp={(area) => {
-            setIsWhatsAppModalOpen(true);
-          }}
-          onActivateGeofence={(area) => {
-            handleActivateGeofence({
-              id: 'geofence-custom-area',
-              name: `Área Delimitada (~${area.areaSqKm} km²)`,
-              lat: area.center.lat,
-              lng: area.center.lng,
-              areaKm2: area.areaSqKm,
-              description: 'Área delimitada pelo operador para isolamento e vigilância de IA',
-              bounds: [
-                [area.northEast.lat, area.northEast.lng],
-                [area.southWest.lat, area.southWest.lng],
-              ],
-            } as any);
-          }}
-        />
+        <React.Suspense fallback={null}>
+          <AreaInspectionModal
+            isOpen={isAreaInspectionOpen}
+            onClose={() => setIsAreaInspectionOpen(false)}
+            area={selectedArea}
+            allFires={fireSpots}
+            onOpenReport={() => {
+              setIsReportsOpen(true);
+            }}
+            onDispatchWhatsApp={(area) => {
+              setIsWhatsAppModalOpen(true);
+            }}
+            onActivateGeofence={(area) => {
+              handleActivateGeofence({
+                id: 'geofence-custom-area',
+                name: `Área Delimitada (~${area.areaSqKm} km²)`,
+                lat: area.center.lat,
+                lng: area.center.lng,
+                areaKm2: area.areaSqKm,
+                description: 'Área delimitada pelo operador para isolamento e vigilância de IA',
+                bounds: [
+                  [area.northEast.lat, area.northEast.lng],
+                  [area.southWest.lat, area.southWest.lng],
+                ],
+              } as any);
+            }}
+          />
+        </React.Suspense>
       )}
 
-      {/* 14. Centro de Relatórios e Estatísticas */}
-      <ReportsModal
-        isOpen={isReportsOpen}
-        onClose={() => setIsReportsOpen(false)}
-        fireSpots={fireSpots}
-        selectedArea={selectedArea}
-        onSelectLocation={(lat, lng) => {
-          setTargetMapLocation({ center: [lat, lng], zoom: 13, trigger: Date.now() });
-        }}
-      />
+      {/* 14. Centro de Relatórios e Estatísticas (Lazy) */}
+      <React.Suspense fallback={null}>
+        <ReportsModal
+          isOpen={isReportsOpen}
+          onClose={() => setIsReportsOpen(false)}
+          fireSpots={fireSpots}
+          selectedArea={selectedArea}
+          onSelectLocation={(lat, lng) => {
+            setTargetMapLocation({ center: [lat, lng], zoom: 13, trigger: Date.now() });
+          }}
+        />
+      </React.Suspense>
 
       {/* 15. Centro de Configurações do Sistema */}
       <SettingsModal
@@ -1155,6 +1662,52 @@ const AppContent: React.FC = () => {
           onSuccess={() => setIsAuthModalOpen(false)}
           onCancel={() => setIsAuthModalOpen(false)}
         />
+      )}
+
+      {/* 16. Modal de Auditoria e Ocorrências 24h da Cerca Virtual */}
+      <GeofenceIncidentsModal
+        isOpen={isIncidentsModalOpen}
+        onClose={() => setIsIncidentsModalOpen(false)}
+        incidents={geofenceIncidents}
+        onClearIncidents={() => geofence24hMonitor.clearIncidents()}
+        onFlyToLocation={(lat, lng) => {
+          setTargetMapLocation({ center: [lat, lng], zoom: 16, trigger: Date.now() });
+        }}
+        isAutoReportEnabled={isAutoReportActive}
+        onToggleAutoReport={() => {
+          const nextVal = !isAutoReportActive;
+          setIsAutoReportActive(nextVal);
+          geofence24hMonitor.setAutoReportActive(nextVal);
+        }}
+      />
+
+      {/* 17. Toast Alerta de Violação de Perímetro da Cerca Virtual 24h */}
+      {perimeterBreachAlert && (
+        <div className="fixed top-20 right-4 z-[1300] max-w-md bg-red-950/95 border-2 border-red-500 rounded-xl p-3 shadow-[0_0_35px_rgba(239,68,68,0.5)] font-mono text-white animate-bounce pointer-events-auto">
+          <div className="flex items-start justify-between gap-2 border-b border-red-800 pb-1.5 mb-1.5">
+            <div className="flex items-center gap-1.5 font-black text-xs text-red-200">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-ping" />
+              <span>🚨 INVASÃO DE CERCA VIRTUAL 24H DETECTADA!</span>
+            </div>
+            <button
+              onClick={() => setPerimeterBreachAlert(null)}
+              className="text-slate-400 hover:text-white p-0.5 rounded transition cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="text-[11px] text-slate-200 space-y-1">
+            <div>
+              Cerca: <strong className="text-cyan-300">{perimeterBreachAlert.incident.geofenceName}</strong>
+            </div>
+            <div>
+              Potência Térmica: <strong className="text-amber-300">{perimeterBreachAlert.incident.frpMw} MW</strong> • Sensor: <strong className="text-slate-300">{perimeterBreachAlert.incident.satellite}</strong>
+            </div>
+            <div className="text-[10px] text-emerald-300 font-bold bg-slate-950/80 p-1 rounded border border-emerald-800/60">
+              ✓ Protocolo executado: Alerta de voz sintetizado e reporte WhatsApp despachado automaticamente!
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

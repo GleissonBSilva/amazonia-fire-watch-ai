@@ -286,3 +286,134 @@ export async function performAdvancedSearch(rawQuery: string): Promise<Geocoding
 
   return results;
 }
+
+export interface ReverseGeocodingResult {
+  road: string; // Nome da Rua, Avenida, Rodovia (ex: "Avenida das Torres", "BR-174")
+  neighborhood?: string; // Bairro (ex: "Flores", "Distrito Industrial")
+  neighbourhood?: string;
+  suburb?: string;
+  city: string; // Cidade (ex: "Manaus")
+  state: string; // Estado (ex: "AM")
+  postcode?: string; // CEP (ex: "69058-000")
+  country: string; // País (ex: "Brasil")
+  fullAddress: string; // Endereço formatado completo
+  formattedStreet: string; // "Av. das Torres, Bairro Flores" ou "Rodovia BR-174"
+  isHighway: boolean;
+  isUrban: boolean;
+  confidence: 'EXACT_STREET' | 'HIGHWAY' | 'NEIGHBORHOOD' | 'RURAL_ESTIMATE';
+}
+
+const reverseGeocodeMemoryCache = new Map<string, ReverseGeocodingResult>();
+
+/**
+ * Geocodificação Reversa em Tempo Real:
+ * Converte latitude e longitude em logradouro exato (Rua, Avenida, Rodovia, Bairro e CEP)
+ * consultando a malha viária oficial do OpenStreetMap com cache ultrarrápido em memória e localStorage.
+ */
+export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodingResult> {
+  const cacheKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+
+  // 1. Cache em memória (<0.1ms)
+  if (reverseGeocodeMemoryCache.has(cacheKey)) {
+    return reverseGeocodeMemoryCache.get(cacheKey)!;
+  }
+
+  // 2. Cache persistente em LocalStorage
+  const storageKey = `afw_rev_geo_${cacheKey}`;
+  try {
+    const cached = localStorage.getItem(storageKey);
+    if (cached) {
+      const parsed: ReverseGeocodingResult = JSON.parse(cached);
+      reverseGeocodeMemoryCache.set(cacheKey, parsed);
+      return parsed;
+    }
+  } catch {}
+
+  // 3. Consulta em tempo real à malha viária (Nominatim OSM) com timeout resiliente de 2.2s
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2200);
+
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+      },
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const data = await res.json();
+      const a = data.address || {};
+
+      const road = a.road || a.street || a.pedestrian || a.avenue || a.highway || '';
+      const neighborhood = a.suburb || a.neighbourhood || a.city_district || a.residential || '';
+      const city = a.city || a.town || a.municipality || a.village || a.county || '';
+      const state = a.state || '';
+      const postcode = a.postcode || '';
+      const country = a.country || 'Brasil';
+
+      const isHwy = Boolean(
+        a.highway ||
+        (road && (road.includes('BR-') || road.includes('AM-') || road.includes('RO-') || road.includes('MT-') || road.toLowerCase().includes('rodovia')))
+      );
+      const isUrb = Boolean(road || neighborhood);
+
+      let formattedStreet = '';
+      if (road && neighborhood) {
+        formattedStreet = `${road}, Bairro ${neighborhood}`;
+      } else if (road) {
+        formattedStreet = road;
+      } else if (neighborhood) {
+        formattedStreet = `Bairro ${neighborhood}`;
+      } else if (a.industrial) {
+        formattedStreet = `Polo Industrial ${a.industrial}`;
+      } else {
+        formattedStreet = a.hamlet || a.isolated_dwelling || 'Área Florestal / Zona Vicinal';
+      }
+
+      const result: ReverseGeocodingResult = {
+        road: road || formattedStreet,
+        neighborhood: neighborhood || undefined,
+        neighbourhood: neighborhood || undefined,
+        suburb: neighborhood || undefined,
+        city: city || 'Região Metropolitana',
+        state: state || 'AM',
+        postcode: postcode || undefined,
+        country,
+        fullAddress: data.display_name || formattedStreet,
+        formattedStreet,
+        isHighway: isHwy,
+        isUrban: isUrb,
+        confidence: road ? (isHwy ? 'HIGHWAY' : 'EXACT_STREET') : neighborhood ? 'NEIGHBORHOOD' : 'RURAL_ESTIMATE',
+      };
+
+      reverseGeocodeMemoryCache.set(cacheKey, result);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(result));
+      } catch {}
+
+      return result;
+    }
+  } catch (err) {
+    // Timeout ou sem internet: prossegue para o fallback
+  }
+
+  // 4. Fallback descritivo
+  const fallbackResult: ReverseGeocodingResult = {
+    road: 'Perímetro Tático em Monitoramento',
+    city: 'Amazônia Ocidental',
+    state: 'AM',
+    country: 'Brasil',
+    fullAddress: `Latitude: ${lat.toFixed(5)}°, Longitude: ${lng.toFixed(5)}°`,
+    formattedStreet: `Coordenadas: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
+    isHighway: false,
+    isUrban: false,
+    confidence: 'RURAL_ESTIMATE',
+  };
+
+  return fallbackResult;
+}
+

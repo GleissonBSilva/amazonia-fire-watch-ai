@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Rnd } from 'react-rnd';
 import {
   Flame,
   Satellite,
@@ -10,6 +11,8 @@ import {
   Zap,
   CheckCircle2,
   X,
+  Minus,
+  ChevronDown,
   Copy,
   Check,
   Radio,
@@ -22,8 +25,10 @@ import {
   Sun,
   Moon,
   Clock,
-  History
+  History,
+  Navigation
 } from 'lucide-react';
+import { reverseGeocode, ReverseGeocodingResult } from '../services/geocodingService';
 import { FireSpot } from '../types';
 import { calculateAirQuality } from '../data/airQuality';
 import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
@@ -50,13 +55,34 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
   isSimulation = true,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => {
+    try {
+      const saved = localStorage.getItem('afw_min_fire_alert');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return false;
+  });
   const [isDispatching, setIsDispatching] = useState(false);
   const [localStatus, setLocalStatus] = useState<string>(spot.status || 'PENDENTE');
   const [dispatchedTime, setDispatchedTime] = useState<string | null>(spot.dispatched_at || null);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => isVoiceAlertsEnabled());
+  const [resolvedAddress, setResolvedAddress] = useState<ReverseGeocodingResult | null>(null);
   const lastAnnouncedSpotIdRef = useRef<string | null>(null);
 
   const auth = classifyFireAuthenticity(spot);
+
+  // Consulta automática à malha de ruas e avenidas em tempo real (Reverse Geocoding)
+  useEffect(() => {
+    let isCancelled = false;
+    reverseGeocode(spot.latitude, spot.longitude).then(res => {
+      if (!isCancelled && res) {
+        setResolvedAddress(res);
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [spot.latitude, spot.longitude]);
 
   useEffect(() => {
     setLocalStatus(spot.status || 'PENDENTE');
@@ -153,13 +179,39 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
     }
   };
 
+  const bannerWidth = Math.min(420, typeof window !== 'undefined' ? window.innerWidth - 20 : 420);
+  const initialX = typeof window !== 'undefined' ? Math.max(10, window.innerWidth - bannerWidth - 20) : 100;
+  const savedPos = (() => {
+    try {
+      const raw = localStorage.getItem('afw_pos_fire_alert');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  })();
+
   return (
-    <aside
-      aria-label="Alerta de Novo Foco Detectado"
-      className="fixed top-14 right-2 sm:right-4 z-50 w-[calc(100vw-1rem)] sm:w-[420px] max-w-[420px] bg-slate-950/98 border-2 border-yellow-500/90 shadow-[0_0_35px_rgba(234,179,8,0.35),0_15px_40px_rgba(0,0,0,0.95)] rounded-xl p-3 sm:p-3.5 font-mono text-white select-none animate-slide-in backdrop-blur-xl"
+    <Rnd
+      default={{
+        x: savedPos?.x ?? initialX,
+        y: savedPos?.y ?? 110,
+        width: bannerWidth,
+        height: isMinimized ? 48 : 'auto',
+      }}
+      size={isMinimized ? { width: bannerWidth, height: 48 } : undefined}
+      minWidth={280}
+      bounds="window"
+      dragHandleClassName="fire-banner-drag-handle"
+      enableResizing={false}
+      onDragStop={(_e, d) => {
+        try {
+          localStorage.setItem('afw_pos_fire_alert', JSON.stringify({ x: d.x, y: d.y }));
+        } catch {}
+      }}
+      style={{ zIndex: 1050 }}
+      className="flex flex-col bg-slate-950/98 border-2 border-yellow-500/90 shadow-[0_0_35px_rgba(234,179,8,0.35),0_15px_40px_rgba(0,0,0,0.95)] rounded-xl font-mono text-white select-none backdrop-blur-xl pointer-events-auto overflow-hidden animate-slide-in"
     >
-      {/* 1. TOPO: ALERTA TÁTICO PISCANTE DE NOVO SURGIMENTO */}
-      <div className="flex items-center justify-between border-b border-yellow-500/40 pb-2 mb-2.5">
+      {/* 1. TOPO: ALERTA TÁTICO PISCANTE DE NOVO SURGIMENTO (Draggable Handle) */}
+      <div className="fire-banner-drag-handle flex items-center justify-between border-b border-yellow-500/40 p-2.5 sm:p-3 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 cursor-grab active:cursor-grabbing select-none rounded-t-xl">
         <div className="flex items-center space-x-2 min-w-0">
           <span className="relative flex h-3 w-3 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -173,7 +225,7 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
             }`}>
               {isSimulation ? 'SIMULAÇÃO' : 'REAL NASA/INPE'}
             </span>
-            <span className="text-[11px] sm:text-[11.5px] font-black tracking-wider text-yellow-300 uppercase truncate max-w-[160px] sm:max-w-[200px]">
+            <span className="text-[11px] sm:text-[11.5px] font-black tracking-wider text-yellow-300 uppercase truncate max-w-[140px] sm:max-w-[180px]">
               {spot.is_new_outbreak ? '🚨 NOVO FOCO (<3H)' : '🔥 FOCO SELECIONADO'}
             </span>
           </div>
@@ -202,15 +254,34 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
             {voiceEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
           </button>
 
+          {/* Botão de Minimizar */}
+          <button
+            onClick={() => {
+              const nextMin = !isMinimized;
+              setIsMinimized(nextMin);
+              try {
+                localStorage.setItem('afw_min_fire_alert', JSON.stringify(nextMin));
+              } catch {}
+            }}
+            className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded transition"
+            title={isMinimized ? 'Expandir Alerta' : 'Minimizar Alerta'}
+          >
+            {isMinimized ? <ChevronDown size={14} /> : <Minus size={14} />}
+          </button>
+
+          {/* Botão Fechar (Dispensar) */}
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded transition"
-            title="Dispensar alerta"
+            className="p-1 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded transition"
+            title="Fechar (Dispensar alerta)"
           >
             <X size={14} />
           </button>
         </div>
       </div>
+
+      {!isMinimized ? (
+        <div className="p-3 sm:p-3.5 max-h-[calc(100vh-180px)] overflow-y-auto">
 
       {/* FAIXA EXPLÍCITA DE SEPARAÇÃO: DADO REAL DE SATÉLITE vs SIMULAÇÃO */}
       {spot.is_simulated ? (
@@ -285,9 +356,30 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
             <div className="text-[13px] font-black text-white uppercase tracking-wide truncate">
               {isBrazil ? `${spot.municipality} - ${spot.state}` : `${spot.municipality}`}
             </div>
-            <div className="text-[11px] font-medium text-slate-300 leading-tight mt-0.5 break-words">
-              {spot.address || 'Perímetro sob Monitoramento'}
-            </div>
+            {/* Logradouro / Rodovia identificado via OpenStreetMap */}
+            {resolvedAddress && resolvedAddress.road ? (
+              <div className="mt-1 flex items-start gap-1.5 p-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-200">
+                <Navigation size={12} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-tight min-w-0">
+                  <div className="font-bold flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[8px] font-black tracking-wider uppercase px-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                      {resolvedAddress.road.toLowerCase().includes('rodovia') || resolvedAddress.road.toLowerCase().includes('br-') || resolvedAddress.road.toLowerCase().includes('am-') || resolvedAddress.road.toLowerCase().includes('pa-') || resolvedAddress.road.toLowerCase().includes('mt-') || resolvedAddress.road.toLowerCase().includes('ro-') ? 'RODOVIA' : 'LOGRADOURO'}
+                    </span>
+                    <span className="truncate">{resolvedAddress.road}</span>
+                  </div>
+                  {(resolvedAddress.neighbourhood || resolvedAddress.suburb) && (
+                    <div className="text-[9.5px] text-slate-300 font-normal mt-0.5 truncate">
+                      Bairro/Distrito: {resolvedAddress.neighbourhood || resolvedAddress.suburb}
+                      {resolvedAddress.postcode ? ` • CEP ${resolvedAddress.postcode}` : ''}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-[11px] font-medium text-slate-300 leading-tight mt-0.5 break-words">
+                {spot.address || 'Perímetro sob Monitoramento'}
+              </div>
+            )}
             {landRegistry && (
               <div className="mt-1 flex items-center gap-1.5 text-[9px] text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 flex-wrap sm:flex-nowrap">
                 <span className="font-bold">CAR:</span>
@@ -527,6 +619,15 @@ export const NewFireAlertBanner: React.FC<NewFireAlertBannerProps> = ({
           <span>Detalhes</span>
         </button>
       </div>
-    </aside>
+        </div>
+      ) : (
+        <div className="px-3 py-1.5 bg-slate-900 text-[10px] text-slate-300 flex items-center justify-between">
+          <span className="truncate">
+            {resolvedAddress?.road ? `${resolvedAddress.road} (${spot.municipality})` : `${spot.municipality} - ${spot.state}`}
+          </span>
+          <span className="text-amber-400 font-bold ml-2 shrink-0">{Math.round(spot.frp_mw)} MW</span>
+        </div>
+      )}
+    </Rnd>
   );
 };

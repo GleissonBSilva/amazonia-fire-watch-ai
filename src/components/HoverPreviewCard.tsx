@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Crosshair, ExternalLink, Activity, Radio, Eye, ShieldAlert, Truck, Droplets, Zap, CheckCircle2, Wind, Sun, Moon, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Crosshair, ExternalLink, Activity, Radio, Eye, ShieldAlert, Truck, Droplets, Zap, CheckCircle2, Wind, Sun, Moon, Clock, Navigation } from 'lucide-react';
 import { FireSpot } from '../types';
 import { findNearestInfrastructure } from '../data/emergencyInfrastructure';
 import { calculateAirQuality } from '../data/airQuality';
 import { sendWhatsAppFireAlert } from '../services/alertService';
 import { classifyFireAuthenticity } from '../services/fireClassificationService';
+import { reverseGeocode, ReverseGeocodingResult } from '../services/geocodingService';
 
 interface HoverPreviewCardProps {
   spot: FireSpot;
@@ -30,6 +31,19 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
   const [isDispatching, setIsDispatching] = useState(false);
   const [localStatus, setLocalStatus] = useState<string>(spot.status || 'PENDENTE');
   const [dispatchedTime, setDispatchedTime] = useState<string | null>(spot.dispatched_at || null);
+  const [resolvedAddress, setResolvedAddress] = useState<ReverseGeocodingResult | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    reverseGeocode(spot.latitude, spot.longitude).then((res) => {
+      if (!isCancelled && res) {
+        setResolvedAddress(res);
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [spot.latitude, spot.longitude]);
 
   const isCrimeSuspect = spot.is_arson_cluster;
   const isNew = spot.is_new_outbreak;
@@ -203,9 +217,22 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
       {/* 3. TELEMETRIA TÉCNICA COMPACTA (text-[10px] & text-[11px]) */}
       <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800 mb-2 text-[10px] space-y-1">
         <div className="text-white font-bold truncate text-[11px] border-b border-slate-800 pb-1 flex items-center justify-between">
-          <span className="truncate">{spot.address || `${spot.municipality} - ${spot.state}`}</span>
-          <span className="text-cyan-400 text-[9px] uppercase">{spot.biome}</span>
+          <div className="flex items-center gap-1.5 truncate min-w-0">
+            {resolvedAddress?.road && <Navigation size={11} className="text-amber-400 shrink-0" />}
+            <span className="truncate">{resolvedAddress?.road || spot.address || `${spot.municipality} - ${spot.state}`}</span>
+          </div>
+          <span className="text-cyan-400 text-[9px] uppercase shrink-0 ml-1">
+            {resolvedAddress?.road
+              ? (resolvedAddress.road.toLowerCase().includes('rodovia') || resolvedAddress.road.toLowerCase().includes('br-') || resolvedAddress.road.toLowerCase().includes('am-') || resolvedAddress.road.toLowerCase().includes('pa-') ? 'RODOVIA' : 'LOGRADOURO')
+              : spot.biome}
+          </span>
         </div>
+        {resolvedAddress && (resolvedAddress.neighbourhood || resolvedAddress.suburb) && (
+          <div className="text-[9px] text-slate-400 truncate -mt-0.5 pb-0.5">
+            Bairro: {resolvedAddress.neighbourhood || resolvedAddress.suburb}
+            {resolvedAddress.postcode ? ` • CEP ${resolvedAddress.postcode}` : ''}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-1.5 pt-0.5 text-slate-300">
           <div>
