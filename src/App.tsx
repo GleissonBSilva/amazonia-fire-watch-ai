@@ -1515,18 +1515,16 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* 5. HUD Tático Hierárquico: Mundo -> País -> Bioma -> Estado */}
-      <div className="absolute top-12 sm:top-14 left-1/2 transform -translate-x-1/2 z-[1200] pointer-events-auto w-full max-w-fit px-2 flex justify-center">
-        <HierarchicalTelemetryHUD
-          fireSpots={activeTemporalSpots}
-          onFlyToLocation={(center, zoom, label) => {
-            setTargetMapLocation({ center, zoom, trigger: Date.now() });
-          }}
-          onEnableNasaFirmsGlobal={() => {
-            setActiveOverlays(prev => ({ ...prev, nasaFirms: true }));
-          }}
-        />
-      </div>
+      {/* 5. HUD Tático Hierárquico Móvel: Mundo -> País -> Bioma -> Estado */}
+      <HierarchicalTelemetryHUD
+        fireSpots={activeTemporalSpots}
+        onFlyToLocation={(center, zoom, label) => {
+          setTargetMapLocation({ center, zoom, trigger: Date.now() });
+        }}
+        onEnableNasaFirmsGlobal={() => {
+          setActiveOverlays(prev => ({ ...prev, nasaFirms: true }));
+        }}
+      />
 
       {/* 6. Barra e Painel Avançado para Modo Histórico & Intervalo de Meses */}
       {temporalMode === 'historical' && (

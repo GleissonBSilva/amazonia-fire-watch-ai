@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Globe, ChevronDown, Radio, Flame, Sparkles, Navigation } from 'lucide-react';
+import { Rnd } from 'react-rnd';
+import { Globe, ChevronDown, GripHorizontal, RotateCcw } from 'lucide-react';
 import { FireSpot } from '../types';
 
 export const TOTAL_GLOBAL_FIRES_COUNT = 85870;
@@ -52,6 +53,10 @@ const BRAZIL_STATES: Record<string, { center: [number, number]; zoom: number; na
   'MS': { center: [-20.7, -54.8], zoom: 6, name: 'Mato Grosso do Sul', uf: 'MS' },
 };
 
+const CARD_WIDTH = 195;
+const CARD_HEIGHT = 100;
+const CARD_GAP = 12;
+
 export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> = ({
   fireSpots,
   onFlyToLocation,
@@ -63,18 +68,55 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
 
   const [openDropdown, setOpenDropdown] = useState<'country' | 'biome' | 'state' | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Fecha dropdowns se clicar fora
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
+  // Posições móveis salvas para cada um dos 4 cards
+  const getInitialPos = (cardIndex: number, storageKey: string) => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
       }
+    } catch {}
+
+    const totalWidth = 4 * CARD_WIDTH + 3 * CARD_GAP;
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const startX = Math.max(12, Math.round((screenW - totalWidth) / 2));
+    return {
+      x: startX + cardIndex * (CARD_WIDTH + CARD_GAP),
+      y: 54,
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  };
+
+  const [posMundo, setPosMundo] = useState<{ x: number; y: number }>(() => getInitialPos(0, 'afw_hud_pos_mundo'));
+  const [posPais, setPosPais] = useState<{ x: number; y: number }>(() => getInitialPos(1, 'afw_hud_pos_pais'));
+  const [posBioma, setPosBioma] = useState<{ x: number; y: number }>(() => getInitialPos(2, 'afw_hud_pos_bioma'));
+  const [posEstado, setPosEstado] = useState<{ x: number; y: number }>(() => getInitialPos(3, 'afw_hud_pos_estado'));
+
+  // Resetar posições para alinhamento padrão no topo
+  const handleResetPositions = () => {
+    const totalWidth = 4 * CARD_WIDTH + 3 * CARD_GAP;
+    const screenW = window.innerWidth;
+    const startX = Math.max(12, Math.round((screenW - totalWidth) / 2));
+
+    const p0 = { x: startX, y: 54 };
+    const p1 = { x: startX + (CARD_WIDTH + CARD_GAP), y: 54 };
+    const p2 = { x: startX + 2 * (CARD_WIDTH + CARD_GAP), y: 54 };
+    const p3 = { x: startX + 3 * (CARD_WIDTH + CARD_GAP), y: 54 };
+
+    setPosMundo(p0);
+    setPosPais(p1);
+    setPosBioma(p2);
+    setPosEstado(p3);
+
+    try {
+      localStorage.setItem('afw_hud_pos_mundo', JSON.stringify(p0));
+      localStorage.setItem('afw_hud_pos_pais', JSON.stringify(p1));
+      localStorage.setItem('afw_hud_pos_bioma', JSON.stringify(p2));
+      localStorage.setItem('afw_hud_pos_estado', JSON.stringify(p3));
+    } catch {}
+  };
 
   // 1. Contagens dinâmicas por País
   const countryCounts = useMemo(() => {
@@ -88,7 +130,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
 
   const countryCount = countryCounts[selectedCountry] || 0;
 
-  // 2. Contagens dinâmicas por Bioma (para o país selecionado)
+  // 2. Contagens dinâmicas por Bioma
   const biomeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     const filtered = fireSpots.filter(s => {
@@ -105,7 +147,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
 
   const biomeCount = biomeCounts[selectedBiome] || 0;
 
-  // 3. Contagens dinâmicas por Estado / UF
+  // 3. Contagens dinâmicas por Estado
   const stateCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     const filtered = fireSpots.filter(s => {
@@ -122,7 +164,6 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
 
   const stateCount = stateCounts[selectedState] || 0;
 
-  // Lista ordenada de Países presentes
   const availableCountries = useMemo(() => {
     const list = Object.keys(countryCounts).filter(c => countryCounts[c] > 0);
     list.sort((a, b) => {
@@ -133,7 +174,6 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
     return list;
   }, [countryCounts]);
 
-  // Lista ordenada de Biomas
   const availableBiomes = useMemo(() => {
     if (selectedCountry === 'Brasil') {
       return Object.keys(BRAZIL_BIOMES);
@@ -141,7 +181,6 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
     return Object.keys(biomeCounts).filter(b => biomeCounts[b] > 0);
   }, [selectedCountry, biomeCounts]);
 
-  // Lista ordenada de Estados
   const availableStates = useMemo(() => {
     if (selectedCountry === 'Brasil') {
       const ufs = Object.keys(BRAZIL_STATES);
@@ -201,238 +240,323 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
   };
 
   return (
-    <div
-      ref={containerRef}
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => e.stopPropagation()}
-      className="flex items-center justify-center gap-2 sm:gap-3.5 font-mono select-none pointer-events-auto max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar py-1.5 px-2"
-    >
-      
-      {/* ================= CARD 1: 🌐 MUNDO (RELÓGIO DIGITAL CIANO) ================= */}
-      <div
-        onClick={handleSelectWorld}
-        className="relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 border-cyan-500/70 hover:border-cyan-400 rounded-2xl p-3 shadow-[0_12px_40px_rgba(6,182,212,0.4)] cursor-pointer transition-all hover:scale-105 group shrink-0"
-        title="Nível 1: Visão Global Planetária (NASA FIRMS 24h)"
-      >
-        <div className="flex items-center justify-between border-b border-cyan-900/80 pb-1.5">
-          <span className="text-[10px] font-black tracking-widest uppercase text-cyan-300 flex items-center gap-1.5 whitespace-nowrap">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            1. MUNDO
-          </span>
-          <Globe size={14} className="text-cyan-400 group-hover:rotate-45 transition-transform shrink-0" />
-        </div>
-
-        {/* Mostrador Digital LED */}
-        <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-cyan-950 flex items-baseline justify-between">
-          <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-300 tracking-wider drop-shadow-[0_0_15px_rgba(6,182,212,0.8)] whitespace-nowrap">
-            {TOTAL_GLOBAL_FIRES_COUNT.toLocaleString('pt-BR')}
-          </span>
-          <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider ml-1">focos</span>
-        </div>
-
-        <div className="flex items-center justify-between text-[10px] text-cyan-300 font-bold bg-cyan-950/80 px-2 py-1 rounded-lg border border-cyan-800/80 whitespace-nowrap">
-          <span>NASA 360°</span>
-          <span className="text-[9px] text-cyan-400/80 uppercase">PLANETA</span>
-        </div>
+    <>
+      {/* Botão sutil de Alinhar HUD caso os cards sejam espalhados */}
+      <div className="fixed top-1.5 right-48 z-[1300] hidden xl:block pointer-events-auto font-mono">
+        <button
+          onClick={handleResetPositions}
+          className="h-7 px-2 py-0.5 rounded-md text-[10px] bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 flex items-center gap-1 transition shadow cursor-pointer"
+          title="Alinhar os 4 Relógios Digitais no topo do mapa"
+        >
+          <RotateCcw size={11} className="text-slate-400" />
+          <span>Alinhar HUD</span>
+        </button>
       </div>
 
-      {/* ================= CARD 2: 🇧🇷 PAÍS (RELÓGIO DIGITAL VERDE ESMERALDA) ================= */}
-      <div className="relative shrink-0">
+      {/* =========================================================================
+          NÍVEL 1 MÓVEL: 🌐 MUNDO (RELÓGIO DIGITAL CIANO)
+          ========================================================================= */}
+      <Rnd
+        position={{ x: posMundo.x, y: posMundo.y }}
+        size={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+        enableResizing={false}
+        bounds="window"
+        dragHandleClassName="hud-drag-handle-mundo"
+        className="z-[1250] pointer-events-auto select-none"
+        onDragStop={(_e, d) => {
+          const next = { x: d.x, y: d.y };
+          setPosMundo(next);
+          try { localStorage.setItem('afw_hud_pos_mundo', JSON.stringify(next)); } catch {}
+        }}
+      >
         <div
-          onClick={() => setOpenDropdown(prev => (prev === 'country' ? null : 'country'))}
-          className={`relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 group ${
-            openDropdown === 'country'
-              ? 'border-emerald-400 shadow-[0_12px_40px_rgba(16,185,129,0.55)]'
-              : 'border-emerald-500/70 hover:border-emerald-400 shadow-[0_12px_40px_rgba(16,185,129,0.4)]'
-          }`}
-          title="Nível 2: Alternar País monitorado"
+          onClick={handleSelectWorld}
+          className="w-full h-full flex flex-col justify-between bg-slate-950/95 backdrop-blur-2xl border-2 border-cyan-500/70 hover:border-cyan-400 rounded-2xl p-2.5 shadow-[0_15px_45px_rgba(6,182,212,0.4)] cursor-pointer transition-shadow"
+          title="Nível 1: MUNDO (Clique para Visão Global • Arraste pelo topo para mover)"
         >
-          <div className="flex items-center justify-between border-b border-emerald-900/80 pb-1.5">
-            <span className="text-[10px] font-black tracking-widest uppercase text-emerald-300 flex items-center gap-1.5 whitespace-nowrap">
+          {/* Barra Superior de Arraste (Drag Handle) */}
+          <div className="hud-drag-handle-mundo flex items-center justify-between border-b border-cyan-900/80 pb-1 cursor-grab active:cursor-grabbing">
+            <span className="text-[9.5px] font-black tracking-widest uppercase text-cyan-300 flex items-center gap-1.5 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              1. MUNDO
+            </span>
+            <div className="flex items-center gap-1 text-cyan-400/80">
+              <Globe size={13} />
+              <GripHorizontal size={12} className="opacity-60" />
+            </div>
+          </div>
+
+          {/* Mostrador Digital LED */}
+          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-0.5 border border-cyan-950 flex items-baseline justify-between">
+            <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-300 tracking-wider drop-shadow-[0_0_15px_rgba(6,182,212,0.8)] whitespace-nowrap">
+              {TOTAL_GLOBAL_FIRES_COUNT.toLocaleString('pt-BR')}
+            </span>
+            <span className="text-[8.5px] font-bold text-cyan-400 uppercase tracking-wider ml-1">focos</span>
+          </div>
+
+          <div className="flex items-center justify-between text-[9.5px] text-cyan-300 font-bold bg-cyan-950/80 px-2 py-0.5 rounded-lg border border-cyan-800/80 whitespace-nowrap">
+            <span>NASA 360°</span>
+            <span className="text-[8.5px] text-cyan-400/80 uppercase">PLANETA</span>
+          </div>
+        </div>
+      </Rnd>
+
+      {/* =========================================================================
+          NÍVEL 2 MÓVEL: 🇧🇷 PAÍS (RELÓGIO DIGITAL VERDE ESMERALDA)
+          ========================================================================= */}
+      <Rnd
+        position={{ x: posPais.x, y: posPais.y }}
+        size={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+        enableResizing={false}
+        bounds="window"
+        dragHandleClassName="hud-drag-handle-pais"
+        className="z-[1250] pointer-events-auto select-none"
+        onDragStop={(_e, d) => {
+          const next = { x: d.x, y: d.y };
+          setPosPais(next);
+          try { localStorage.setItem('afw_hud_pos_pais', JSON.stringify(next)); } catch {}
+        }}
+      >
+        <div className="relative w-full h-full flex flex-col justify-between bg-slate-950/95 backdrop-blur-2xl border-2 border-emerald-500/70 hover:border-emerald-400 rounded-2xl p-2.5 shadow-[0_15px_45px_rgba(16,185,129,0.4)]">
+          {/* Barra Superior de Arraste (Drag Handle) */}
+          <div className="hud-drag-handle-pais flex items-center justify-between border-b border-emerald-900/80 pb-1 cursor-grab active:cursor-grabbing">
+            <span className="text-[9.5px] font-black tracking-widest uppercase text-emerald-300 flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               2. PAÍS
             </span>
-            <span className="text-sm shrink-0">{COUNTRY_METADATA[selectedCountry]?.flag || '🇧🇷'}</span>
+            <div className="flex items-center gap-1 text-emerald-400/80">
+              <span className="text-xs">{COUNTRY_METADATA[selectedCountry]?.flag || '🇧🇷'}</span>
+              <GripHorizontal size={12} className="opacity-60" />
+            </div>
           </div>
 
           {/* Mostrador Digital LED */}
-          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-emerald-950 flex items-baseline justify-between">
+          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-0.5 border border-emerald-950 flex items-baseline justify-between">
             <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-300 tracking-wider drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] whitespace-nowrap">
               {countryCount.toLocaleString('pt-BR')}
             </span>
-            <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider ml-1">focos</span>
+            <span className="text-[8.5px] font-bold text-emerald-400 uppercase tracking-wider ml-1">focos</span>
           </div>
 
-          <div className="flex items-center justify-between text-[10px] text-emerald-200 font-bold bg-emerald-950/80 px-2 py-1 rounded-lg border border-emerald-800/80 whitespace-nowrap gap-1">
-            <span className="truncate max-w-[130px]">{selectedCountry}</span>
+          {/* Seletor Dropdown de País */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenDropdown(prev => (prev === 'country' ? null : 'country'));
+            }}
+            className="flex items-center justify-between text-[9.5px] text-emerald-200 font-bold bg-emerald-950/80 hover:bg-emerald-900 px-2 py-0.5 rounded-lg border border-emerald-800/80 whitespace-nowrap gap-1 cursor-pointer transition"
+          >
+            <span className="truncate max-w-[125px]">{selectedCountry}</span>
             <ChevronDown size={12} className={`text-emerald-400 transition-transform shrink-0 ${openDropdown === 'country' ? 'rotate-180' : ''}`} />
-          </div>
-        </div>
+          </button>
 
-        {/* Dropdown de Países Flutuante com z-index Máximo */}
-        {openDropdown === 'country' && (
-          <div className="absolute top-full left-0 mt-2.5 w-60 max-h-72 overflow-y-auto bg-slate-950 border-2 border-emerald-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3000] backdrop-blur-2xl">
-            <div className="px-2.5 py-1 text-[9.5px] text-emerald-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
-              <span>Selecione o País</span>
-              <span>Focos</span>
+          {/* Dropdown Flutuante */}
+          {openDropdown === 'country' && (
+            <div
+              onMouseDown={(e) => e.stopPropagation()}
+              className="absolute top-full left-0 mt-2 w-60 max-h-72 overflow-y-auto bg-slate-950 border-2 border-emerald-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3500] backdrop-blur-2xl"
+            >
+              <div className="px-2 py-1 text-[9px] text-emerald-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
+                <span>Selecione o País</span>
+                <span>Focos</span>
+              </div>
+              {availableCountries.map(c => (
+                <button
+                  key={c}
+                  onClick={(e) => handleSelectCountry(c, e)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
+                    selectedCountry === c ? 'bg-emerald-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="text-sm shrink-0">{COUNTRY_METADATA[c]?.flag || '🏳️'}</span>
+                    <span className="truncate font-medium">{c}</span>
+                  </div>
+                  <span className="text-xs font-mono font-black text-emerald-400 shrink-0 ml-2">
+                    {countryCounts[c]}
+                  </span>
+                </button>
+              ))}
             </div>
-            {availableCountries.map(c => (
-              <button
-                key={c}
-                onClick={(e) => handleSelectCountry(c, e)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
-                  selectedCountry === c ? 'bg-emerald-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <span className="text-base shrink-0">{COUNTRY_METADATA[c]?.flag || '🏳️'}</span>
-                  <span className="truncate font-medium">{c}</span>
-                </div>
-                <span className="text-xs font-mono font-black text-emerald-400 shrink-0 ml-2">
-                  {countryCounts[c]}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </Rnd>
 
-      {/* ================= CARD 3: 🌲 BIOMA (RELÓGIO DIGITAL ÂMBAR / DOURADO) ================= */}
-      <div className="relative shrink-0">
-        <div
-          onClick={() => setOpenDropdown(prev => (prev === 'biome' ? null : 'biome'))}
-          className={`relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 group ${
-            openDropdown === 'biome'
-              ? 'border-amber-400 shadow-[0_12px_40px_rgba(245,158,11,0.55)]'
-              : 'border-amber-500/70 hover:border-amber-400 shadow-[0_12px_40px_rgba(245,158,11,0.4)]'
-          }`}
-          title="Nível 3: Alternar Bioma / Região Ecológica"
-        >
-          <div className="flex items-center justify-between border-b border-amber-900/80 pb-1.5">
-            <span className="text-[10px] font-black tracking-widest uppercase text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
+      {/* =========================================================================
+          NÍVEL 3 MÓVEL: 🌲 BIOMA (RELÓGIO DIGITAL ÂMBAR / DOURADO)
+          ========================================================================= */}
+      <Rnd
+        position={{ x: posBioma.x, y: posBioma.y }}
+        size={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+        enableResizing={false}
+        bounds="window"
+        dragHandleClassName="hud-drag-handle-bioma"
+        className="z-[1250] pointer-events-auto select-none"
+        onDragStop={(_e, d) => {
+          const next = { x: d.x, y: d.y };
+          setPosBioma(next);
+          try { localStorage.setItem('afw_hud_pos_bioma', JSON.stringify(next)); } catch {}
+        }}
+      >
+        <div className="relative w-full h-full flex flex-col justify-between bg-slate-950/95 backdrop-blur-2xl border-2 border-amber-500/70 hover:border-amber-400 rounded-2xl p-2.5 shadow-[0_15px_45px_rgba(245,158,11,0.4)]">
+          {/* Barra Superior de Arraste (Drag Handle) */}
+          <div className="hud-drag-handle-bioma flex items-center justify-between border-b border-amber-900/80 pb-1 cursor-grab active:cursor-grabbing">
+            <span className="text-[9.5px] font-black tracking-widest uppercase text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
               3. BIOMA
             </span>
-            <span className="text-sm shrink-0">{BRAZIL_BIOMES[selectedBiome]?.icon || '🌲'}</span>
+            <div className="flex items-center gap-1 text-amber-400/80">
+              <span className="text-xs">{BRAZIL_BIOMES[selectedBiome]?.icon || '🌲'}</span>
+              <GripHorizontal size={12} className="opacity-60" />
+            </div>
           </div>
 
           {/* Mostrador Digital LED */}
-          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-amber-950 flex items-baseline justify-between">
+          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-0.5 border border-amber-950 flex items-baseline justify-between">
             <span className="text-2xl sm:text-3xl font-black font-mono text-amber-300 tracking-wider drop-shadow-[0_0_15px_rgba(245,158,11,0.8)] whitespace-nowrap">
               {biomeCount.toLocaleString('pt-BR')}
             </span>
-            <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider ml-1">focos</span>
+            <span className="text-[8.5px] font-bold text-amber-400 uppercase tracking-wider ml-1">focos</span>
           </div>
 
-          <div className="flex items-center justify-between text-[10px] text-amber-200 font-bold bg-amber-950/80 px-2 py-1 rounded-lg border border-amber-800/80 whitespace-nowrap gap-1">
-            <span className="truncate max-w-[130px]">{selectedBiome}</span>
+          {/* Seletor Dropdown de Bioma */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenDropdown(prev => (prev === 'biome' ? null : 'biome'));
+            }}
+            className="flex items-center justify-between text-[9.5px] text-amber-200 font-bold bg-amber-950/80 hover:bg-amber-900 px-2 py-0.5 rounded-lg border border-amber-800/80 whitespace-nowrap gap-1 cursor-pointer transition"
+          >
+            <span className="truncate max-w-[125px]">{selectedBiome}</span>
             <ChevronDown size={12} className={`text-amber-400 transition-transform shrink-0 ${openDropdown === 'biome' ? 'rotate-180' : ''}`} />
-          </div>
-        </div>
+          </button>
 
-        {/* Dropdown de Biomas Flutuante com z-index Máximo */}
-        {openDropdown === 'biome' && (
-          <div className="absolute top-full left-0 mt-2.5 w-56 max-h-68 overflow-y-auto bg-slate-950 border-2 border-amber-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3000] backdrop-blur-2xl">
-            <div className="px-2.5 py-1 text-[9.5px] text-amber-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
-              <span>Biomas &amp; Regiões</span>
-              <span>Focos</span>
+          {/* Dropdown Flutuante */}
+          {openDropdown === 'biome' && (
+            <div
+              onMouseDown={(e) => e.stopPropagation()}
+              className="absolute top-full left-0 mt-2 w-56 max-h-68 overflow-y-auto bg-slate-950 border-2 border-amber-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3500] backdrop-blur-2xl"
+            >
+              <div className="px-2 py-1 text-[9px] text-amber-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
+                <span>Biomas &amp; Regiões</span>
+                <span>Focos</span>
+              </div>
+              {availableBiomes.map(b => (
+                <button
+                  key={b}
+                  onClick={(e) => handleSelectBiome(b, e)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
+                    selectedBiome === b ? 'bg-amber-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="text-sm shrink-0">{BRAZIL_BIOMES[b]?.icon || '🌲'}</span>
+                    <span className="truncate font-medium">{b}</span>
+                  </div>
+                  <span className="text-xs font-mono font-black text-amber-400 shrink-0 ml-2">
+                    {biomeCounts[b] || 0}
+                  </span>
+                </button>
+              ))}
             </div>
-            {availableBiomes.map(b => (
-              <button
-                key={b}
-                onClick={(e) => handleSelectBiome(b, e)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
-                  selectedBiome === b ? 'bg-amber-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <span className="text-base shrink-0">{BRAZIL_BIOMES[b]?.icon || '🌲'}</span>
-                  <span className="truncate font-medium">{b}</span>
-                </div>
-                <span className="text-xs font-mono font-black text-amber-400 shrink-0 ml-2">
-                  {biomeCounts[b] || 0}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </Rnd>
 
-      {/* ================= CARD 4: 📍 ESTADO (RELÓGIO DIGITAL VERMELHO NEON) ================= */}
-      <div className="relative shrink-0">
-        <div
-          onClick={() => setOpenDropdown(prev => (prev === 'state' ? null : 'state'))}
-          className={`relative flex flex-col justify-between min-w-[160px] sm:min-w-[195px] h-auto min-h-[96px] bg-slate-950/95 backdrop-blur-2xl border-2 rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 group ${
-            openDropdown === 'state'
-              ? 'border-red-400 shadow-[0_12px_40px_rgba(239,68,68,0.55)]'
-              : 'border-red-500/70 hover:border-red-400 shadow-[0_12px_40px_rgba(239,68,68,0.4)]'
-          }`}
-          title="Nível 4: Alternar Estado da Federação (AM, PA, etc.)"
-        >
-          <div className="flex items-center justify-between border-b border-red-900/80 pb-1.5">
-            <span className="text-[10px] font-black tracking-widest uppercase text-red-300 flex items-center gap-1.5 whitespace-nowrap">
+      {/* =========================================================================
+          NÍVEL 4 MÓVEL: 📍 ESTADO (RELÓGIO DIGITAL VERMELHO NEON)
+          ========================================================================= */}
+      <Rnd
+        position={{ x: posEstado.x, y: posEstado.y }}
+        size={{ width: CARD_WIDTH, height: CARD_HEIGHT }}
+        enableResizing={false}
+        bounds="window"
+        dragHandleClassName="hud-drag-handle-estado"
+        className="z-[1250] pointer-events-auto select-none"
+        onDragStop={(_e, d) => {
+          const next = { x: d.x, y: d.y };
+          setPosEstado(next);
+          try { localStorage.setItem('afw_hud_pos_estado', JSON.stringify(next)); } catch {}
+        }}
+      >
+        <div className="relative w-full h-full flex flex-col justify-between bg-slate-950/95 backdrop-blur-2xl border-2 border-red-500/70 hover:border-red-400 rounded-2xl p-2.5 shadow-[0_15px_45px_rgba(239,68,68,0.4)]">
+          {/* Barra Superior de Arraste (Drag Handle) */}
+          <div className="hud-drag-handle-estado flex items-center justify-between border-b border-red-900/80 pb-1 cursor-grab active:cursor-grabbing">
+            <span className="text-[9.5px] font-black tracking-widest uppercase text-red-300 flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
               4. ESTADO
             </span>
-            <span className="text-[11px] font-black text-red-400 bg-red-950/60 px-1.5 py-0.2 rounded border border-red-800/60 shrink-0">
-              {selectedState}
-            </span>
+            <div className="flex items-center gap-1 text-red-400">
+              <span className="text-[10px] font-black bg-red-950/80 px-1 py-0.2 rounded border border-red-800/80">{selectedState}</span>
+              <GripHorizontal size={12} className="opacity-60" />
+            </div>
           </div>
 
           {/* Mostrador Digital LED */}
-          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-1.5 border border-red-950 flex items-baseline justify-between">
+          <div className="bg-slate-900/80 rounded-lg px-2.5 py-1 my-0.5 border border-red-950 flex items-baseline justify-between">
             <span className="text-2xl sm:text-3xl font-black font-mono text-red-300 tracking-wider drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] whitespace-nowrap">
               {stateCount.toLocaleString('pt-BR')}
             </span>
-            <span className="text-[9px] font-bold text-red-400 uppercase tracking-wider ml-1">focos</span>
+            <span className="text-[8.5px] font-bold text-red-400 uppercase tracking-wider ml-1">focos</span>
           </div>
 
-          <div className="flex items-center justify-between text-[10px] text-red-200 font-bold bg-red-950/80 px-2 py-1 rounded-lg border border-red-800/80 whitespace-nowrap gap-1">
-            <span className="truncate max-w-[130px]">
+          {/* Seletor Dropdown de Estado */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenDropdown(prev => (prev === 'state' ? null : 'state'));
+            }}
+            className="flex items-center justify-between text-[9.5px] text-red-200 font-bold bg-red-950/80 hover:bg-red-900 px-2 py-0.5 rounded-lg border border-red-800/80 whitespace-nowrap gap-1 cursor-pointer transition"
+          >
+            <span className="truncate max-w-[125px]">
               {BRAZIL_STATES[selectedState]?.name.split(' (')[0] || selectedState}
             </span>
             <ChevronDown size={12} className={`text-red-400 transition-transform shrink-0 ${openDropdown === 'state' ? 'rotate-180' : ''}`} />
-          </div>
-        </div>
+          </button>
 
-        {/* Dropdown de Estados Flutuante com z-index Máximo */}
-        {openDropdown === 'state' && (
-          <div className="absolute top-full right-0 mt-2.5 w-68 max-h-72 overflow-y-auto bg-slate-950 border-2 border-red-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3000] backdrop-blur-2xl">
-            <div className="px-2.5 py-1 text-[9.5px] text-red-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
-              <span>Estados (UFs)</span>
-              <span>Focos</span>
+          {/* Dropdown Flutuante */}
+          {openDropdown === 'state' && (
+            <div
+              onMouseDown={(e) => e.stopPropagation()}
+              className="absolute top-full right-0 mt-2 w-64 max-h-72 overflow-y-auto bg-slate-950 border-2 border-red-500 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-2 z-[3500] backdrop-blur-2xl"
+            >
+              <div className="px-2 py-1 text-[9px] text-red-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
+                <span>Estados (UFs)</span>
+                <span>Focos</span>
+              </div>
+              {availableStates.map(st => {
+                const meta = BRAZIL_STATES[st] || { name: st, uf: st };
+                return (
+                  <button
+                    key={st}
+                    onClick={(e) => handleSelectState(st, e)}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
+                      selectedState === st ? 'bg-red-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="w-7 font-black text-white shrink-0 text-[11px] bg-slate-900 px-1 py-0.2 rounded text-center border border-slate-700">
+                        {meta.uf}
+                      </span>
+                      <span className="truncate text-slate-200 font-medium">
+                        {meta.name.split(' (')[0]}
+                      </span>
+                    </div>
+                    <span className={`text-xs font-mono font-black shrink-0 ml-2 ${
+                      (stateCounts[st] || 0) > 50 ? 'text-red-400' : 'text-amber-400'
+                    }`}>
+                      {stateCounts[st] || 0}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            {availableStates.map(st => {
-              const meta = BRAZIL_STATES[st] || { name: st, uf: st };
-              return (
-                <button
-                  key={st}
-                  onClick={(e) => handleSelectState(st, e)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition cursor-pointer my-0.5 ${
-                    selectedState === st ? 'bg-red-600 text-white font-bold shadow' : 'hover:bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <span className="w-8 font-black text-white shrink-0 text-xs bg-slate-900 px-1 py-0.5 rounded text-center border border-slate-700">
-                      {meta.uf}
-                    </span>
-                    <span className="truncate text-slate-200 font-medium">
-                      {meta.name.split(' (')[0]}
-                    </span>
-                  </div>
-                  <span className={`text-xs font-mono font-black shrink-0 ml-2 ${
-                    (stateCounts[st] || 0) > 50 ? 'text-red-400' : 'text-amber-400'
-                  }`}>
-                    {stateCounts[st] || 0}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-    </div>
+          )}
+        </div>
+      </Rnd>
+    </>
   );
 };
