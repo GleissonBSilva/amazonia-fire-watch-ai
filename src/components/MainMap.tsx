@@ -1665,7 +1665,7 @@ export const MainMap: React.FC<MainMapProps> = React.memo(({
               onClick={() => onToggleEditGeofence && onToggleEditGeofence()}
               className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-950 cursor-pointer transition transform hover:scale-105 active:scale-95"
             >
-              <span>💾 Salvar e Sair</span>
+              <span>💾 Salvar e Fechar</span>
             </button>
             {onClearGeofence && (
               <button

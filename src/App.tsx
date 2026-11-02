@@ -1220,7 +1220,7 @@ const AppContent: React.FC = () => {
               }`}
               title={isEditingGeofence ? 'Salvar alterações e sair do modo de ajuste da ROI' : 'Habilitar alças para mover e dimensionar a ROI'}
             >
-              {isEditingGeofence ? <span>💾 Salvar e Sair</span> : <span>✏️ Ajustar ROI</span>}
+              {isEditingGeofence ? <span>💾 Salvar e Fechar</span> : <span>✏️ Ajustar ROI</span>}
             </button>
 
             {/* Controles de Dimensionamento X, Y e Escala */}

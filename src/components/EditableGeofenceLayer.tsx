@@ -55,7 +55,7 @@ const createVertexIcon = (index: number) => {
   });
 };
 
-// 2. Alça Central de Movimentação da ROI
+// 2a. Alça Central de Movimentação da ROI
 const createCenterMoveIcon = () => {
   return L.divIcon({
     className: 'geofence-center-icon-container',
@@ -80,11 +80,46 @@ const createCenterMoveIcon = () => {
         letter-spacing: 0.5px;
       " onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
         <span style="font-size: 15px;">✋</span>
-        <span>ARRASTAR ROI</span>
+        <span>ARRASTAR CERCA</span>
       </div>
     `,
     iconSize: [154, 38],
-    iconAnchor: [77, 19],
+    iconAnchor: [77, -6],
+  });
+};
+
+// 2b. Botão Central de Salvar e Fechar Diretamente na Cerca
+const createSaveCloseIcon = () => {
+  return L.divIcon({
+    className: 'geofence-save-close-icon-container',
+    html: `
+      <div style="
+        width: 170px;
+        height: 38px;
+        background: linear-gradient(135deg, #059669, #10b981);
+        border: 2px solid #ffffff;
+        border-radius: 19px;
+        box-shadow: 0 0 24px rgba(16, 185, 129, 0.98), 0 4px 14px rgba(0, 0, 0, 0.85);
+        color: #ffffff;
+        font-size: 11.5px;
+        font-weight: 900;
+        font-family: monospace;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        user-select: none;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        transition: transform 0.12s ease;
+      " onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+        <span style="font-size: 14px;">💾</span>
+        <span>SALVAR E FECHAR</span>
+      </div>
+    `,
+    iconSize: [170, 38],
+    iconAnchor: [85, 44],
   });
 };
 
@@ -405,6 +440,15 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
     } catch {}
   };
 
+  // Salvar alterações e fechar o modo de edição
+  const handleSaveAndClose = async () => {
+    await handleCommit();
+    if (onToggleEdit) {
+      onToggleEdit();
+    }
+    map.closePopup();
+  };
+
   // Escala rápida pelos botões
   const handleScaleXY = (factorX: number, factorY: number) => {
     const scaled = scalePolygonXY(polygonRef.current, factorX, factorY);
@@ -532,14 +576,14 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
             <div className="flex flex-col gap-1.5">
               <button
                 type="button"
-                onClick={() => onToggleEdit && onToggleEdit()}
-                className={`w-full py-1.5 px-2 rounded font-bold text-[11px] text-center cursor-pointer transition shadow flex items-center justify-center gap-1.5 ${
+                onClick={isEditing ? handleSaveAndClose : () => onToggleEdit && onToggleEdit()}
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs text-center cursor-pointer transition shadow flex items-center justify-center gap-1.5 ${
                   isEditing
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-300 shadow-emerald-950'
                     : 'bg-cyan-700 hover:bg-cyan-600 text-white'
                 }`}
               >
-                {isEditing ? '💾 Salvar e Sair da Edição' : '✏️ Ajustar / Mover ROI'}
+                <span>{isEditing ? '💾 Salvar e Fechar' : '✏️ Ajustar / Mover ROI'}</span>
               </button>
 
               <div className="space-y-1 pt-1 border-t border-slate-200">
@@ -589,6 +633,17 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                   </div>
                 </div>
 
+                {/* Botão Secundário de Salvar e Fechar no Rodapé dos Ajustes */}
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleSaveAndClose}
+                    className="w-full mt-1.5 py-2 px-3 rounded-lg font-black text-xs text-center cursor-pointer transition shadow-md flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400"
+                  >
+                    <span>💾 Salvar e Fechar</span>
+                  </button>
+                )}
+
                 {/* Excluir Cerca Inteira */}
                 {onDeleteGeofence && (
                   <button
@@ -608,17 +663,32 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
       {/* 2. ALÇAS INTERATIVAS (VISÍVEIS APENAS NO MODO EDIÇÃO) */}
       {isEditing && (
         <>
+          {/* Botão Salvar e Fechar Diretamente no Centro da Cerca */}
+          <Marker
+            position={centroid}
+            icon={createSaveCloseIcon()}
+            eventHandlers={{
+              click: handleSaveAndClose,
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -28]} opacity={0.95}>
+              <span className="font-mono text-[10.5px] font-bold text-emerald-950 bg-white px-2 py-0.5 rounded shadow border border-emerald-400">
+                💾 Clique para Salvar e Fechar a edição da cerca
+              </span>
+            </Tooltip>
+          </Marker>
+
           {/* Alça Central de Translação (Mover a cerca completa) */}
-        <Marker
-          position={centroid}
-          draggable={true}
-          icon={createCenterMoveIcon()}
-          eventHandlers={{
-            dragstart: handleCenterDragStart,
-            drag: handleCenterDrag,
-            dragend: handleCommit,
-          }}
-        >
+          <Marker
+            position={centroid}
+            draggable={true}
+            icon={createCenterMoveIcon()}
+            eventHandlers={{
+              dragstart: handleCenterDragStart,
+              drag: handleCenterDrag,
+              dragend: handleCommit,
+            }}
+          >
           <Tooltip direction="top" offset={[0, -15]} opacity={0.95}>
             <span className="font-mono text-[10.5px] font-bold">
               ✋ Segure e arraste aqui para mover a ROI inteira
