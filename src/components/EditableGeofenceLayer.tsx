@@ -9,7 +9,6 @@ import {
   calculatePolygonAreaKm2,
   getPolygonCentroid,
   translatePolygon,
-  scalePolygon,
   scalePolygonXY,
   getPolygonDimensionsKm,
   addVertexAtMidpoint,
@@ -25,151 +24,159 @@ interface EditableGeofenceLayerProps {
   onDeleteGeofence?: () => void;
 }
 
-// Custom Leaflet DivIcon para as alças de vértices (dimensionamento livre)
+// 1. Alças de Vértices Numeradas (Dimensionamento livre por vértice)
 const createVertexIcon = (index: number) => {
   return L.divIcon({
     className: 'geofence-vertex-icon-container',
     html: `
       <div style="
-        width: 22px;
-        height: 22px;
+        width: 30px;
+        height: 30px;
         background: #0891b2;
-        border: 2px solid #00f0ff;
+        border: 2.5px solid #ffffff;
         border-radius: 50%;
-        box-shadow: 0 0 12px #00f0ff, 0 0 20px rgba(0, 240, 255, 0.6);
+        box-shadow: 0 0 16px rgba(0, 240, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.8);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-size: 10px;
+        color: #ffffff;
+        font-size: 12px;
         font-weight: 900;
         font-family: monospace;
-        cursor: crosshair;
+        cursor: grab;
         user-select: none;
         transition: transform 0.15s ease;
-      " onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">
+      " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
         ${index}
       </div>
     `,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
   });
 };
 
-// Custom Leaflet DivIcon para o centroide (mover a cerca inteira)
+// 2. Alça Central de Movimentação (Mover toda a cerca virtual)
 const createCenterMoveIcon = () => {
   return L.divIcon({
     className: 'geofence-center-icon-container',
     html: `
       <div style="
-        padding: 5px 10px;
-        background: rgba(8, 145, 178, 0.95);
-        border: 2px solid #00f0ff;
-        border-radius: 8px;
-        box-shadow: 0 0 16px rgba(0, 240, 255, 0.8), 0 4px 12px rgba(0, 0, 0, 0.9);
+        width: 154px;
+        height: 40px;
+        background: linear-gradient(135deg, rgba(8, 145, 178, 0.96), rgba(6, 182, 212, 0.96));
+        border: 2.5px solid #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 0 22px rgba(0, 240, 255, 0.95), 0 4px 14px rgba(0, 0, 0, 0.85);
         color: #ffffff;
-        font-size: 10.5px;
+        font-size: 11px;
         font-weight: 900;
         font-family: monospace;
         display: flex;
         align-items: center;
-        gap: 5px;
+        justify-content: center;
+        gap: 6px;
         cursor: grab;
         user-select: none;
-        white-space: nowrap;
-        transform: translate(-50%, -50%);
-      " onmouseover="this.style.transform='translate(-50%, -50%) scale(1.1)'" onmouseout="this.style.transform='translate(-50%, -50%) scale(1)'">
-        <span style="font-size: 12px;">✋</span>
-        <span>MOVER CERCA</span>
+        letter-spacing: 0.5px;
+      " onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+        <span style="font-size: 16px;">✋</span>
+        <span>ARRASTAR CERCA</span>
       </div>
     `,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
+    iconSize: [154, 40],
+    iconAnchor: [77, 20],
   });
 };
 
-// Custom Leaflet DivIcon para alça de esticar Eixo X (Largura L-O)
+// 3. Alça do Eixo X (Largura Leste-Oeste)
 const createAxisXIcon = () => {
   return L.divIcon({
     className: 'geofence-axis-x-icon-container',
     html: `
       <div style="
-        padding: 3px 7px;
+        width: 112px;
+        height: 32px;
         background: #f59e0b;
         border: 2px solid #ffffff;
-        border-radius: 6px;
-        box-shadow: 0 0 12px #f59e0b;
-        color: #000;
-        font-size: 9px;
+        border-radius: 16px;
+        box-shadow: 0 0 16px rgba(245, 158, 11, 0.95), 0 2px 8px rgba(0, 0, 0, 0.7);
+        color: #000000;
+        font-size: 10px;
         font-weight: 900;
         font-family: monospace;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         cursor: ew-resize;
         user-select: none;
         white-space: nowrap;
-        transform: translate(-50%, -50%);
-      " title="Arraste para dimensionar o Eixo X (Largura)">
-        ↔️ EIXO X
+      " onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+        ↔️ LARGURA X
       </div>
     `,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
+    iconSize: [112, 32],
+    iconAnchor: [56, 16],
   });
 };
 
-// Custom Leaflet DivIcon para alça de esticar Eixo Y (Altura N-S)
+// 4. Alça do Eixo Y (Altura Norte-Sul)
 const createAxisYIcon = () => {
   return L.divIcon({
     className: 'geofence-axis-y-icon-container',
     html: `
       <div style="
-        padding: 3px 7px;
+        width: 112px;
+        height: 32px;
         background: #a855f7;
         border: 2px solid #ffffff;
-        border-radius: 6px;
-        box-shadow: 0 0 12px #a855f7;
+        border-radius: 16px;
+        box-shadow: 0 0 16px rgba(168, 85, 247, 0.95), 0 2px 8px rgba(0, 0, 0, 0.7);
         color: #ffffff;
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 900;
         font-family: monospace;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         cursor: ns-resize;
         user-select: none;
         white-space: nowrap;
-        transform: translate(-50%, -50%);
-      " title="Arraste para dimensionar o Eixo Y (Altura)">
-        ↕️ EIXO Y
+      " onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+        ↕️ ALTURA Y
       </div>
     `,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
+    iconSize: [112, 32],
+    iconAnchor: [56, 16],
   });
 };
 
-// Custom Leaflet DivIcon para botões de inserção de vértices no meio das arestas
+// 5. Botões de Adição de Vértices nas Arestas (Midpoints)
 const createMidpointIcon = () => {
   return L.divIcon({
     className: 'geofence-midpoint-icon-container',
     html: `
       <div style="
-        width: 16px;
-        height: 16px;
+        width: 22px;
+        height: 22px;
         background: #0284c7;
-        border: 1.5px solid #ffffff;
+        border: 2px solid #ffffff;
         border-radius: 50%;
-        box-shadow: 0 0 8px rgba(2, 132, 199, 0.8);
+        box-shadow: 0 0 10px rgba(2, 132, 199, 0.9);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-size: 11px;
-        font-weight: bold;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 900;
         cursor: pointer;
-        opacity: 0.85;
-      " title="Clique para adicionar vértice nesta aresta">
+        opacity: 0.9;
+        transition: transform 0.15s ease;
+      " onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Clique para adicionar vértice nesta aresta">
         +
       </div>
     `,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   });
 };
 
@@ -184,16 +191,23 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
     normalizeGeofenceToPolygon(geofence)
   );
 
-  const prevCentroidRef = useRef<[number, number]>(getPolygonCentroid(polygon));
+  // Referência contínua do polígono para evitar stale closures em eventos de drag a 60 FPS
+  const polygonRef = useRef<[number, number][]>(polygon);
+  polygonRef.current = polygon;
+
+  // Snapshots de início de arrasto (Zero jitter e zero distorção acumulada)
+  const dragStartCenterRef = useRef<{ lat: number; lng: number; polygon: [number, number][] } | null>(null);
+  const dragStartAxisRef = useRef<{ polygon: [number, number][]; centroid: [number, number]; halfWidth: number; halfHeight: number } | null>(null);
+
   const [placeInfo, setPlaceInfo] = useState<ReverseGeocodingResult | null>(null);
 
-  // Sincroniza com as props externas quando a geofence mudar
+  // Sincroniza quando a geofence mudar externamente
   useEffect(() => {
     const normalized = normalizeGeofenceToPolygon(geofence);
     setPolygon(normalized);
-    const c = getPolygonCentroid(normalized);
-    prevCentroidRef.current = c;
+    polygonRef.current = normalized;
 
+    const c = getPolygonCentroid(normalized);
     reverseGeocode(c[0], c[1])
       .then((res) => setPlaceInfo(res))
       .catch(() => {});
@@ -205,65 +219,111 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
   const bbox = getPolygonBoundingBox(polygon);
   const dimensions = getPolygonDimensionsKm(polygon);
 
-  // Posições das alças de eixo X (Leste) e eixo Y (Norte)
+  // Posições das alças dos eixos X (Leste) e Y (Norte)
   const midLat = (bbox[0][0] + bbox[1][0]) / 2;
   const midLng = (bbox[0][1] + bbox[1][1]) / 2;
   const axisXPosition: [number, number] = [midLat, bbox[1][1]];
   const axisYPosition: [number, number] = [bbox[1][0], midLng];
 
-  // Manipulador de arrasto de vértice individual (Dimensionamento livre)
-  const handleVertexDrag = (index: number, newLat: number, newLng: number) => {
-    const updated = [...polygon];
-    updated[index] = [newLat, newLng];
-    setPolygon(updated);
-    prevCentroidRef.current = getPolygonCentroid(updated);
+  // -------------------------------------------------------------
+  // MANIPULADORES DE ARRASTO COM SNAPSHOTS (FÍSICA SUAVE SEM JITTER)
+  // -------------------------------------------------------------
+
+  // 1. Mover toda a cerca (Centroide)
+  const handleCenterDragStart = (e: any) => {
+    const latLng = e.target.getLatLng();
+    dragStartCenterRef.current = {
+      lat: latLng.lat,
+      lng: latLng.lng,
+      polygon: [...polygonRef.current],
+    };
   };
 
-  // Manipulador de arrasto do centroide (Mover toda a cerca)
-  const handleCenterDrag = (newLat: number, newLng: number) => {
-    const [oldLat, oldLng] = prevCentroidRef.current;
-    const deltaLat = newLat - oldLat;
-    const deltaLng = newLng - oldLng;
-
-    const shifted = translatePolygon(polygon, deltaLat, deltaLng);
+  const handleCenterDrag = (e: any) => {
+    if (!dragStartCenterRef.current) return;
+    const current = e.target.getLatLng();
+    const deltaLat = current.lat - dragStartCenterRef.current.lat;
+    const deltaLng = current.lng - dragStartCenterRef.current.lng;
+    const shifted = translatePolygon(dragStartCenterRef.current.polygon, deltaLat, deltaLng);
     setPolygon(shifted);
-    prevCentroidRef.current = [newLat, newLng];
   };
 
-  // Manipulador de arrasto da alça do Eixo X (Alonga ou encolhe a largura horizontal)
-  const handleAxisXDrag = (newLng: number) => {
-    const currentHalfWidth = Math.abs(bbox[1][1] - centroid[1]);
-    const targetHalfWidth = Math.abs(newLng - centroid[1]);
-    if (currentHalfWidth > 0.0001 && targetHalfWidth > 0.0001) {
-      const factorX = targetHalfWidth / currentHalfWidth;
-      const scaled = scalePolygonXY(polygon, factorX, 1.0);
+  // 2. Mover vértice individual (Dimensionamento livre)
+  const handleVertexDrag = (index: number, e: any) => {
+    const latLng = e.target.getLatLng();
+    setPolygon((prev) => {
+      const updated = [...prev];
+      updated[index] = [latLng.lat, latLng.lng];
+      return updated;
+    });
+  };
+
+  // 3. Esticar / Encolher Eixo X (Largura)
+  const handleAxisXDragStart = () => {
+    const c = getPolygonCentroid(polygonRef.current);
+    const bb = getPolygonBoundingBox(polygonRef.current);
+    dragStartAxisRef.current = {
+      polygon: [...polygonRef.current],
+      centroid: c,
+      halfWidth: Math.abs(bb[1][1] - c[1]),
+      halfHeight: Math.abs(bb[1][0] - c[0]),
+    };
+  };
+
+  const handleAxisXDrag = (e: any) => {
+    if (!dragStartAxisRef.current) return;
+    const { polygon: startPoly, centroid: c, halfWidth } = dragStartAxisRef.current;
+    const currentLng = e.target.getLatLng().lng;
+    const targetHalfWidth = Math.abs(currentLng - c[1]);
+    if (halfWidth > 0.0001 && targetHalfWidth > 0.0001) {
+      const factorX = targetHalfWidth / halfWidth;
+      const scaled = scalePolygonXY(startPoly, factorX, 1.0);
       setPolygon(scaled);
     }
   };
 
-  // Manipulador de arrasto da alça do Eixo Y (Alonga ou encolhe a altura vertical)
-  const handleAxisYDrag = (newLat: number) => {
-    const currentHalfHeight = Math.abs(bbox[1][0] - centroid[0]);
-    const targetHalfHeight = Math.abs(newLat - centroid[0]);
-    if (currentHalfHeight > 0.0001 && targetHalfHeight > 0.0001) {
-      const factorY = targetHalfHeight / currentHalfHeight;
-      const scaled = scalePolygonXY(polygon, 1.0, factorY);
+  // 4. Esticar / Encolher Eixo Y (Altura)
+  const handleAxisYDragStart = () => {
+    const c = getPolygonCentroid(polygonRef.current);
+    const bb = getPolygonBoundingBox(polygonRef.current);
+    dragStartAxisRef.current = {
+      polygon: [...polygonRef.current],
+      centroid: c,
+      halfWidth: Math.abs(bb[1][1] - c[1]),
+      halfHeight: Math.abs(bb[1][0] - c[0]),
+    };
+  };
+
+  const handleAxisYDrag = (e: any) => {
+    if (!dragStartAxisRef.current) return;
+    const { polygon: startPoly, centroid: c, halfHeight } = dragStartAxisRef.current;
+    const currentLat = e.target.getLatLng().lat;
+    const targetHalfHeight = Math.abs(currentLat - c[0]);
+    if (halfHeight > 0.0001 && targetHalfHeight > 0.0001) {
+      const factorY = targetHalfHeight / halfHeight;
+      const scaled = scalePolygonXY(startPoly, 1.0, factorY);
       setPolygon(scaled);
     }
   };
 
-  // Comita as alterações, calcula a nova área e enriquece com dados precisos do lugar
+  // 5. Salvar e Enriquecer com dados precisos do local
   const handleCommit = async () => {
-    const newAreaKm2 = calculatePolygonAreaKm2(polygon);
-    const newBounds = getPolygonBoundingBox(polygon);
-    const c = getPolygonCentroid(polygon);
+    dragStartCenterRef.current = null;
+    dragStartAxisRef.current = null;
+
+    const currentPoly = polygonRef.current;
+    const newAreaKm2 = calculatePolygonAreaKm2(currentPoly);
+    const newBounds = getPolygonBoundingBox(currentPoly);
+    const c = getPolygonCentroid(currentPoly);
 
     let updated: ActiveGeofenceState = {
       ...geofence,
-      polygon,
+      polygon: currentPoly,
       bounds: newBounds,
       areaKm2: newAreaKm2,
     };
+
+    onUpdateGeofence(updated);
 
     try {
       const rev = await reverseGeocode(c[0], c[1]);
@@ -276,7 +336,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
         ? `${land.property_name} (${rev.city || 'AM'})`
         : `${rev.city} - ${rev.state}`;
 
-      updated = {
+      const fullyEnriched: ActiveGeofenceState = {
         ...updated,
         name: placeLabel,
         address: rev.fullAddress,
@@ -288,15 +348,16 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
         landPropertyName: land.property_name,
         carReceipt: land.car_receipt,
       };
-    } catch {}
 
-    onUpdateGeofence(updated);
+      onUpdateGeofence(fullyEnriched);
+    } catch {}
   };
 
-  // Escala independente nos eixos X e Y
+  // Escala independente nos eixos X e Y pelos botões de clique
   const handleScaleXY = (factorX: number, factorY: number) => {
-    const scaled = scalePolygonXY(polygon, factorX, factorY);
+    const scaled = scalePolygonXY(polygonRef.current, factorX, factorY);
     setPolygon(scaled);
+    polygonRef.current = scaled;
     const newAreaKm2 = calculatePolygonAreaKm2(scaled);
     const newBounds = getPolygonBoundingBox(scaled);
 
@@ -308,10 +369,11 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
     });
   };
 
-  // Inserção de novo vértice
+  // Inserção de novo vértice no midpoint
   const handleAddVertex = (midpointIndex: number) => {
-    const withVertex = addVertexAtMidpoint(polygon, midpointIndex);
+    const withVertex = addVertexAtMidpoint(polygonRef.current, midpointIndex);
     setPolygon(withVertex);
+    polygonRef.current = withVertex;
     const newAreaKm2 = calculatePolygonAreaKm2(withVertex);
     const newBounds = getPolygonBoundingBox(withVertex);
 
@@ -325,9 +387,10 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
 
   // Remoção de vértice
   const handleRemoveVertex = (vertexIndex: number) => {
-    if (polygon.length <= 3) return;
-    const withoutVertex = removeVertex(polygon, vertexIndex);
+    if (polygonRef.current.length <= 3) return;
+    const withoutVertex = removeVertex(polygonRef.current, vertexIndex);
     setPolygon(withoutVertex);
+    polygonRef.current = withoutVertex;
     const newAreaKm2 = calculatePolygonAreaKm2(withoutVertex);
     const newBounds = getPolygonBoundingBox(withoutVertex);
 
@@ -341,19 +404,32 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
 
   return (
     <>
-      {/* 1. POLÍGONO DA CERCA VIRTUAL (NEON CIANO) */}
+      {/* 1. POLÍGONO DA CERCA VIRTUAL (NEON CIANO COM INTERAÇÃO DE CLIQUE) */}
       <Polygon
         positions={polygon}
         pathOptions={{
           color: isEditing ? '#00f0ff' : '#06b6d4',
           fillColor: '#0891b2',
-          fillOpacity: isEditing ? 0.28 : 0.16,
+          fillOpacity: isEditing ? 0.32 : 0.18,
           weight: isEditing ? 3.5 : 2.5,
           dashArray: isEditing ? '4, 4' : '8, 6',
         }}
+        eventHandlers={{
+          click: () => {
+            if (!isEditing && onToggleEdit) {
+              onToggleEdit();
+            }
+          },
+        }}
       >
+        <Tooltip direction="center" permanent={false} opacity={0.95}>
+          <div className="font-mono text-[10px] font-bold text-cyan-950 bg-white/95 px-2 py-0.5 rounded shadow-lg border border-cyan-400">
+            {isEditing ? '✏️ Modo Edição Ativo (Arraste as alças)' : '🔒 Clique para Mover / Dimensionar Cerca'}
+          </div>
+        </Tooltip>
+
         <Popup>
-          <div className="font-mono text-xs text-slate-900 min-w-[260px]">
+          <div className="font-mono text-xs text-slate-900 min-w-[270px]">
             <div className="font-bold text-cyan-800 text-[12px] flex items-center justify-between border-b pb-1 mb-1.5">
               <span className="truncate">🔒 {geofence.name}</span>
             </div>
@@ -406,7 +482,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
               <button
                 type="button"
                 onClick={() => onToggleEdit && onToggleEdit()}
-                className="w-full py-1 px-2 rounded bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-[10.5px] text-center"
+                className="w-full py-1 px-2 rounded bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-[10.5px] text-center cursor-pointer transition shadow"
               >
                 {isEditing ? '✓ Concluir Edição' : '✏️ Mover / Dimensionar X, Y'}
               </button>
@@ -420,7 +496,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                       <button
                         type="button"
                         onClick={() => handleScaleXY(0.88, 1.0)}
-                        className="px-1 py-0.2 rounded bg-amber-200 hover:bg-amber-300 font-bold"
+                        className="px-1.5 py-0.5 rounded bg-amber-200 hover:bg-amber-300 font-bold cursor-pointer"
                         title="Reduzir largura horizontal em 12%"
                       >
                         -12%
@@ -428,7 +504,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                       <button
                         type="button"
                         onClick={() => handleScaleXY(1.12, 1.0)}
-                        className="px-1 py-0.2 rounded bg-amber-200 hover:bg-amber-300 font-bold"
+                        className="px-1.5 py-0.5 rounded bg-amber-200 hover:bg-amber-300 font-bold cursor-pointer"
                         title="Expandir largura horizontal em 12%"
                       >
                         +12%
@@ -443,7 +519,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                       <button
                         type="button"
                         onClick={() => handleScaleXY(1.0, 0.88)}
-                        className="px-1 py-0.2 rounded bg-purple-200 hover:bg-purple-300 font-bold text-purple-950"
+                        className="px-1.5 py-0.5 rounded bg-purple-200 hover:bg-purple-300 font-bold text-purple-950 cursor-pointer"
                         title="Reduzir altura vertical em 12%"
                       >
                         -12%
@@ -451,7 +527,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                       <button
                         type="button"
                         onClick={() => handleScaleXY(1.0, 1.12)}
-                        className="px-1 py-0.2 rounded bg-purple-200 hover:bg-purple-300 font-bold text-purple-950"
+                        className="px-1.5 py-0.5 rounded bg-purple-200 hover:bg-purple-300 font-bold text-purple-950 cursor-pointer"
                         title="Expandir altura vertical em 12%"
                       >
                         +12%
@@ -464,7 +540,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                     <button
                       type="button"
                       onClick={() => onDeleteGeofence()}
-                      className="w-full mt-1 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 text-[10px] font-bold transition flex items-center justify-center gap-1"
+                      className="w-full mt-1 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <span>🗑️ Excluir Cerca Virtual</span>
                     </button>
@@ -476,7 +552,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
         </Popup>
       </Polygon>
 
-      {/* 2. ALÇAS INTERATIVAS EM MODO DE EDIÇÃO */}
+      {/* 2. ALÇAS INTERATIVAS DE ALTA PRECISÃO (RENDERIZADAS EM MODO DE EDIÇÃO) */}
       {isEditing && (
         <>
           {/* Alça Central de Translação (Mover a cerca completa) */}
@@ -485,16 +561,14 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
             draggable={true}
             icon={createCenterMoveIcon()}
             eventHandlers={{
-              drag: (e: any) => {
-                const latLng = e.target.getLatLng();
-                handleCenterDrag(latLng.lat, latLng.lng);
-              },
+              dragstart: handleCenterDragStart,
+              drag: handleCenterDrag,
               dragend: handleCommit,
             }}
           >
             <Tooltip direction="top" offset={[0, -15]} opacity={0.95}>
-              <span className="font-mono text-[10px] font-bold">
-                ✋ Arraste para mover a cerca virtual completa
+              <span className="font-mono text-[10.5px] font-bold">
+                ✋ Clique e arraste aqui para mover a cerca inteira
               </span>
             </Tooltip>
           </Marker>
@@ -505,15 +579,13 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
             draggable={true}
             icon={createAxisXIcon()}
             eventHandlers={{
-              drag: (e: any) => {
-                const latLng = e.target.getLatLng();
-                handleAxisXDrag(latLng.lng);
-              },
+              dragstart: handleAxisXDragStart,
+              drag: handleAxisXDrag,
               dragend: handleCommit,
             }}
           >
             <Tooltip direction="right" offset={[10, 0]} opacity={0.9}>
-              <span className="font-mono text-[9px] font-bold">
+              <span className="font-mono text-[9.5px] font-bold">
                 ↔️ Puxe para esticar ou encolher a Largura (Eixo X)
               </span>
             </Tooltip>
@@ -525,21 +597,19 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
             draggable={true}
             icon={createAxisYIcon()}
             eventHandlers={{
-              drag: (e: any) => {
-                const latLng = e.target.getLatLng();
-                handleAxisYDrag(latLng.lat);
-              },
+              dragstart: handleAxisYDragStart,
+              drag: handleAxisYDrag,
               dragend: handleCommit,
             }}
           >
             <Tooltip direction="top" offset={[0, -10]} opacity={0.9}>
-              <span className="font-mono text-[9px] font-bold">
+              <span className="font-mono text-[9.5px] font-bold">
                 ↕️ Puxe para esticar ou encolher a Altura (Eixo Y)
               </span>
             </Tooltip>
           </Marker>
 
-          {/* Alças de Vértices Numeradas para Dimensionamento Livre e Formato */}
+          {/* Alças de Vértices Numeradas para Dimensionamento Livre */}
           {polygon.map((point, idx) => (
             <Marker
               key={`geofence-vertex-${idx}`}
@@ -547,15 +617,12 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
               draggable={true}
               icon={createVertexIcon(idx + 1)}
               eventHandlers={{
-                drag: (e: any) => {
-                  const latLng = e.target.getLatLng();
-                  handleVertexDrag(idx, latLng.lat, latLng.lng);
-                },
+                drag: (e: any) => handleVertexDrag(idx, e),
                 dragend: handleCommit,
               }}
             >
               <Popup>
-                <div className="font-mono text-xs text-slate-800 p-1 space-y-1.5 min-w-[150px]">
+                <div className="font-mono text-xs text-slate-800 p-1 space-y-1.5 min-w-[160px]">
                   <div className="font-bold text-[11px] border-b pb-0.5">
                     Vértice #{idx + 1}
                   </div>
@@ -567,7 +634,7 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveVertex(idx)}
-                      className="w-full py-0.5 px-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold text-[9.5px] transition"
+                      className="w-full py-0.5 px-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold text-[9.5px] transition cursor-pointer"
                     >
                       🗑️ Excluir Vértice #{idx + 1}
                     </button>
@@ -578,9 +645,9 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                   )}
                 </div>
               </Popup>
-              <Tooltip direction="top" offset={[0, -10]} opacity={0.9}>
-                <span className="font-mono text-[9px]">
-                  Vértice #{idx + 1} • Clique para excluir ou arraste para mover
+              <Tooltip direction="top" offset={[0, -12]} opacity={0.9}>
+                <span className="font-mono text-[9.5px] font-bold">
+                  Vértice #{idx + 1} • Arraste para mover ou clique para excluir
                 </span>
               </Tooltip>
             </Marker>
@@ -602,8 +669,8 @@ export const EditableGeofenceLayer: React.FC<EditableGeofenceLayerProps> = ({
                 }}
               >
                 <Tooltip direction="top" offset={[0, -8]} opacity={0.85}>
-                  <span className="font-mono text-[9px]">
-                    ➕ Adicionar Vértice entre #{idx + 1} e #{((idx + 1) % polygon.length) + 1}
+                  <span className="font-mono text-[9px] font-bold">
+                    ➕ Clique para adicionar vértice entre #{idx + 1} e #{((idx + 1) % polygon.length) + 1}
                   </span>
                 </Tooltip>
               </Marker>
