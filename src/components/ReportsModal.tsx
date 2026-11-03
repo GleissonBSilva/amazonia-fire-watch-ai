@@ -73,11 +73,56 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
           f.longitude <= maxLng
       );
     } else if (reportScope === 'amazonia') {
-      list = list.filter((f) => (f.biome?.toLowerCase() || '').includes('amazônia') || f.state === 'AM');
+      list = list.filter((f) => (f.biome?.toLowerCase() || '').includes('amazônia') || (['AM', 'PA', 'RO', 'AC', 'RR', 'AP', 'TO', 'MA', 'MT'].includes(f.state) && (f.is_brazil ?? true)));
+    } else if (reportScope === 'north_america') {
+      list = list.filter((f) =>
+        f.continent === 'América do Norte' ||
+        ['US', 'CA', 'MX'].includes(f.country_code || '') ||
+        f.country_name === 'Estados Unidos' ||
+        f.country_name === 'Canadá' ||
+        f.country_name === 'México'
+      );
+    } else if (reportScope === 'europe') {
+      list = list.filter((f) =>
+        f.continent === 'Europa' ||
+        ['ES', 'PT', 'FR', 'IT', 'GR', 'RU'].includes(f.country_code || '') ||
+        f.country_name === 'Espanha / Portugal' ||
+        f.country_name === 'Rússia (Sibéria)' ||
+        f.country_name === 'Europa'
+      );
+    } else if (reportScope === 'africa') {
+      list = list.filter((f) =>
+        f.continent === 'África' ||
+        ['MZ', 'AO', 'ZM', 'CD', 'NG', 'MG'].includes(f.country_code || '') ||
+        f.country_name === 'Moçambique' ||
+        f.country_name === 'Angola' ||
+        f.country_name === 'Zâmbia' ||
+        f.country_name === 'Nigéria' ||
+        f.country_name === 'Madagascar' ||
+        f.country_name === 'África Subsaariana' ||
+        f.country_name === 'África'
+      );
+    } else if (reportScope === 'asia') {
+      list = list.filter((f) =>
+        f.continent === 'Ásia' ||
+        ['CN', 'ID', 'IN', 'MM', 'TH'].includes(f.country_code || '') ||
+        f.country_name === 'China' ||
+        f.country_name === 'Indonésia' ||
+        f.country_name === 'Índia' ||
+        f.country_name === 'Ásia'
+      );
+    } else if (reportScope === 'oceania') {
+      list = list.filter((f) =>
+        f.continent === 'Oceania' ||
+        f.country_code === 'AU' ||
+        f.country_name === 'Austrália'
+      );
     }
 
     if (timeScope === 'recent') {
       list = list.filter((f) => (f.minutes_ago ?? 999) <= 180);
+    } else if (timeScope === '24h') {
+      list = list.filter((f) => (f.minutes_ago ?? 0) <= 1440);
     }
 
     return list;
@@ -386,6 +431,16 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
             >
               🇮🇩 Ásia
             </button>
+            <button
+              onClick={() => { setReportScope('oceania'); setSelectedMunicipalityName('all'); }}
+              className={`px-2 py-0.5 rounded text-[9.5px] font-bold transition cursor-pointer flex-shrink-0 ${
+                reportScope === 'oceania'
+                  ? 'bg-teal-600 text-white shadow'
+                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              🇦🇺 Oceania
+            </button>
             {selectedArea && (
               <button
                 onClick={() => { setReportScope('area'); setSelectedMunicipalityName('all'); }}
@@ -522,7 +577,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
                   Boletim de Inteligência de Incêndios
                 </span>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>{selectedMunicipalityName === 'all' ? (reportScope === 'amazonia' ? 'Bioma Amazônia e América do Sul' : reportScope === 'north_america' ? 'América do Norte (EUA / Canadá)' : reportScope === 'europe' ? 'Europa & Bacia do Mediterrâneo' : reportScope === 'africa' ? 'África Subsaariana & Bacia do Congo' : reportScope === 'asia' ? 'Ásia & Sudeste Asiático' : 'Monitoramento Planetário Completo (Globo 360°)') : currentMunicipalityDetail?.name}</span>
+                  <span>{selectedMunicipalityName === 'all' ? (reportScope === 'amazonia' ? 'Bioma Amazônia e América do Sul' : reportScope === 'north_america' ? 'América do Norte (EUA / Canadá)' : reportScope === 'europe' ? 'Europa & Bacia do Mediterrâneo' : reportScope === 'africa' ? 'África Subsaariana & Bacia do Congo' : reportScope === 'asia' ? 'Ásia & Sudeste Asiático' : reportScope === 'oceania' ? 'Oceania (Austrália & Pacífico)' : 'Monitoramento Planetário Completo (Globo 360°)') : currentMunicipalityDetail?.name}</span>
                   {selectedMunicipalityName !== 'all' && (
                     <span className="px-1.5 py-0.2 rounded text-[9px] bg-red-950 text-red-300 border border-red-700">
                       {currentMunicipalityDetail?.state} • {currentMunicipalityDetail?.biome}
