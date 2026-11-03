@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
 import { FireSpot, DelimitedArea } from '../types';
 import { isSupabaseConfigured } from '../services/supabaseClient';
@@ -48,7 +48,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
   selectedArea,
   onSelectLocation,
 }) => {
-  const [reportScope, setReportScope] = useState<'all' | 'amazonia' | 'north_america' | 'europe' | 'africa' | 'asia' | 'oceania' | 'area'>('all');
+  const [reportScope, setReportScope] = useState<'all' | 'brazil' | 'amazonia' | 'north_america' | 'europe' | 'africa' | 'asia' | 'oceania' | 'area'>('all');
   const [timeScope, setTimeScope] = useState<'24h' | 'recent' | 'all'>('24h');
   const [selectedMunicipalityName, setSelectedMunicipalityName] = useState<string>('all');
   const [searchTableQuery, setSearchTableQuery] = useState<string>('');
@@ -72,8 +72,10 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
           f.longitude >= minLng &&
           f.longitude <= maxLng
       );
+    } else if (reportScope === 'brazil') {
+      list = list.filter((f) => f.is_brazil || f.country_name === 'Brasil' || f.country_code === 'BR');
     } else if (reportScope === 'amazonia') {
-      list = list.filter((f) => (f.biome?.toLowerCase() || '').includes('amazônia') || (['AM', 'PA', 'RO', 'AC', 'RR', 'AP', 'TO', 'MA', 'MT'].includes(f.state) && (f.is_brazil ?? true)));
+      list = list.filter((f) => (f.biome?.toLowerCase() || '').includes('amazônia'));
     } else if (reportScope === 'north_america') {
       list = list.filter((f) =>
         f.continent === 'América do Norte' ||
@@ -128,27 +130,17 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
     return list;
   }, [fireSpots, reportScope, timeScope, selectedArea]);
 
-  // 2. Filtro específico por Município (se selecionado)
-  const reportFires = useMemo(() => {
-    if (selectedMunicipalityName === 'all') return baseScopedFires;
-    return baseScopedFires.filter(
-      (f) => `${f.municipality}_${f.state}` === selectedMunicipalityName || f.municipality === selectedMunicipalityName
-    );
-  }, [baseScopedFires, selectedMunicipalityName]);
-
-  // 3. Cálculo de emissões atmosféricas e consolidação dos dados municipais
-  const reportData = useMemo(() => {
-    return generateDetailedEmissionsReport(reportFires);
-  }, [reportFires]);
-
-  // Lista única de municípios para o dropdown seletor
+  // Lista única de municípios / regiões para o dropdown seletor
   const availableMunicipalities = useMemo(() => {
     const map = new Map<string, { label: string; count: number; state: string }>();
     baseScopedFires.forEach((f) => {
-      const key = `${f.municipality}_${f.state}`;
-      const label = `${f.municipality} - ${f.state}`;
+      const mun = f.municipality || f.country_name || 'Região';
+      const uf = f.state || f.country_code || 'BR';
+      const key = `${mun}_${uf}`;
+      const isBr = f.is_brazil || f.country_name === 'Brasil' || !f.country_name;
+      const label = isBr ? `${mun} - ${uf}` : `${mun} (${f.country_name || uf})`;
       if (!map.has(key)) {
-        map.set(key, { label, count: 0, state: f.state });
+        map.set(key, { label, count: 0, state: uf });
       }
       map.get(key)!.count += 1;
     });
@@ -156,6 +148,31 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
       .map(([key, item]) => ({ key, label: item.label, count: item.count, state: item.state }))
       .sort((a, b) => b.count - a.count);
   }, [baseScopedFires]);
+
+  // Reseta automaticamente para 'all' caso o município selecionado não exista no novo escopo
+  useEffect(() => {
+    if (selectedMunicipalityName !== 'all') {
+      const exists = availableMunicipalities.some((m) => m.key === selectedMunicipalityName);
+      if (!exists) {
+        setSelectedMunicipalityName('all');
+      }
+    }
+  }, [availableMunicipalities, selectedMunicipalityName]);
+
+  // 2. Filtro específico por Município (se selecionado)
+  const reportFires = useMemo(() => {
+    if (selectedMunicipalityName === 'all') return baseScopedFires;
+    return baseScopedFires.filter((f) => {
+      const mun = f.municipality || f.country_name || 'Região';
+      const uf = f.state || f.country_code || 'BR';
+      return `${mun}_${uf}` === selectedMunicipalityName || mun === selectedMunicipalityName;
+    });
+  }, [baseScopedFires, selectedMunicipalityName]);
+
+  // 3. Cálculo de emissões atmosféricas e consolidação dos dados municipais
+  const reportData = useMemo(() => {
+    return generateDetailedEmissionsReport(reportFires);
+  }, [reportFires]);
 
   // Município atualmente em foco na visualização detalhada
   const currentMunicipalityDetail = useMemo(() => {
@@ -382,14 +399,24 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
               🌐 Global
             </button>
             <button
-              onClick={() => { setReportScope('amazonia'); setSelectedMunicipalityName('all'); }}
+              onClick={() => { setReportScope('brazil'); setSelectedMunicipalityName('all'); }}
               className={`px-2 py-0.5 rounded text-[9.5px] font-bold transition cursor-pointer flex-shrink-0 ${
-                reportScope === 'amazonia'
+                reportScope === 'brazil'
                   ? 'bg-emerald-600 text-white shadow'
                   : 'bg-slate-950 text-emerald-400 hover:text-white border border-slate-800'
               }`}
             >
-              🇧🇷 Amazônia
+              🇧🇷 Brasil
+            </button>
+            <button
+              onClick={() => { setReportScope('amazonia'); setSelectedMunicipalityName('all'); }}
+              className={`px-2 py-0.5 rounded text-[9.5px] font-bold transition cursor-pointer flex-shrink-0 ${
+                reportScope === 'amazonia'
+                  ? 'bg-green-600 text-white shadow'
+                  : 'bg-slate-950 text-green-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              🌲 Amazônia
             </button>
             <button
               onClick={() => { setReportScope('north_america'); setSelectedMunicipalityName('all'); }}
@@ -577,7 +604,25 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
                   Boletim de Inteligência de Incêndios
                 </span>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>{selectedMunicipalityName === 'all' ? (reportScope === 'amazonia' ? 'Bioma Amazônia e América do Sul' : reportScope === 'north_america' ? 'América do Norte (EUA / Canadá)' : reportScope === 'europe' ? 'Europa & Bacia do Mediterrâneo' : reportScope === 'africa' ? 'África Subsaariana & Bacia do Congo' : reportScope === 'asia' ? 'Ásia & Sudeste Asiático' : reportScope === 'oceania' ? 'Oceania (Austrália & Pacífico)' : 'Monitoramento Planetário Completo (Globo 360°)') : currentMunicipalityDetail?.name}</span>
+                  <span>
+                    {selectedMunicipalityName === 'all'
+                      ? reportScope === 'brazil'
+                        ? 'Território Nacional do Brasil (Todos os Biomas)'
+                        : reportScope === 'amazonia'
+                        ? 'Bioma Amazônia e Bacia Amazônica'
+                        : reportScope === 'north_america'
+                        ? 'América do Norte (EUA / Canadá)'
+                        : reportScope === 'europe'
+                        ? 'Europa & Bacia do Mediterrâneo'
+                        : reportScope === 'africa'
+                        ? 'África Subsaariana & Bacia do Congo'
+                        : reportScope === 'asia'
+                        ? 'Ásia & Sudeste Asiático'
+                        : reportScope === 'oceania'
+                        ? 'Oceania (Austrália & Pacífico)'
+                        : 'Monitoramento Planetário Completo (Globo 360°)'
+                      : currentMunicipalityDetail?.name}
+                  </span>
                   {selectedMunicipalityName !== 'all' && (
                     <span className="px-1.5 py-0.2 rounded text-[9px] bg-red-950 text-red-300 border border-red-700">
                       {currentMunicipalityDetail?.state} • {currentMunicipalityDetail?.biome}
@@ -595,8 +640,16 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 shadow">
                 <span className="text-[9px] text-slate-400 block mb-0.5 font-bold">TOTAL DE FOCOS</span>
-                <span className="text-xl font-bold text-white tracking-tight">{reportData.totalSpots}</span>
-                <span className="text-[8.5px] text-slate-500 block mt-1">VIIRS 375m &amp; MODIS</span>
+                <span className="text-xl font-bold text-white tracking-tight">{reportData.totalSpots.toLocaleString('pt-BR')}</span>
+                <span className="text-[8.5px] text-slate-500 block mt-1 truncate">
+                  {reportScope === 'all'
+                    ? 'Ativos 24h (~85.870 no Globo)'
+                    : reportScope === 'brazil'
+                    ? 'Focos no Território Nacional'
+                    : reportScope === 'amazonia'
+                    ? 'Focos no Bioma Amazônia'
+                    : 'Focos no recorte territorial'}
+                </span>
               </div>
 
               <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 shadow">

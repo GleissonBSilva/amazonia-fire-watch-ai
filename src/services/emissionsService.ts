@@ -238,35 +238,35 @@ export function generateDetailedEmissionsReport(spots: FireSpot[]): AggregatedEm
       name: 'Dióxido de Carbono (CO₂)',
       key: 'CO2',
       valueTons: parseFloat(totalCo2.toFixed(1)),
-      percent: totalPollutantTons > 0 ? parseFloat(((totalCo2 / totalPollutantTons) * 100).toFixed(1)) : 93.5,
+      percent: totalPollutantTons > 0 ? parseFloat(((totalCo2 / totalPollutantTons) * 100).toFixed(1)) : 0,
       color: '#ef4444' // Vermelho
     },
     {
       name: 'Monóxido de Carbono (CO)',
       key: 'CO',
       valueTons: parseFloat(totalCo.toFixed(1)),
-      percent: totalPollutantTons > 0 ? parseFloat(((totalCo / totalPollutantTons) * 100).toFixed(1)) : 6.1,
+      percent: totalPollutantTons > 0 ? parseFloat(((totalCo / totalPollutantTons) * 100).toFixed(1)) : 0,
       color: '#f97316' // Laranja
     },
     {
       name: 'Metano (CH₄)',
       key: 'CH4',
       valueTons: parseFloat((totalCh4 / 1000).toFixed(2)),
-      percent: totalPollutantTons > 0 ? parseFloat((((totalCh4 / 1000) / totalPollutantTons) * 100).toFixed(2)) : 0.3,
+      percent: totalPollutantTons > 0 ? parseFloat((((totalCh4 / 1000) / totalPollutantTons) * 100).toFixed(2)) : 0,
       color: '#eab308' // Amarelo
     },
     {
       name: 'Particulados Finos (PM2.5)',
       key: 'PM2.5',
       valueTons: parseFloat((totalPm25 / 1000).toFixed(2)),
-      percent: totalPollutantTons > 0 ? parseFloat((((totalPm25 / 1000) / totalPollutantTons) * 100).toFixed(2)) : 0.5,
+      percent: totalPollutantTons > 0 ? parseFloat((((totalPm25 / 1000) / totalPollutantTons) * 100).toFixed(2)) : 0,
       color: '#a855f7' // Roxo
     },
     {
       name: 'Óxidos de Nitrogênio (NOx)',
       key: 'NOx',
       valueTons: parseFloat((totalNox / 1000).toFixed(2)),
-      percent: totalPollutantTons > 0 ? parseFloat((((totalNox / 1000) / totalPollutantTons) * 100).toFixed(2)) : 0.15,
+      percent: totalPollutantTons > 0 ? parseFloat((((totalNox / 1000) / totalPollutantTons) * 100).toFixed(2)) : 0,
       color: '#06b6d4' // Ciano
     }
   ];
