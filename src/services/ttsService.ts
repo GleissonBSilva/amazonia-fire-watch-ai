@@ -1,8 +1,11 @@
-// Serviço de Text-to-Speech (TTS) com suporte a voz neural de alta fidelidade
-// Prioriza o endpoint serverless /api/tts (OpenAI TTS) com fallback instantâneo para a Web Speech API nativa
+// Serviço de Text-to-Speech (TTS) Humanizado e Natural
+// Prioriza o áudio neural (MP3) do endpoint /api/tts (Google Neural / OpenAI TTS)
+// Fallback inteligente para vozes neurais de alta fidelidade da Web Speech API (Edge/Chrome/Windows)
+
+export type VoiceGender = 'feminina' | 'masculina';
 
 export interface TTSOptions {
-  voice?: 'onyx' | 'alloy' | 'nova' | string;
+  gender?: VoiceGender;
   speed?: number;
   onStart?: () => void;
   onEnd?: () => void;
@@ -13,15 +16,30 @@ class TTSService {
   private currentAudio: HTMLAudioElement | null = null;
   private isMutedState: boolean = false;
   private speaking: boolean = false;
+  private selectedGender: VoiceGender = 'feminina';
   private listeners: Set<(isSpeaking: boolean) => void> = new Set();
+  private cachedVoices: SpeechSynthesisVoice[] = [];
 
   constructor() {
     try {
-      const saved = localStorage.getItem('afw_tts_muted');
-      if (saved !== null) {
-        this.isMutedState = JSON.parse(saved);
+      const savedMute = localStorage.getItem('afw_tts_muted');
+      if (savedMute !== null) {
+        this.isMutedState = JSON.parse(savedMute);
+      }
+      const savedGender = localStorage.getItem('afw_tts_gender') as VoiceGender;
+      if (savedGender === 'feminina' || savedGender === 'masculina') {
+        this.selectedGender = savedGender;
       }
     } catch {}
+
+    // Pré-carrega vozes do navegador de forma assíncrona
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const loadVoices = () => {
+        this.cachedVoices = window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
   }
 
   public subscribe(listener: (isSpeaking: boolean) => void): () => void {
@@ -54,6 +72,17 @@ class TTSService {
     return this.isMutedState;
   }
 
+  public getGender(): VoiceGender {
+    return this.selectedGender;
+  }
+
+  public setGender(gender: VoiceGender): void {
+    this.selectedGender = gender;
+    try {
+      localStorage.setItem('afw_tts_gender', gender);
+    } catch {}
+  }
+
   public isSpeaking(): boolean {
     return this.speaking;
   }
@@ -78,21 +107,30 @@ class TTSService {
     this.stop();
     this.setSpeaking(true);
 
+    const gender = options.gender || this.selectedGender;
+
+    // Higienização semântica de pontuação e siglas para fala fluida
     const cleanText = text
       .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
       .replace(/[#*`_~]/g, '')
       .replace(/•/g, ', ')
       .replace(/https?:\/\/\S+/g, '')
+      .replace(/CBMAM/gi, 'Corpo de Bombeiros')
+      .replace(/ICMBio/gi, 'I C M Bio')
+      .replace(/PM2\.5/gi, 'partículas P M 2 ponto 5')
+      .replace(/AQI/gi, 'índice A Q I')
+      .replace(/FRP/gi, 'potência radiativa')
+      .replace(/MW/gi, 'Megawatts')
       .trim();
 
     try {
-      // 1. Tenta endpoint da Vercel (/api/tts)
+      // 1. Tenta endpoint /api/tts (Retorna áudio neural MP3 Google/OpenAI)
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: cleanText,
-          voice: options.voice || 'onyx',
+          voice: gender === 'masculina' ? 'onyx' : 'nova',
           speed: options.speed || 1.0,
         }),
       });
@@ -116,26 +154,27 @@ class TTSService {
         };
 
         audio.onerror = (e) => {
-          console.warn('Erro na reprodução do áudio da Vercel, usando fallback Web Speech:', e);
-          this.fallbackWebSpeech(cleanText, options);
+          console.warn('Erro ao reproduzir stream MP3, recorrendo à síntese local natural:', e);
+          this.fallbackWebSpeech(cleanText, gender, options);
         };
 
         await audio.play();
         return;
       }
 
-      // Se a API retornar JSON indicando fallback ou se falhar
-      this.fallbackWebSpeech(cleanText, options);
+      // Se retornou JSON instruindo síntese local
+      this.fallbackWebSpeech(cleanText, gender, options);
     } catch (err) {
-      console.warn('Falha na chamada /api/tts, usando Web Speech API local:', err);
-      this.fallbackWebSpeech(cleanText, options);
+      console.warn('Endpoint /api/tts inacessível, utilizando vozes neurais locais do sistema:', err);
+      this.fallbackWebSpeech(cleanText, gender, options);
     }
   }
 
-  private fallbackWebSpeech(text: string, options: TTSOptions): void {
+  // Fallback Inteligente: Filtra rigorosamente por vozes neurais humanas em português
+  private fallbackWebSpeech(text: string, gender: VoiceGender, options: TTSOptions): void {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       this.setSpeaking(false);
-      options.onError?.(new Error('Nenhum sintetizador de voz disponível neste navegador.'));
+      options.onError?.(new Error('Nenhum sintetizador de voz disponível.'));
       return;
     }
 
@@ -143,16 +182,34 @@ class TTSService {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'pt-BR';
-    utterance.rate = options.speed || 1.05;
-    utterance.pitch = 0.95; // Tom levemente mais sóbrio e militar
+    utterance.rate = 1.0; // Cadência humana normal
+    utterance.pitch = 1.0; // Entonação natural (evita pitch grave ou robótico)
 
-    // Procura por vozes em português de alta qualidade disponíveis no sistema
-    const voices = window.speechSynthesis.getVoices();
-    const ptVoice = voices.find((v) => v.lang === 'pt-BR' && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Neural')))
-      || voices.find((v) => v.lang.startsWith('pt'));
+    const voices = this.cachedVoices.length > 0 ? this.cachedVoices : window.speechSynthesis.getVoices();
 
-    if (ptVoice) {
-      utterance.voice = ptVoice;
+    // Prioriza vozes neurais / naturais conhecidas no Edge e Chrome:
+    // 1. Francisca Online (Natural) - Português (Brasil) -> Voz humana mais perfeita da Microsoft
+    // 2. Antonio Online (Natural) - Português (Brasil) -> Voz masculina natural
+    // 3. Google português do Brasil -> Muito limpa
+    // 4. Luciana / Maria Natural
+    let bestVoice: SpeechSynthesisVoice | undefined;
+
+    if (gender === 'masculina') {
+      bestVoice = voices.find((v) => v.lang.startsWith('pt') && (v.name.includes('Antonio') || v.name.includes('Felipe') || v.name.includes('Daniel') || (v.name.includes('Male') && v.name.includes('Natural'))))
+        || voices.find((v) => v.lang === 'pt-BR' && v.name.includes('Natural'))
+        || voices.find((v) => v.lang === 'pt-BR' && !v.name.toLowerCase().includes('desktop'));
+    } else {
+      bestVoice = voices.find((v) => v.lang.startsWith('pt') && (v.name.includes('Francisca') || v.name.includes('Thalita') || v.name.includes('Google') || (v.name.includes('Natural') && !v.name.includes('Antonio'))))
+        || voices.find((v) => v.lang === 'pt-BR' && v.name.includes('Natural'))
+        || voices.find((v) => v.lang === 'pt-BR' && !v.name.toLowerCase().includes('desktop'));
+    }
+
+    if (!bestVoice) {
+      bestVoice = voices.find((v) => v.lang.startsWith('pt')) || voices[0];
+    }
+
+    if (bestVoice) {
+      utterance.voice = bestVoice;
     }
 
     utterance.onstart = () => {
@@ -175,4 +232,3 @@ class TTSService {
 }
 
 export const ttsService = new TTSService();
-

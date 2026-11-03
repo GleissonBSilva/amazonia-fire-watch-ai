@@ -18,7 +18,7 @@ import {
   Square,
 } from 'lucide-react';
 import { ActiveGeofenceState, DelimitedArea } from '../types';
-import { ttsService } from '../services/ttsService';
+import { ttsService, VoiceGender } from '../services/ttsService';
 
 export interface AIAssistantPanelProps {
   fires?: any[];
@@ -82,6 +82,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [isTTSMuted, setIsTTSMuted] = useState(ttsService.isMuted());
+  const [voiceGender, setVoiceGender] = useState<VoiceGender>(ttsService.getGender());
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [activeSpeakingMsgId, setActiveSpeakingMsgId] = useState<string | null>(null);
   const [expandedTraceId, setExpandedTraceId] = useState<string | null>(null);
@@ -126,7 +127,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
     setActiveSpeakingMsgId(msgId);
     ttsService.speak(text, {
-      voice: 'onyx',
+      gender: voiceGender,
       onEnd: () => setActiveSpeakingMsgId(null),
       onError: () => setActiveSpeakingMsgId(null),
     });
@@ -295,6 +296,23 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
         {/* Controles de Voz, Memória e Janela */}
         <div className="flex items-center gap-1 shrink-0 text-slate-400">
+          {/* Seletor de Perfil de Voz Natural */}
+          {!isMinimizedLocal && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const next = voiceGender === 'feminina' ? 'masculina' : 'feminina';
+                setVoiceGender(next);
+                ttsService.setGender(next);
+              }}
+              className="px-1.5 py-0.5 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/80 text-[8.5px] font-bold transition cursor-pointer shrink-0"
+              title={`Alternar perfil vocal (Ativa: ${voiceGender === 'feminina' ? 'Voz Feminina Natural (Francisca/Nova)' : 'Voz Masculina Tática (Antonio/Onyx)'})`}
+            >
+              {voiceGender === 'feminina' ? '👩 Francisca' : '👨 Antonio'}
+            </button>
+          )}
+
           {/* Botão Text-to-Speech Mute/Unmute */}
           <button
             type="button"
@@ -362,6 +380,23 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
       {!isMinimizedLocal && (
         <div className="flex-1 flex flex-col p-2.5 overflow-hidden font-mono">
+          {/* BARRA DE STATUS DE REPRODUÇÃO DA VOZ NEURAL */}
+          {isSpeaking && (
+            <div className="mb-2 px-2.5 py-1 bg-emerald-950/90 border border-emerald-500/70 rounded-lg flex items-center justify-between text-[9.5px] text-emerald-300 shadow-md shrink-0 animate-fade-in">
+              <div className="flex items-center gap-1.5">
+                <Volume2 size={12} className="text-emerald-400 animate-pulse" />
+                <span className="font-bold">Narrando com voz neural natural ({voiceGender === 'feminina' ? 'Francisca' : 'Antonio'})...</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => ttsService.stop()}
+                className="px-2 py-0.5 rounded bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[8.5px] transition cursor-pointer"
+              >
+                Parar
+              </button>
+            </div>
+          )}
+
           {/* GEOFENCE ACTIVE STATUS BADGE */}
           {geofence && (
             <div className="mb-2 px-2 py-1 bg-cyan-950/80 border border-cyan-500/50 rounded flex flex-col gap-0.5 text-[10px] text-cyan-200 shrink-0 shadow-sm">
