@@ -54,7 +54,7 @@ const BRAZIL_STATES: Record<string, { center: [number, number]; zoom: number; na
 };
 
 const UNIFIED_HUD_WIDTH = 840;
-const UNIFIED_HUD_HEIGHT = 152;
+const UNIFIED_HUD_HEIGHT = 156;
 
 export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> = ({
   fireSpots,
@@ -68,6 +68,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
   const [openDropdown, setOpenDropdown] = useState<'country' | 'biome' | 'state' | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [rndKey, setRndKey] = useState<number>(0);
 
   // Posição inicial centralizada do painel unificado
   const getInitialPosition = () => {
@@ -102,10 +103,11 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
   // Resetar posição para o topo centralizado
   const handleResetPosition = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const screenW = window.innerWidth;
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
     const startX = Math.max(10, Math.round((screenW - UNIFIED_HUD_WIDTH) / 2));
     const centered = { x: startX, y: 52 };
     setHudPos(centered);
+    setRndKey(prev => prev + 1);
     try {
       localStorage.setItem('afw_hud_unified_pos', JSON.stringify(centered));
     } catch {}
@@ -234,12 +236,20 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
 
   return (
     <Rnd
-      position={{ x: hudPos.x, y: hudPos.y }}
+      key={rndKey}
+      default={{
+        x: hudPos.x,
+        y: hudPos.y,
+        width: UNIFIED_HUD_WIDTH,
+        height: UNIFIED_HUD_HEIGHT,
+      }}
       size={{ width: UNIFIED_HUD_WIDTH, height: UNIFIED_HUD_HEIGHT }}
       enableResizing={false}
       bounds="window"
       dragHandleClassName="unified-hud-drag-handle"
-      className="z-[1250] pointer-events-auto select-none"
+      cancel="button, select, input, .no-drag"
+      style={{ zIndex: 1250 }}
+      className="select-none pointer-events-auto"
       onDragStop={(_e, d) => {
         const next = { x: d.x, y: d.y };
         setHudPos(next);
@@ -250,29 +260,32 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
     >
       <div
         ref={containerRef}
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
         className="w-full h-full bg-slate-950/95 backdrop-blur-2xl border-2 border-slate-700/90 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-col justify-between font-mono"
       >
         
         {/* ================= BARRA DE TÍTULO UNIFICADA / DRAG HANDLE ================= */}
-        <div className="unified-hud-drag-handle flex items-center justify-between px-2 pb-1.5 border-b border-slate-800/80 cursor-grab active:cursor-grabbing text-slate-400">
-          <div className="flex items-center gap-2">
-            <GripHorizontal size={14} className="text-slate-500" />
-            <span className="text-[10px] font-black tracking-widest uppercase text-slate-300">
+        <div
+          className="unified-hud-drag-handle flex items-center justify-between px-3 py-1.5 border-b border-slate-800/90 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-t-xl cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-200 transition-colors select-none"
+          title="Clique e arraste aqui para posicionar o painel em qualquer local da tela"
+        >
+          <div className="flex items-center gap-2 pointer-events-none">
+            <GripHorizontal size={16} className="text-cyan-400" />
+            <span className="text-[10.5px] font-black tracking-widest uppercase text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">
               TELEMETRIA HIERÁRQUICA C2 (MUNDO &gt; PAÍS &gt; BIOMA &gt; ESTADO)
+            </span>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 hidden sm:inline-flex items-center gap-1.5 font-bold animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+              ARRASTE AQUI PARA MOVER
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-slate-500 hidden sm:inline">
-              Arraste para mover o painel
-            </span>
             <button
+              type="button"
               onClick={handleResetPosition}
-              className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700/80 text-[9px] flex items-center gap-1 transition cursor-pointer"
+              className="px-2 py-0.5 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600/80 text-[9.5px] font-bold flex items-center gap-1 transition cursor-pointer shadow"
               title="Centralizar painel no topo"
             >
-              <RotateCcw size={10} />
+              <RotateCcw size={11} className="text-cyan-400" />
               <span>Centralizar</span>
             </button>
           </div>
@@ -284,7 +297,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
           {/* ----- CARD 1: 🌐 MUNDO ----- */}
           <div
             onClick={handleSelectWorld}
-            className="flex-1 flex flex-col justify-between bg-slate-900/90 hover:bg-slate-900 border-2 border-cyan-500/70 hover:border-cyan-400 rounded-xl px-3 py-2 cursor-pointer transition-all shadow-[0_8px_20px_rgba(6,182,212,0.25)] group"
+            className="no-drag flex-1 flex flex-col justify-between bg-slate-900/90 hover:bg-slate-900 border-2 border-cyan-500/70 hover:border-cyan-400 rounded-xl px-3 py-2 cursor-pointer transition-all shadow-[0_8px_20px_rgba(6,182,212,0.25)] group"
             title="Nível 1: Visão Global Planetária (NASA FIRMS 24h)"
           >
             <div className="flex items-center justify-between border-b border-cyan-950 pb-1">
@@ -344,7 +357,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
             {openDropdown === 'country' && (
               <div
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute top-full left-0 mt-2 w-56 max-h-64 overflow-y-auto bg-slate-950 border-2 border-emerald-500 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-1.5 z-[3500] backdrop-blur-2xl"
+                className="no-drag absolute top-full left-0 mt-2 w-56 max-h-64 overflow-y-auto bg-slate-950 border-2 border-emerald-500 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-1.5 z-[3500] backdrop-blur-2xl"
               >
                 <div className="px-2 py-1 text-[9px] text-emerald-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
                   <span>Selecione o País</span>
@@ -406,7 +419,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
             {openDropdown === 'biome' && (
               <div
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute top-full left-0 mt-2 w-56 max-h-68 overflow-y-auto bg-slate-950 border-2 border-amber-500 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-1.5 z-[3500] backdrop-blur-2xl"
+                className="no-drag absolute top-full left-0 mt-2 w-56 max-h-68 overflow-y-auto bg-slate-950 border-2 border-amber-500 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-1.5 z-[3500] backdrop-blur-2xl"
               >
                 <div className="px-2 py-1 text-[9px] text-amber-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
                   <span>Biomas &amp; Regiões</span>
@@ -472,7 +485,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
             {openDropdown === 'state' && (
               <div
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute top-full right-0 mt-2 w-64 max-h-72 overflow-y-auto bg-slate-950 border-2 border-red-500 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-1.5 z-[3500] backdrop-blur-2xl"
+                className="no-drag absolute top-full right-0 mt-2 w-64 max-h-72 overflow-y-auto bg-slate-950 border-2 border-red-500 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] p-1.5 z-[3500] backdrop-blur-2xl"
               >
                 <div className="px-2 py-1 text-[9px] text-red-400 uppercase tracking-wider font-black border-b border-slate-800 mb-1 flex items-center justify-between">
                   <span>Estados (UFs)</span>
