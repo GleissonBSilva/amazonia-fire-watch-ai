@@ -68,7 +68,23 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
 
   // Emergency Infrastructure proximity calculation
   const infra = findNearestInfrastructure(spot.latitude, spot.longitude);
-  const airQuality = calculateAirQuality(spot.frp_mw, 0.8);
+  const airQuality = spot.aqi != null
+    ? {
+        aqi: spot.aqi,
+        pm25: spot.pm25 ?? 'N/A',
+        co_ppm: Number((spot.frp_mw * 0.08).toFixed(1)),
+        level: (spot.air_quality_level || 'MONITORADO') as any,
+        categoryNumber: spot.aqi > 300 ? 6 : spot.aqi > 200 ? 5 : spot.aqi > 150 ? 4 : spot.aqi > 100 ? 3 : spot.aqi > 50 ? 2 : 1,
+        color: spot.aqi > 300 ? '#7e22ce' : spot.aqi > 200 ? '#a855f7' : spot.aqi > 150 ? '#ef4444' : spot.aqi > 100 ? '#f97316' : spot.aqi > 50 ? '#eab308' : '#10b981',
+        badgeBg: spot.aqi > 150 ? 'bg-red-950/80' : spot.aqi > 50 ? 'bg-amber-950/80' : 'bg-emerald-950/80',
+        badgeText: spot.aqi > 150 ? 'text-red-300' : spot.aqi > 50 ? 'text-amber-300' : 'text-emerald-300',
+        badgeBorder: spot.aqi > 150 ? 'border-red-600' : spot.aqi > 50 ? 'border-amber-600' : 'border-emerald-600',
+        healthImpact: 'Qualidade do ar monitorada pelos sensores orbitais.',
+        operationalRecommendation: 'Acompanhar dispersão de fumaça via satélite.',
+        alertTriggered: spot.aqi > 50,
+        alertMessage: spot.aqi > 50 ? 'Alerta: concentração elevada de material particulado' : 'Qualidade do ar estável'
+      }
+    : calculateAirQuality(spot.frp_mw, 0.8);
   const aiClassification = React.useMemo(() => classifyFireAuthenticity(spot), [spot]);
 
   const handleQuickDispatch = async (e: React.MouseEvent) => {
@@ -82,7 +98,7 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
         lng: spot.longitude,
         areaSqKm: 1.45,
         criticidade: spot.frp_mw >= 40 ? 'CRÍTICA' : 'ALTA',
-        airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: airQuality.pm25 },
+        airQualityAlert: { aqi: airQuality.aqi, level: airQuality.level, pm25: Number(airQuality.pm25) || 0 },
         isSimulation,
       });
 
@@ -222,7 +238,7 @@ export const HoverPreviewCard: React.FC<HoverPreviewCardProps> = ({
 
             <div className="absolute inset-1.5 border border-emerald-400 bg-emerald-500/10 flex flex-col justify-between p-0.5">
               <span className="bg-emerald-950/90 text-emerald-300 text-[7.5px] font-bold px-1 py-0.2 self-start rounded border border-emerald-500/80">
-                CONF: {(spot.confidence * 100).toFixed(0)}%
+                CONF: {Math.round(spot.confidence <= 1 ? spot.confidence * 100 : spot.confidence)}%
               </span>
             </div>
           </div>
