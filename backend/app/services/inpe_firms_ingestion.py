@@ -107,10 +107,10 @@ def get_brazil_location(lat: float, lng: float):
     elif -18.3 <= lat <= -8.5 and -46.6 <= lng <= -37.3:
         biome = "Caatinga" if lat > -14.0 and lng > -43.0 else "Cerrado"
         return "BA", "Bahia", biome
+    elif -25.3 <= lat <= -19.8 and -53.1 <= lng <= -44.2 and (lng <= -46.5 or lat <= -22.5):
+        return "SP", "São Paulo", "Mata Atlântica"
     elif -22.9 <= lat <= -14.2 and -51.1 <= lng <= -39.8:
         return "MG", "Minas Gerais", "Cerrado" if lng < -45.0 else "Mata Atlântica"
-    elif -25.3 <= lat <= -19.7 and -53.1 <= lng <= -44.2:
-        return "SP", "São Paulo", "Mata Atlântica"
     elif -10.9 <= lat <= -2.7 and -45.9 <= lng <= -40.3:
         return "PI", "Piauí", "Caatinga"
     elif -7.9 <= lat <= -2.7 and -41.4 <= lng <= -37.2:

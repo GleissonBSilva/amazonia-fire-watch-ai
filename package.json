@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "node scripts/run_tests.cjs",
+    "test:backend": "python -m unittest backend/tests/test_backend.py",
+    "test:all": "npm test && npm run test:backend",
     "verify:supabase": "python scripts/verify_supabase.py"
   },
   "dependencies": {
