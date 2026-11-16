@@ -3,7 +3,7 @@ import { Rnd } from 'react-rnd';
 import { Globe, ChevronDown, GripHorizontal, RotateCcw } from 'lucide-react';
 import { FireSpot } from '../types';
 
-export const TOTAL_GLOBAL_FIRES_COUNT = 85870;
+export const TOTAL_GLOBAL_FIRES_COUNT = 0; // Mantido como fallback retrocompatível
 
 export interface HierarchicalTelemetryHUDProps {
   fireSpots: FireSpot[];
@@ -112,6 +112,9 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
       localStorage.setItem('afw_hud_unified_pos', JSON.stringify(centered));
     } catch {}
   };
+
+  // 0. Contagem dinâmica global (Mundo) a partir dos focos ativos na memória
+  const totalGlobalCount = useMemo(() => fireSpots.length, [fireSpots]);
 
   // 1. Contagens dinâmicas por País
   const countryCounts = useMemo(() => {
@@ -311,7 +314,7 @@ export const HierarchicalTelemetryHUD: React.FC<HierarchicalTelemetryHUDProps> =
             {/* Mostrador Digital LED */}
             <div className="bg-black/50 rounded-lg px-2 py-0.5 my-1 border border-cyan-950/80 flex items-baseline justify-between">
               <span className="text-2xl font-black font-mono text-cyan-300 tracking-wider drop-shadow-[0_0_12px_rgba(6,182,212,0.8)] whitespace-nowrap">
-                {TOTAL_GLOBAL_FIRES_COUNT.toLocaleString('pt-BR')}
+                {totalGlobalCount.toLocaleString('pt-BR')}
               </span>
               <span className="text-[8.5px] font-bold text-cyan-400 uppercase tracking-wider ml-1">focos</span>
             </div>

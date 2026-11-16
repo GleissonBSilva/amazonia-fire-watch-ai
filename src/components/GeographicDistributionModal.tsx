@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Globe, MapPin, Navigation, Flame, Eye, BarChart3, Radio, ArrowUpRight } from 'lucide-react';
 import { FireSpot } from '../types';
+import { getSpotContinent } from './FiresDrawer';
 
 export const BRAZILIAN_STATE_METADATA: Record<string, { center: [number, number]; zoom: number; name: string; region: string }> = {
   PA: { center: [-3.8, -52.5], zoom: 6, name: 'Pará', region: 'Norte' },
@@ -19,76 +20,65 @@ export const BRAZILIAN_STATE_METADATA: Record<string, { center: [number, number]
   MS: { center: [-20.7, -54.8], zoom: 6, name: 'Mato Grosso do Sul', region: 'Centro-Oeste' },
 };
 
-export const GLOBAL_CONTINENT_STATS = [
-  {
-    id: 'africa',
-    name: 'África Subsaariana',
-    flag: '🌍',
-    count: 52410,
-    pct: 61.0,
-    center: [-2.0, 24.0] as [number, number],
-    zoom: 4,
-    description: 'Bacia do Congo, Angola, Moçambique e Zâmbia (Queimadas sazonais de savana e agricultura)',
-    status: 'CRÍTICO PLANETÁRIO'
-  },
+export const GLOBAL_CONTINENT_BASE_METADATA = [
   {
     id: 'south_america',
     name: 'América do Sul',
+    matchName: 'América do Sul',
     flag: '🌎',
-    count: 18870,
-    pct: 22.0,
     center: [-15.0, -55.0] as [number, number],
     zoom: 4,
     description: 'Brasil (Amazônia/Cerrado), Bolívia (Chiquitania) e norte da Argentina (Gran Chaco)',
-    status: 'ALERTA MÁXIMO'
+  },
+  {
+    id: 'africa',
+    name: 'África Subsaariana',
+    matchName: 'África',
+    flag: '🌍',
+    center: [-2.0, 24.0] as [number, number],
+    zoom: 4,
+    description: 'Bacia do Congo, Angola, Moçambique e Zâmbia (Queimadas sazonais de savana e agricultura)',
   },
   {
     id: 'asia',
     name: 'Ásia & Sudeste Asiático',
+    matchName: 'Ásia',
     flag: '🌏',
-    count: 9120,
-    pct: 10.6,
     center: [15.0, 95.0] as [number, number],
     zoom: 4,
     description: 'Norte da Índia (restolho de arroz), Bornéu/Sumatra e leste da China',
-    status: 'MODERADO / ALTO'
   },
   {
     id: 'oceania',
     name: 'Oceania (Austrália)',
+    matchName: 'Oceania',
     flag: '🇦🇺',
-    count: 4210,
-    pct: 4.9,
     center: [-25.0, 134.0] as [number, number],
     zoom: 4,
     description: 'Território do Norte e Queensland (Início dos bushfires de primavera/verão)',
-    status: 'VIGILÂNCIA'
   },
   {
     id: 'north_america',
     name: 'América do Norte',
+    matchName: 'América do Norte',
     flag: '🇺🇸',
-    count: 1150,
-    pct: 1.3,
     center: [42.0, -100.0] as [number, number],
     zoom: 4,
     description: 'EUA e Canadá (Baixa atividade devido à transição de outono/inverno)',
-    status: 'NOMINAL'
   },
   {
     id: 'europe',
     name: 'Europa & Mediterrâneo',
+    matchName: 'Europa',
     flag: '🇪🇺',
-    count: 110,
-    pct: 0.2,
     center: [48.0, 15.0] as [number, number],
     zoom: 4,
     description: 'Península Ibérica e Mediterrâneo em período úmido/invernal',
-    status: 'MÍNIMO'
   },
 ];
 
-export const TOTAL_GLOBAL_FIRES_COUNT = 85870;
+export const TOTAL_GLOBAL_FIRES_COUNT = 0; // Mantido como fallback retrocompatível
+export const GLOBAL_CONTINENT_STATS = GLOBAL_CONTINENT_BASE_METADATA.map(c => ({ ...c, count: 0, pct: 0, status: 'NOMINAL' }));
 
 interface GeographicDistributionModalProps {
   isOpen: boolean;
@@ -120,6 +110,30 @@ export const GeographicDistributionModal: React.FC<GeographicDistributionModalPr
   }
 
   const sortedStates = Object.entries(stateCountsMap).sort((a, b) => b[1] - a[1]);
+
+  // Contagem dinâmica global e distribuição por continentes em tempo real
+  const totalGlobalCount = fireSpots.length;
+
+  const dynamicContinentStats = useMemo(() => {
+    const countsMap: Record<string, number> = {};
+    for (const s of fireSpots) {
+      const cont = getSpotContinent(s);
+      countsMap[cont] = (countsMap[cont] || 0) + 1;
+    }
+    const total = fireSpots.length > 0 ? fireSpots.length : 1;
+
+    return GLOBAL_CONTINENT_BASE_METADATA.map((cont) => {
+      const count = countsMap[cont.matchName] ?? countsMap[cont.name] ?? 0;
+      const pct = Math.round((count / total) * 1000) / 10;
+      const status = count > 1000 ? 'ALERTA MÁXIMO' : count > 200 ? 'MODERADO / ALTO' : count > 20 ? 'VIGILÂNCIA' : 'NOMINAL';
+      return {
+        ...cont,
+        count,
+        pct,
+        status: count > 0 ? status : 'MÍNIMO'
+      };
+    }).sort((a, b) => b.count - a.count);
+  }, [fireSpots]);
 
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/75 backdrop-blur-md p-3 sm:p-6 animate-fadeIn font-mono">
@@ -295,16 +309,16 @@ export const GeographicDistributionModal: React.FC<GeographicDistributionModalPr
               <div className="bg-cyan-950/30 p-3.5 rounded-xl border border-cyan-800/60 text-[11px] text-cyan-200 flex items-center justify-between">
                 <div>
                   <span className="font-bold text-white block text-xs">Cenário Planetário Global (24 Horas):</span>
-                  <span>A <strong>África Subsaariana</strong> lidera com mais de 60% dos focos do planeta. A <strong>América do Sul</strong> é a 2ª região com maior número de queimadas do mundo.</span>
+                  <span>Distribuição geográfica dos focos ativos consolidados pelos satélites em tempo real.</span>
                 </div>
                 <div className="text-right pl-3 shrink-0">
                   <span className="text-[10px] text-slate-400 uppercase block">Total no Mundo</span>
-                  <span className="text-xl font-black text-cyan-300">{TOTAL_GLOBAL_FIRES_COUNT.toLocaleString('pt-BR')}</span>
+                  <span className="text-xl font-black text-cyan-300">{totalGlobalCount.toLocaleString('pt-BR')}</span>
                 </div>
               </div>
 
               <div className="space-y-2.5">
-                {GLOBAL_CONTINENT_STATS.map((cont) => (
+                {dynamicContinentStats.map((cont) => (
                   <div
                     key={cont.id}
                     className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
